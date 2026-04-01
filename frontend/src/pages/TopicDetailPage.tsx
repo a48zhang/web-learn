@@ -1,21 +1,26 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuthStore } from '../stores/useAuthStore';
-import { topicApi } from '../services/api';
-import type { Topic, Resource } from '@web-learn/shared';
+import { topicApi, taskApi } from '../services/api';
+import type { Topic, Resource, Task } from '@web-learn/shared';
 import ResourceUpload from '../components/ResourceUpload';
 import ResourceList from '../components/ResourceList';
+import TaskCreate from '../components/TaskCreate';
+import TaskList from '../components/TaskList';
 
 function TopicDetailPage() {
   const { user } = useAuthStore();
   const { id } = useParams<{ id: string }>();
   const [topic, setTopic] = useState<Topic | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [resourcesLoading, setResourcesLoading] = useState(false);
+  const [tasksLoading, setTasksLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
+  const [showTaskCreate, setShowTaskCreate] = useState(false);
 
   const isOwner = user?.role === 'teacher' && topic?.createdBy === user.id;
 
@@ -40,6 +45,19 @@ function TopicDetailPage() {
     }
   };
 
+  const fetchTasks = async () => {
+    if (!id) return;
+    setTasksLoading(true);
+    try {
+      const data = await taskApi.getByTopic(id);
+      setTasks(data || []);
+    } catch (err) {
+      console.error('Failed to fetch tasks:', err);
+    } finally {
+      setTasksLoading(false);
+    }
+  };
+
   useEffect(() => {
     const fetchTopic = async () => {
       if (!id) return;
@@ -61,12 +79,23 @@ function TopicDetailPage() {
   useEffect(() => {
     if (topic) {
       fetchResources();
+      fetchTasks();
     }
   }, [topic?.id]);
 
   const handleUploadSuccess = (resource: Resource) => {
     setResources(prev => [resource, ...prev]);
     setShowUpload(false);
+  };
+
+  const handleTaskCreated = (task: Task) => {
+    setTasks(prev => [task, ...prev]);
+    setShowTaskCreate(false);
+  };
+
+  const handleSubmissionSuccess = () => {
+    // Optionally update state to show that submission was made
+    alert('提交成功！');
   };
 
   const handleDeleteResource = async (resourceId: string) => {
@@ -264,12 +293,41 @@ function TopicDetailPage() {
               )}
             </div>
 
-            {/* Tasks (Placeholder) */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">任务列表</h2>
-              <div className="text-gray-500 text-center py-8">
-                任务模块开发中...
+            {/* Tasks */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900">任务列表</h2>
+                {isOwner && (
+                  <button
+                    onClick={() => setShowTaskCreate(!showTaskCreate)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+                  >
+                    {showTaskCreate ? '取消创建' : '创建任务'}
+                  </button>
+                )}
               </div>
+
+              {showTaskCreate && isOwner && (
+                <TaskCreate
+                  topicId={topic!.id}
+                  onTaskCreated={handleTaskCreated}
+                  onCancel={() => setShowTaskCreate(false)}
+                />
+              )}
+
+              {tasksLoading ? (
+                <div className="bg-white shadow rounded-lg p-6 text-center">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                  <p className="text-gray-600">加载任务中...</p>
+                </div>
+              ) : (
+                <TaskList
+                  tasks={tasks}
+                  canCreate={isOwner}
+                  isTeacher={user?.role === 'teacher'}
+                  onSubmissionSuccess={handleSubmissionSuccess}
+                />
+              )}
             </div>
           </div>
 

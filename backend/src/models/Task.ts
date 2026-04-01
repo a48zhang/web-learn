@@ -1,6 +1,8 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 import { sequelize } from '../utils/database';
 
+import { Topic } from './index';
+
 interface TaskAttributes {
   id: number;
   topic_id: number;
@@ -9,9 +11,10 @@ interface TaskAttributes {
   created_by: number;
   created_at: Date;
   updated_at: Date;
+  topic?: Topic;
 }
 
-interface TaskCreationAttributes extends Optional<TaskAttributes, 'id' | 'created_at' | 'updated_at' | 'description'> {}
+interface TaskCreationAttributes extends Optional<TaskAttributes, 'id' | 'created_at' | 'updated_at' | 'description' | 'topic'> {}
 
 class Task extends Model<TaskAttributes, TaskCreationAttributes> implements TaskAttributes {
   public id!: number;
@@ -21,6 +24,7 @@ class Task extends Model<TaskAttributes, TaskCreationAttributes> implements Task
   public created_by!: number;
   public readonly created_at!: Date;
   public readonly updated_at!: Date;
+  public topic?: Topic;
 }
 
 Task.init(

@@ -1,6 +1,8 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 import { sequelize } from '../utils/database';
 
+import { Task, User } from './index';
+
 interface SubmissionAttributes {
   id: number;
   task_id: number;
@@ -8,9 +10,11 @@ interface SubmissionAttributes {
   content?: string;
   file_url?: string;
   submitted_at: Date;
+  task?: Task;
+  student?: User;
 }
 
-interface SubmissionCreationAttributes extends Optional<SubmissionAttributes, 'id' | 'submitted_at' | 'content' | 'file_url'> {}
+interface SubmissionCreationAttributes extends Optional<SubmissionAttributes, 'id' | 'submitted_at' | 'content' | 'file_url' | 'task' | 'student'> {}
 
 class Submission extends Model<SubmissionAttributes, SubmissionCreationAttributes> implements SubmissionAttributes {
   public id!: number;
@@ -19,6 +23,8 @@ class Submission extends Model<SubmissionAttributes, SubmissionCreationAttribute
   public content?: string;
   public file_url?: string;
   public readonly submitted_at!: Date;
+  public task?: Task;
+  public student?: User;
 }
 
 Submission.init(

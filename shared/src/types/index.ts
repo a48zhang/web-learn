@@ -75,20 +75,15 @@ export interface Task {
   id: string;
   topicId: string;
   title: string;
-  description: string;
-  assignedTo?: string;
-  status: 'pending' | 'in_progress' | 'completed';
-  dueDate?: string;
+  description?: string;
+  createdBy: string;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface CreateTaskDto {
-  topicId: string;
   title: string;
-  description: string;
-  assignedTo?: string;
-  dueDate?: string;
+  description?: string;
 }
 
 // Submission types
@@ -96,19 +91,34 @@ export interface Submission {
   id: string;
   taskId: string;
   studentId: string;
-  content: string;
-  attachments?: string[];
-  status: 'submitted' | 'graded';
-  grade?: number;
-  feedback?: string;
+  content?: string;
+  fileUrl?: string;
   submittedAt: string;
-  gradedAt?: string;
 }
 
 export interface CreateSubmissionDto {
-  taskId: string;
-  content: string;
-  attachments?: string[];
+  content?: string;
+  file?: File;
+}
+
+// Review types
+export interface Review {
+  id: string;
+  submissionId: string;
+  reviewerId: string;
+  score?: number;
+  feedback?: string;
+  reviewedAt: string;
+}
+
+export interface CreateReviewDto {
+  score?: number;
+  feedback?: string;
+}
+
+export interface UpdateReviewDto {
+  score?: number;
+  feedback?: string;
 }
 
 // API Response types

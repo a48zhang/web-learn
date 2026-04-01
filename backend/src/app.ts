@@ -5,6 +5,7 @@ import { config } from './utils/config';
 import authRoutes from './routes/authRoutes';
 import userRoutes from './routes/userRoutes';
 import topicRoutes from './routes/topicRoutes';
+import reviewRoutes from './routes/reviewRoutes';
 
 const app: Application = express();
 
@@ -29,6 +30,7 @@ app.get('/api/health', (req: Request, res: Response) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/topics', topicRoutes);
+app.use('/api', reviewRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response) => {

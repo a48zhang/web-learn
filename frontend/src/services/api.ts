@@ -10,6 +10,12 @@ import type {
   UpdateTopicDto,
   UpdateTopicStatusDto,
   Resource,
+  Task,
+  CreateTaskDto,
+  Submission,
+  Review,
+  CreateReviewDto,
+  UpdateReviewDto,
 } from '@web-learn/shared';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
@@ -115,6 +121,59 @@ export const resourceApi = {
 
   delete: async (id: string): Promise<void> => {
     await api.delete(`/resources/${id}`);
+  },
+};
+
+// Task API
+export const taskApi = {
+  create: async (topicId: string, data: CreateTaskDto): Promise<Task> => {
+    const response = await api.post<ApiResponse<Task>>(`/topics/${topicId}/tasks`, data);
+    return response.data.data as Task;
+  },
+
+  getByTopic: async (topicId: string): Promise<Task[]> => {
+    const response = await api.get<ApiResponse<Task[]>>(`/topics/${topicId}/tasks`);
+    return response.data.data as Task[];
+  },
+};
+
+// Submission API
+export const submissionApi = {
+  submit: async (taskId: string, formData: FormData): Promise<Submission> => {
+    const response = await api.post<ApiResponse<Submission>>(`/tasks/${taskId}/submit`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data.data as Submission;
+  },
+
+  getByTask: async (taskId: string): Promise<Submission[]> => {
+    const response = await api.get<ApiResponse<Submission[]>>(`/tasks/${taskId}/submissions`);
+    return response.data.data as Submission[];
+  },
+
+  getMySubmissions: async (): Promise<Submission[]> => {
+    const response = await api.get<ApiResponse<Submission[]>>('/submissions/me');
+    return response.data.data as Submission[];
+  },
+};
+
+// Review API
+export const reviewApi = {
+  create: async (submissionId: string, data: CreateReviewDto): Promise<Review> => {
+    const response = await api.post<ApiResponse<Review>>(`/submissions/${submissionId}/review`, data);
+    return response.data.data as Review;
+  },
+
+  getBySubmission: async (submissionId: string): Promise<Review> => {
+    const response = await api.get<ApiResponse<Review>>(`/submissions/${submissionId}/review`);
+    return response.data.data as Review;
+  },
+
+  update: async (reviewId: string, data: UpdateReviewDto): Promise<Review> => {
+    const response = await api.put<ApiResponse<Review>>(`/reviews/${reviewId}`, data);
+    return response.data.data as Review;
   },
 };
 

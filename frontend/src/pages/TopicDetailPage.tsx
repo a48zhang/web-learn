@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuthStore } from '../stores/useAuthStore';
+import { toast } from '../stores/useToastStore';
+import { LoadingOverlay, LoadingSpinner } from '../components/Loading';
 import { topicApi, taskApi } from '../services/api';
 import type { Topic, Resource, Task } from '@web-learn/shared';
 import ResourceUpload from '../components/ResourceUpload';
@@ -95,7 +97,7 @@ function TopicDetailPage() {
 
   const handleSubmissionSuccess = () => {
     // Optionally update state to show that submission was made
-    alert('提交成功！');
+    toast.success('提交成功！');
   };
 
   const handleDeleteResource = async (resourceId: string) => {
@@ -112,12 +114,13 @@ function TopicDetailPage() {
       const result = await response.json();
       if (result.success) {
         setResources(prev => prev.filter(r => r.id !== resourceId));
+        toast.success('资源已删除');
       } else {
-        alert('删除失败: ' + (result.error || '未知错误'));
+        toast.error('删除失败: ' + (result.error || '未知错误'));
       }
     } catch (err) {
       console.error('Delete error:', err);
-      alert('删除失败');
+      toast.error('删除失败');
     }
   };
 
@@ -128,8 +131,9 @@ function TopicDetailPage() {
     try {
       const updated = await topicApi.updateStatus(topic.id, { status: newStatus });
       setTopic(updated);
+      toast.success('状态更新成功');
     } catch (err) {
-      alert('更新状态失败');
+      toast.error('更新状态失败');
       console.error(err);
     } finally {
       setActionLoading(false);
@@ -163,14 +167,7 @@ function TopicDetailPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">加载中...</p>
-        </div>
-      </div>
-    );
+    return <LoadingOverlay message="加载中..." />;
   }
 
   if (error || !topic) {
@@ -191,15 +188,15 @@ function TopicDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto py-6 px-4">
+      <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-6">
           <Link to="/topics" className="text-blue-600 hover:text-blue-500 mb-2 inline-block">
             ← 返回专题列表
           </Link>
-          <div className="flex justify-between items-start">
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
             <div>
-              <div className="flex items-center gap-3 mb-2">
+              <div className="flex items-center gap-3 mb-2 flex-wrap">
                 <h1 className="text-2xl font-bold text-gray-900">{topic.title}</h1>
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(topic.status)}`}>
                   {getStatusText(topic.status)}
@@ -210,12 +207,12 @@ function TopicDetailPage() {
               </p>
             </div>
             {isOwner && (
-              <div className="flex gap-2">
+              <div className="flex gap-2 w-full sm:w-auto">
                 {topic.status === 'draft' && (
                   <button
                     onClick={() => handleStatusChange('published')}
                     disabled={actionLoading}
-                    className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition-colors disabled:opacity-50"
+                    className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition-colors disabled:opacity-50"
                   >
                     发布专题
                   </button>
@@ -224,7 +221,7 @@ function TopicDetailPage() {
                   <button
                     onClick={() => handleStatusChange('closed')}
                     disabled={actionLoading}
-                    className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition-colors disabled:opacity-50"
+                    className="flex-1 sm:flex-none bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition-colors disabled:opacity-50"
                   >
                     关闭专题
                   </button>
@@ -233,7 +230,7 @@ function TopicDetailPage() {
                   <button
                     onClick={() => handleStatusChange('published')}
                     disabled={actionLoading}
-                    className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition-colors disabled:opacity-50"
+                    className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition-colors disabled:opacity-50"
                   >
                     重新发布
                   </button>
@@ -259,12 +256,12 @@ function TopicDetailPage() {
 
             {/* Resources */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <h2 className="text-lg font-semibold text-gray-900">学习资源</h2>
                 {isOwner && (
                   <button
                     onClick={() => setShowUpload(!showUpload)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+                    className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
                   >
                     {showUpload ? '取消上传' : '上传资源'}
                   </button>
@@ -275,14 +272,14 @@ function TopicDetailPage() {
                 <ResourceUpload
                   topicId={topic!.id}
                   onUploadSuccess={handleUploadSuccess}
-                  onUploadError={(error) => alert(error)}
+                  onUploadError={(error) => toast.error(error)}
                 />
               )}
 
               {resourcesLoading ? (
-                <div className="bg-white shadow rounded-lg p-6 text-center">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                  <p className="text-gray-600">加载资源中...</p>
+                <div className="bg-white shadow rounded-lg p-6 flex items-center justify-center">
+                  <LoadingSpinner size="md" className="mr-2" />
+                  <span className="text-gray-600">加载资源中...</span>
                 </div>
               ) : (
                 <ResourceList
@@ -295,12 +292,12 @@ function TopicDetailPage() {
 
             {/* Tasks */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <h2 className="text-lg font-semibold text-gray-900">任务列表</h2>
                 {isOwner && (
                   <button
                     onClick={() => setShowTaskCreate(!showTaskCreate)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+                    className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
                   >
                     {showTaskCreate ? '取消创建' : '创建任务'}
                   </button>
@@ -316,9 +313,9 @@ function TopicDetailPage() {
               )}
 
               {tasksLoading ? (
-                <div className="bg-white shadow rounded-lg p-6 text-center">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                  <p className="text-gray-600">加载任务中...</p>
+                <div className="bg-white shadow rounded-lg p-6 flex items-center justify-center">
+                  <LoadingSpinner size="md" className="mr-2" />
+                  <span className="text-gray-600">加载任务中...</span>
                 </div>
               ) : (
                 <TaskList

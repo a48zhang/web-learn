@@ -1,6 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useAuthStore } from './stores/useAuthStore';
+import { useToastStore } from './stores/useToastStore';
+import { ToastContainer } from './components/Toast';
+import { LoadingOverlay } from './components/Loading';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
@@ -11,20 +14,14 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   const { checkAuth, isLoading, isAuthenticated } = useAuthStore();
+  const { toasts, removeToast } = useToastStore();
 
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">初始化中...</p>
-        </div>
-      </div>
-    );
+    return <LoadingOverlay message="初始化中..." />;
   }
 
   return (
@@ -104,6 +101,7 @@ function App() {
             }
           />
         </Routes>
+        <ToastContainer toasts={toasts} onDismiss={removeToast} />
       </div>
     </BrowserRouter>
   );

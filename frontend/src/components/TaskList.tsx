@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Task, Submission } from '@web-learn/shared';
+import { toast } from '../stores/useToastStore';
 import SubmissionForm from './SubmissionForm';
 import SubmissionList from './SubmissionList';
 
@@ -92,7 +93,7 @@ function TaskList({ tasks, isTeacher, onSubmissionSuccess }: TaskListProps) {
             <SubmissionForm
               taskId={selectedTask.id}
               onSubmitSuccess={handleSubmitSuccess}
-              onSubmitError={(error) => alert(error)}
+              onSubmitError={(error) => toast.error(error)}
               onCancel={() => {
                 setShowSubmissionForm(false);
                 setSelectedTask(null);

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { submissionApi, reviewApi, API_ORIGIN } from '../services/api';
 import { LoadingOverlay } from '../components/Loading';
 import { EmptyState } from '../components/EmptyState';
@@ -7,6 +7,7 @@ import ReviewDisplay from '../components/ReviewDisplay';
 import type { Review, SubmissionWithContext } from '@web-learn/shared';
 
 function StudentSubmissionsPage() {
+  const navigate = useNavigate();
   const [submissions, setSubmissions] = useState<SubmissionWithContext[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -84,9 +85,7 @@ function StudentSubmissionsPage() {
             description="先去浏览专题并完成任务，提交后就能在这里查看记录。"
             action={{
               label: '去浏览专题',
-              onClick: () => {
-                window.location.href = '/topics';
-              },
+              onClick: () => navigate('/topics'),
             }}
           />
         ) : (

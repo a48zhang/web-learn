@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import TopicDetailPage from './TopicDetailPage';
@@ -99,7 +99,7 @@ describe('TopicDetailPage', () => {
     expect(screen.queryByText('出错了')).not.toBeInTheDocument();
   });
 
-  it('shows task failure without turning empty resources into an error', async () => {
+  it('shows resource and task retry actions when the section request fails', async () => {
     topicApiMock.getById.mockResolvedValueOnce({
       id: 'topic-1',
       title: '专题一',
@@ -109,7 +109,48 @@ describe('TopicDetailPage', () => {
       createdAt: '2026-04-01T00:00:00.000Z',
       updatedAt: '2026-04-01T00:00:00.000Z',
     });
-    taskApiMock.getByTopic.mockRejectedValueOnce(new Error('tasks failed'));
+    resourceApiMock.getByTopic
+      .mockRejectedValueOnce(new Error('resources failed'))
+      .mockResolvedValueOnce([{ id: 'res-1', title: '讲义' }]);
+    taskApiMock.getByTopic
+      .mockRejectedValueOnce(new Error('tasks failed'))
+      .mockResolvedValueOnce([{ id: 'task-1', title: '第一次作业' }]);
+
+    render(
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <TopicDetailPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('资源加载失败')).toBeInTheDocument();
+    });
+    expect(screen.getByRole('button', { name: '重试加载资源' })).toBeInTheDocument();
+    expect(screen.getByText('任务加载失败')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '重试加载任务' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '重试加载资源' }));
+    fireEvent.click(screen.getByRole('button', { name: '重试加载任务' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('资源数量：1')).toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(screen.getByText('任务数量：1')).toBeInTheDocument();
+    });
+  });
+
+  it('keeps empty resources distinct from failure states', async () => {
+    topicApiMock.getById.mockResolvedValueOnce({
+      id: 'topic-1',
+      title: '专题一',
+      description: '专题描述',
+      createdBy: 'teacher-1',
+      status: 'published',
+      createdAt: '2026-04-01T00:00:00.000Z',
+      updatedAt: '2026-04-01T00:00:00.000Z',
+    });
+    taskApiMock.getByTopic.mockResolvedValueOnce([]);
     resourceApiMock.getByTopic.mockResolvedValueOnce([]);
 
     render(
@@ -121,12 +162,9 @@ describe('TopicDetailPage', () => {
     await waitFor(() => {
       expect(screen.getByText('资源数量：0')).toBeInTheDocument();
     });
-
-    await waitFor(() => {
-      expect(screen.getByText('任务加载失败')).toBeInTheDocument();
-    });
-    expect(screen.getByText('暂时无法获取任务列表，请稍后重试。')).toBeInTheDocument();
+    expect(screen.getByText('任务数量：0')).toBeInTheDocument();
     expect(screen.queryByText('资源加载失败')).not.toBeInTheDocument();
+    expect(screen.queryByText('任务加载失败')).not.toBeInTheDocument();
   });
 
   it('shows the page-level error state when topic loading fails', async () => {

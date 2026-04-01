@@ -9,6 +9,7 @@ import ResourceUpload from '../components/ResourceUpload';
 import ResourceList from '../components/ResourceList';
 import TaskCreate from '../components/TaskCreate';
 import TaskList from '../components/TaskList';
+import { EmptyState } from '../components/EmptyState';
 
 function TopicDetailPage() {
   const { user } = useAuthStore();
@@ -84,17 +85,17 @@ function TopicDetailPage() {
   }, [topic?.id]);
 
   const handleUploadSuccess = (resource: Resource) => {
-    setResources(prev => [resource, ...prev]);
+    setResources((prev) => [resource, ...prev]);
     setShowUpload(false);
   };
 
   const handleTaskCreated = (task: Task) => {
-    setTasks(prev => [task, ...prev]);
+    setTasks((prev) => [task, ...prev]);
     setShowTaskCreate(false);
   };
 
   const handleSubmissionSuccess = () => {
-    toast.success('提交成功！');
+    toast.success('提交成功');
   };
 
   const handleDeleteResource = async (resourceId: string) => {
@@ -102,7 +103,7 @@ function TopicDetailPage() {
 
     try {
       await resourceApi.delete(resourceId);
-      setResources(prev => prev.filter(r => r.id !== resourceId));
+      setResources((prev) => prev.filter((r) => r.id !== resourceId));
       toast.success('资源已删除');
     } catch (err: any) {
       console.error('Delete error:', err);
@@ -188,7 +189,7 @@ function TopicDetailPage() {
                 </span>
               </div>
               <p className="text-gray-500">
-                创建于 {new Date(topic.createdAt).toLocaleString()}
+                创建于 {new Date(topic.createdAt).toLocaleString('zh-CN')}
               </p>
             </div>
             {isOwner && (
@@ -253,7 +254,7 @@ function TopicDetailPage() {
                 <ResourceUpload
                   topicId={topic.id}
                   onUploadSuccess={handleUploadSuccess}
-                  onUploadError={(error) => toast.error(error)}
+                  onUploadError={(uploadError) => toast.error(uploadError)}
                 />
               )}
 
@@ -266,6 +267,13 @@ function TopicDetailPage() {
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                   <p className="text-red-600 font-medium">资源加载失败</p>
                   <p className="text-red-500 text-sm mt-1">{resourcesError}</p>
+                  <button
+                    type="button"
+                    onClick={fetchResources}
+                    className="mt-3 inline-flex items-center px-3 py-2 rounded-md bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors"
+                  >
+                    重试加载资源
+                  </button>
                 </div>
               ) : (
                 <ResourceList
@@ -306,6 +314,13 @@ function TopicDetailPage() {
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                   <p className="text-red-600 font-medium">任务加载失败</p>
                   <p className="text-red-500 text-sm mt-1">{tasksError}</p>
+                  <button
+                    type="button"
+                    onClick={fetchTasks}
+                    className="mt-3 inline-flex items-center px-3 py-2 rounded-md bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors"
+                  >
+                    重试加载任务
+                  </button>
                 </div>
               ) : (
                 <TaskList
@@ -319,25 +334,63 @@ function TopicDetailPage() {
           </div>
 
           <div className="space-y-6">
+            {user?.role === 'student' && (
+              <div className="bg-white shadow rounded-lg p-6">
+                <h3 className="text-md font-semibold text-gray-900 mb-4">学生入口</h3>
+                <div className="space-y-3">
+                  <Link
+                    to="/my-submissions"
+                    className="block rounded-md border border-gray-200 px-4 py-3 hover:border-blue-300 hover:bg-blue-50 transition-colors"
+                  >
+                    <div className="font-medium text-gray-900">我的提交</div>
+                    <p className="text-sm text-gray-500 mt-1">查看你提交过的任务记录与当前状态。</p>
+                  </Link>
+                  <Link
+                    to="/my-feedback"
+                    className="block rounded-md border border-gray-200 px-4 py-3 hover:border-purple-300 hover:bg-purple-50 transition-colors"
+                  >
+                    <div className="font-medium text-gray-900">我的反馈</div>
+                    <p className="text-sm text-gray-500 mt-1">集中查看教师已返回的评分和反馈意见。</p>
+                  </Link>
+                </div>
+              </div>
+            )}
+
             <div className="bg-white shadow rounded-lg p-6">
               <h3 className="text-md font-semibold text-gray-900 mb-4">专题信息</h3>
               <div className="space-y-3">
                 {topic.deadline && (
                   <div>
                     <span className="text-sm text-gray-500">截止时间</span>
-                    <p className="text-gray-900">{new Date(topic.deadline).toLocaleDateString()}</p>
+                    <p className="text-gray-900">{new Date(topic.deadline).toLocaleDateString('zh-CN')}</p>
                   </div>
                 )}
                 <div>
                   <span className="text-sm text-gray-500">创建时间</span>
-                  <p className="text-gray-900">{new Date(topic.createdAt).toLocaleString()}</p>
+                  <p className="text-gray-900">{new Date(topic.createdAt).toLocaleString('zh-CN')}</p>
                 </div>
                 <div>
                   <span className="text-sm text-gray-500">更新时间</span>
-                  <p className="text-gray-900">{new Date(topic.updatedAt).toLocaleString()}</p>
+                  <p className="text-gray-900">{new Date(topic.updatedAt).toLocaleString('zh-CN')}</p>
                 </div>
               </div>
             </div>
+
+            {!resourcesLoading && !resourcesError && resources.length === 0 && (
+              <EmptyState
+                icon="document"
+                title="暂时还没有学习资源"
+                description={isOwner ? '可以先上传资料，帮助学生开展学习。' : '教师暂未上传资源，请稍后再来查看。'}
+              />
+            )}
+
+            {!tasksLoading && !tasksError && tasks.length === 0 && (
+              <EmptyState
+                icon="task"
+                title="暂时还没有任务"
+                description={isOwner ? '创建一个任务，方便学生开始提交作业。' : '教师暂未布置任务，请稍后再来查看。'}
+              />
+            )}
           </div>
         </div>
       </div>

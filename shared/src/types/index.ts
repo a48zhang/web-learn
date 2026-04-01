@@ -87,6 +87,21 @@ export interface CreateTaskDto {
 }
 
 // Submission types
+export interface SubmissionTaskSummary {
+  id: string;
+  title: string;
+  topic?: {
+    id: string;
+    title: string;
+  };
+}
+
+export interface SubmissionStudentSummary {
+  id: string;
+  username: string;
+  email: string;
+}
+
 export interface Submission {
   id: string;
   taskId: string;
@@ -94,6 +109,13 @@ export interface Submission {
   content?: string;
   fileUrl?: string;
   submittedAt: string;
+  task?: SubmissionTaskSummary;
+  student?: SubmissionStudentSummary;
+}
+
+export interface SubmissionWithContext extends Submission {
+  task?: SubmissionTaskSummary;
+  student?: SubmissionStudentSummary;
 }
 
 export interface CreateSubmissionDto {

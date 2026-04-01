@@ -10,6 +10,8 @@ import DashboardPage from './pages/DashboardPage';
 import TopicListPage from './pages/TopicListPage';
 import TopicCreatePage from './pages/TopicCreatePage';
 import TopicDetailPage from './pages/TopicDetailPage';
+import StudentSubmissionsPage from './pages/StudentSubmissionsPage';
+import StudentFeedbackPage from './pages/StudentFeedbackPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -62,7 +64,7 @@ function App() {
           <Route
             path="/topics/create"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['teacher']}>
                 <TopicCreatePage />
               </ProtectedRoute>
             }
@@ -72,6 +74,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <TopicDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/my-submissions"
+            element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <StudentSubmissionsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/my-feedback"
+            element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <StudentFeedbackPage />
               </ProtectedRoute>
             }
           />

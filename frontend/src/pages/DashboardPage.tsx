@@ -8,13 +8,12 @@ function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto py-6 px-4">
-        {/* Header with user info and logout */}
         <div className="bg-white shadow rounded-lg p-6 mb-6">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+              <h1 className="text-2xl font-bold text-gray-900">控制台</h1>
               <p className="text-gray-600 mt-1">
-                欢迎, {user?.username} ({user?.role === 'teacher' ? '教师' : '学生'})
+                欢迎，{user?.username}（{user?.role === 'teacher' ? '教师' : '学生'}）
               </p>
             </div>
             <button
@@ -26,7 +25,6 @@ function DashboardPage() {
           </div>
         </div>
 
-        {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {user?.role === 'teacher' && (
             <>
@@ -57,19 +55,32 @@ function DashboardPage() {
             <>
               <div className="bg-white shadow rounded-lg p-6 hover:shadow-lg transition-shadow">
                 <h2 className="text-lg font-semibold text-gray-900 mb-2">浏览专题</h2>
-                <p className="text-gray-600 mb-4">浏览可用的学习专题</p>
+                <p className="text-gray-600 mb-4">浏览可学习的专题与任务</p>
                 <button
                   onClick={() => navigate('/topics')}
                   className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
                 >
-                  浏览
+                  去浏览
                 </button>
               </div>
               <div className="bg-white shadow rounded-lg p-6 hover:shadow-lg transition-shadow">
-                <h2 className="text-lg font-semibold text-gray-900 mb-2">我的学习</h2>
-                <p className="text-gray-600 mb-4">查看已加入的专题和任务进度</p>
-                <button className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition-colors">
-                  查看进度
+                <h2 className="text-lg font-semibold text-gray-900 mb-2">我的提交</h2>
+                <p className="text-gray-600 mb-4">查看自己已经提交的任务内容与状态</p>
+                <button
+                  onClick={() => navigate('/my-submissions')}
+                  className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+                >
+                  查看提交
+                </button>
+              </div>
+              <div className="bg-white shadow rounded-lg p-6 hover:shadow-lg transition-shadow">
+                <h2 className="text-lg font-semibold text-gray-900 mb-2">我的反馈</h2>
+                <p className="text-gray-600 mb-4">集中查看教师评分与反馈意见</p>
+                <button
+                  onClick={() => navigate('/my-feedback')}
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+                >
+                  查看反馈
                 </button>
               </div>
             </>
@@ -84,7 +95,6 @@ function DashboardPage() {
           </div>
         </div>
 
-        {/* Activity Feed */}
         <div className="mt-8 bg-white shadow rounded-lg p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">最近活动</h2>
           <div className="text-gray-500 text-center py-8">

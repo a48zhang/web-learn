@@ -62,11 +62,10 @@ function TopicListPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <div>
             <Link to="/dashboard" className="text-blue-600 hover:text-blue-500 mb-2 inline-block">
-              ← 返回仪表盘
+              ← 返回控制台
             </Link>
             <h1 className="text-2xl font-bold text-gray-900">
               {user?.role === 'teacher' ? '我的专题' : '可用专题'}
@@ -88,7 +87,6 @@ function TopicListPage() {
           </div>
         )}
 
-        {/* Topic List */}
         <div className="space-y-4">
           {topics.length === 0 ? (
             user?.role === 'teacher' ? (
@@ -128,7 +126,7 @@ function TopicListPage() {
                     )}
                     <div className="text-sm text-gray-500">
                       {topic.deadline && (
-                        <span>截止时间: {new Date(topic.deadline).toLocaleDateString()}</span>
+                        <span>截止时间: {new Date(topic.deadline).toLocaleDateString('zh-CN')}</span>
                       )}
                     </div>
                   </div>

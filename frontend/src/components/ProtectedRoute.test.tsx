@@ -6,6 +6,7 @@ import ProtectedRoute from './ProtectedRoute';
 const authState = vi.hoisted(() => ({
   isAuthenticated: false,
   isLoading: false,
+  user: null as null | { role: 'teacher' | 'student' },
 }));
 
 vi.mock('../stores/useAuthStore', () => ({
@@ -16,10 +17,12 @@ describe('ProtectedRoute', () => {
   beforeEach(() => {
     authState.isAuthenticated = false;
     authState.isLoading = false;
+    authState.user = null;
   });
 
   it('renders children when the user is authenticated', () => {
     authState.isAuthenticated = true;
+    authState.user = { role: 'student' };
 
     render(
       <MemoryRouter
@@ -95,5 +98,34 @@ describe('ProtectedRoute', () => {
       expect(screen.getByText('Login Route')).toBeInTheDocument();
     });
     expect(screen.queryByText('Protected Content')).not.toBeInTheDocument();
+  });
+
+  it('redirects users without the required role to dashboard', async () => {
+    authState.isAuthenticated = true;
+    authState.user = { role: 'student' };
+
+    render(
+      <MemoryRouter
+        initialEntries={['/teacher-only']}
+        future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+      >
+        <Routes>
+          <Route
+            path="/teacher-only"
+            element={
+              <ProtectedRoute allowedRoles={['teacher']}>
+                <div>Teacher Content</div>
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/dashboard" element={<div>Dashboard Route</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Dashboard Route')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Teacher Content')).not.toBeInTheDocument();
   });
 });

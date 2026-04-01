@@ -17,12 +17,24 @@ function TaskList({ tasks, isTeacher, onSubmissionSuccess }: TaskListProps) {
   const [showSubmissionForm, setShowSubmissionForm] = useState(false);
   const [showSubmissions, setShowSubmissions] = useState(false);
 
+  const submissionDialogTitleId = selectedTask ? `submission-dialog-title-${selectedTask.id}` : undefined;
+  const submissionsDialogTitleId = selectedTask ? `submissions-dialog-title-${selectedTask.id}` : undefined;
+
+  const closeSubmissionForm = () => {
+    setShowSubmissionForm(false);
+    setSelectedTask(null);
+  };
+
+  const closeSubmissionList = () => {
+    setShowSubmissions(false);
+    setSelectedTask(null);
+  };
+
   const handleSubmitSuccess = (submission: Submission) => {
     if (onSubmissionSuccess && selectedTask) {
       onSubmissionSuccess(selectedTask.id, submission);
     }
-    setShowSubmissionForm(false);
-    setSelectedTask(null);
+    closeSubmissionForm();
   };
 
   if (tasks.length === 0) {
@@ -42,7 +54,7 @@ function TaskList({ tasks, isTeacher, onSubmissionSuccess }: TaskListProps) {
           <div className="flex justify-between items-start mb-2">
             <h3 className="text-lg font-semibold text-gray-900">{task.title}</h3>
             <div className="text-sm text-gray-500">
-              创建于 {new Date(task.createdAt).toLocaleDateString()}
+              创建于 {new Date(task.createdAt).toLocaleDateString('zh-CN')}
             </div>
           </div>
           {task.description && (
@@ -68,7 +80,7 @@ function TaskList({ tasks, isTeacher, onSubmissionSuccess }: TaskListProps) {
                 }}
                 className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
               >
-                查看提交
+                查看学生提交
               </button>
             )}
           </div>
@@ -76,49 +88,54 @@ function TaskList({ tasks, isTeacher, onSubmissionSuccess }: TaskListProps) {
       ))}
 
       {showSubmissionForm && selectedTask && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={submissionDialogTitleId}
+            className="bg-white rounded-lg p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto"
+          >
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">提交任务: {selectedTask.title}</h3>
+              <h3 id={submissionDialogTitleId} className="text-lg font-semibold">提交任务：{selectedTask.title}</h3>
               <button
-                onClick={() => {
-                  setShowSubmissionForm(false);
-                  setSelectedTask(null);
-                }}
+                type="button"
+                aria-label="关闭提交任务弹窗"
+                onClick={closeSubmissionForm}
                 className="text-gray-400 hover:text-gray-600"
               >
-                ✕
+                ×
               </button>
             </div>
             <SubmissionForm
               taskId={selectedTask.id}
               onSubmitSuccess={handleSubmitSuccess}
               onSubmitError={(error) => toast.error(error)}
-              onCancel={() => {
-                setShowSubmissionForm(false);
-                setSelectedTask(null);
-              }}
+              onCancel={closeSubmissionForm}
             />
           </div>
         </div>
       )}
 
       {showSubmissions && selectedTask && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={submissionsDialogTitleId}
+            className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto"
+          >
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">提交列表: {selectedTask.title}</h3>
+              <h3 id={submissionsDialogTitleId} className="text-lg font-semibold">学生提交：{selectedTask.title}</h3>
               <button
-                onClick={() => {
-                  setShowSubmissions(false);
-                  setSelectedTask(null);
-                }}
+                type="button"
+                aria-label="关闭提交列表弹窗"
+                onClick={closeSubmissionList}
                 className="text-gray-400 hover:text-gray-600"
               >
-                ✕
+                ×
               </button>
             </div>
-            <SubmissionList taskId={selectedTask.id} />
+            <SubmissionList taskId={selectedTask.id} isTeacher={isTeacher} />
           </div>
         </div>
       )}

@@ -25,15 +25,14 @@ function SubmissionList({ taskId, isTeacher = false }: SubmissionListProps) {
         const data = await submissionApi.getByTask(taskId);
         setSubmissions(data || []);
 
-        // Fetch reviews for all submissions
         const reviewMap = new Map<string, Review>();
         await Promise.all(
           (data || []).map(async (submission) => {
             try {
               const review = await reviewApi.getBySubmission(submission.id);
               reviewMap.set(submission.id, review);
-            } catch (err) {
-              // Review doesn't exist yet, that's okay
+            } catch {
+              // Review does not exist yet.
             }
           })
         );
@@ -50,12 +49,19 @@ function SubmissionList({ taskId, isTeacher = false }: SubmissionListProps) {
   }, [taskId]);
 
   const handleReviewSuccess = (review: Review) => {
-    setReviews(prev => new Map(prev.set(review.submissionId, review)));
+    setReviews((prev) => {
+      const next = new Map(prev);
+      next.set(review.submissionId, review);
+      return next;
+    });
     setShowReviewForm(null);
   };
 
   const toggleSubmission = (submissionId: string) => {
     setExpandedSubmission(expandedSubmission === submissionId ? null : submissionId);
+    if (expandedSubmission === submissionId) {
+      setShowReviewForm(null);
+    }
   };
 
   if (loading) {
@@ -89,20 +95,21 @@ function SubmissionList({ taskId, isTeacher = false }: SubmissionListProps) {
         const hasReview = reviews.has(submission.id);
         const review = reviews.get(submission.id);
         const isExpanded = expandedSubmission === submission.id;
+        const studentName = submission.student?.username || '学生';
+        const studentEmail = submission.student?.email;
 
         return (
           <div key={submission.id} className="border border-gray-200 rounded-lg overflow-hidden">
-            {/* Submission Header - Click to expand */}
-            <div
-              className="p-4 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
+            <button
+              type="button"
+              className="w-full p-4 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
               onClick={() => toggleSubmission(submission.id)}
+              aria-expanded={isExpanded}
             >
-              <div className="flex justify-between items-start">
+              <div className="flex justify-between items-start gap-4">
                 <div>
-                  <div className="flex items-center gap-3">
-                    <h4 className="font-medium text-gray-900">
-                      {(submission as any).student?.username || '学生'}
-                    </h4>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <h4 className="font-medium text-gray-900">{studentName}</h4>
                     {hasReview && review?.score !== undefined && (
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                         review.score >= 90 ? 'bg-green-100 text-green-800' :
@@ -110,41 +117,38 @@ function SubmissionList({ taskId, isTeacher = false }: SubmissionListProps) {
                         review.score >= 60 ? 'bg-yellow-100 text-yellow-800' :
                         'bg-red-100 text-red-800'
                       }`}>
-                        {review.score.toFixed(2)}分
+                        {review.score.toFixed(2)} 分
                       </span>
                     )}
                     {hasReview && review?.score === undefined && (
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                        已评价
+                        已评分
                       </span>
                     )}
                   </div>
-                  {(submission as any).student?.email && (
-                    <p className="text-sm text-gray-500">
-                      {(submission as any).student.email}
-                    </p>
+                  {studentEmail && (
+                    <p className="text-sm text-gray-500 mt-1">{studentEmail}</p>
                   )}
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 shrink-0">
                   <span className="text-sm text-gray-500">
-                    提交于 {new Date(submission.submittedAt).toLocaleDateString()}
+                    提交于 {new Date(submission.submittedAt).toLocaleString('zh-CN')}
                   </span>
                   <svg
                     className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
+                    aria-hidden="true"
                   >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </div>
               </div>
-            </div>
+            </button>
 
-            {/* Expanded Content */}
             {isExpanded && (
               <div className="p-4 space-y-4">
-                {/* Submission Content */}
                 {submission.content && (
                   <div>
                     <h5 className="text-sm font-medium text-gray-700 mb-1">提交内容</h5>
@@ -168,7 +172,6 @@ function SubmissionList({ taskId, isTeacher = false }: SubmissionListProps) {
                   </div>
                 )}
 
-                {/* Review Section */}
                 <div className="border-t border-gray-200 pt-4">
                   {isTeacher ? (
                     <>
@@ -176,13 +179,11 @@ function SubmissionList({ taskId, isTeacher = false }: SubmissionListProps) {
                         <div className="space-y-4">
                           {review && <ReviewDisplay review={review} />}
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setShowReviewForm(submission.id);
-                            }}
+                            type="button"
+                            onClick={() => setShowReviewForm(submission.id)}
                             className="text-blue-600 hover:text-blue-800 font-medium"
                           >
-                            编辑评价
+                            编辑评分
                           </button>
                         </div>
                       ) : (
@@ -200,19 +201,17 @@ function SubmissionList({ taskId, isTeacher = false }: SubmissionListProps) {
 
                   {isTeacher && !hasReview && !showReviewForm && (
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowReviewForm(submission.id);
-                      }}
+                      type="button"
+                      onClick={() => setShowReviewForm(submission.id)}
                       className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
                     >
-                      添加评价
+                      添加评分
                     </button>
                   )}
 
                   {!isTeacher && !hasReview && (
                     <div className="text-center py-4 text-gray-500">
-                      暂无评价
+                      暂无反馈
                     </div>
                   )}
                 </div>

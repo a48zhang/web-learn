@@ -29,20 +29,28 @@ export interface AuthResponse {
 export interface Topic {
   id: string;
   title: string;
-  description: string;
-  teacherId: string;
-  status: 'draft' | 'published' | 'archived';
-  startDate?: string;
-  endDate?: string;
+  description?: string;
+  createdBy: string;
+  status: 'draft' | 'published' | 'closed';
+  deadline?: string;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface CreateTopicDto {
   title: string;
-  description: string;
-  startDate?: string;
-  endDate?: string;
+  description?: string;
+  deadline?: string;
+}
+
+export interface UpdateTopicDto {
+  title?: string;
+  description?: string;
+  deadline?: string;
+}
+
+export interface UpdateTopicStatusDto {
+  status: 'draft' | 'published' | 'closed';
 }
 
 // Resource types
@@ -129,7 +137,7 @@ export const UserRole = {
 export const TopicStatus = {
   DRAFT: 'draft',
   PUBLISHED: 'published',
-  ARCHIVED: 'archived',
+  CLOSED: 'closed',
 } as const;
 
 export const TaskStatus = {

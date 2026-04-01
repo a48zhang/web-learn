@@ -1,6 +1,9 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import { config } from './utils/config';
+import authRoutes from './routes/authRoutes';
+import userRoutes from './routes/userRoutes';
+import topicRoutes from './routes/topicRoutes';
 
 const app: Application = express();
 
@@ -18,11 +21,10 @@ app.get('/api/health', (req: Request, res: Response) => {
   });
 });
 
-// API routes will be added here
-// app.use('/api/auth', authRoutes);
-// app.use('/api/topics', topicRoutes);
-// app.use('/api/tasks', taskRoutes);
-// app.use('/api/resources', resourceRoutes);
+// API routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/topics', topicRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response) => {

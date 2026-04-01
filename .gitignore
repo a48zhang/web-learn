@@ -1,0 +1,6 @@
+# Worktrees
+.worktrees/
+worktrees/
+
+# Dependencies
+node_modules/

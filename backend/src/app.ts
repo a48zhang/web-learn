@@ -1,6 +1,5 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
-import path from 'path';
 import { config } from './utils/config';
 import authRoutes from './routes/authRoutes';
 import userRoutes from './routes/userRoutes';
@@ -11,14 +10,23 @@ import submissionRoutes from './routes/submissionRoutes';
 import reviewRoutes from './routes/reviewRoutes';
 
 const app: Application = express();
+const allowedOrigins = new Set(config.cors.origins);
 
 // Middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.has(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error('Not allowed by CORS'));
+    },
+  })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Serve uploads statically
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Health check route
 app.get('/api/health', (req: Request, res: Response) => {

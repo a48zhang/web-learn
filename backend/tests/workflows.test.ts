@@ -1,3 +1,26 @@
+const mockConfig = {
+  port: 3001,
+  jwt: {
+    secret: 'test-secret',
+    expiresIn: '7d',
+  },
+  cors: {
+    origins: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  },
+  database: {
+    host: 'localhost',
+    port: 3306,
+    name: 'web_learn',
+    user: 'root',
+    password: '',
+  },
+  uploadsDir: '/tmp/web-learn-test-uploads',
+};
+
+jest.mock('../src/utils/config', () => ({
+  config: mockConfig,
+}));
+
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import fs from 'fs';
@@ -191,6 +214,22 @@ describe('Workflow API coverage', () => {
     });
   });
 
+  describe('App security middleware', () => {
+    it('rejects cross-origin requests outside the whitelist', async () => {
+      const response = await request(app)
+        .get('/api/health')
+        .set('Origin', 'https://evil.example.com');
+
+      expect(response.status).toBe(500);
+    });
+
+    it('does not expose uploaded files through a public static route', async () => {
+      const response = await request(app).get('/uploads/secret.pdf');
+
+      expect(response.status).toBe(500);
+    });
+  });
+
   describe('Resource controller branches', () => {
     it('returns the URI when downloading a link resource', async () => {
       const response = createMockResponse();
@@ -219,6 +258,34 @@ describe('Workflow API coverage', () => {
       expect(response.json).toHaveBeenCalledWith({
         success: true,
         data: { uri: 'https://example.com/reference' },
+      });
+    });
+
+    it('denies resource downloads for unauthorised teachers', async () => {
+      const response = createMockResponse();
+      const req = {
+        user: { id: 99, role: 'teacher' },
+        params: { id: '18' },
+      } as any;
+
+      mockResourceModel.findByPk.mockResolvedValue({
+        id: 18,
+        type: 'document',
+        title: 'week1.pdf',
+        uri: '/uploads/week1.pdf',
+        topic: {
+          id: 12,
+          created_by: 41,
+          status: 'published',
+        },
+      });
+
+      await downloadResource(req, response);
+
+      expect(response.status).toHaveBeenCalledWith(403);
+      expect(response.json).toHaveBeenCalledWith({
+        success: false,
+        error: 'Access denied',
       });
     });
 
@@ -281,7 +348,7 @@ describe('Workflow API coverage', () => {
   });
 
   describe('Submission controller flows', () => {
-    it('creates a submission for a student', async () => {
+    it('creates a submission for a student on a published topic before deadline', async () => {
       const response = createMockResponse();
       const req = {
         params: { id: '31' },
@@ -289,7 +356,15 @@ describe('Workflow API coverage', () => {
         user: { id: 77, role: 'student' },
       } as any;
 
-      mockTaskModel.findByPk.mockResolvedValue({ id: 31, title: 'Essay' });
+      mockTaskModel.findByPk.mockResolvedValue({
+        id: 31,
+        title: 'Essay',
+        topic: {
+          id: 12,
+          status: 'published',
+          deadline: '2026-05-01',
+        },
+      });
       mockSubmissionModel.findOne.mockResolvedValue(null);
       mockSubmissionModel.create.mockResolvedValue({
         id: 91,
@@ -320,6 +395,62 @@ describe('Workflow API coverage', () => {
           submittedAt: '2026-04-01T10:00:00.000Z',
         },
       });
+    });
+
+    it('rejects submissions for draft topics', async () => {
+      const response = createMockResponse();
+      const req = {
+        params: { id: '31' },
+        body: { content: 'My answer' },
+        user: { id: 77, role: 'student' },
+      } as any;
+
+      mockTaskModel.findByPk.mockResolvedValue({
+        id: 31,
+        title: 'Essay',
+        topic: {
+          id: 12,
+          status: 'draft',
+          deadline: '2026-05-01',
+        },
+      });
+
+      await submitTask(req, response);
+
+      expect(response.status).toHaveBeenCalledWith(403);
+      expect(response.json).toHaveBeenCalledWith({
+        success: false,
+        error: 'Task submissions are only allowed for published topics',
+      });
+      expect(mockSubmissionModel.findOne).not.toHaveBeenCalled();
+    });
+
+    it('rejects submissions after the deadline', async () => {
+      const response = createMockResponse();
+      const req = {
+        params: { id: '31' },
+        body: { content: 'Late answer' },
+        user: { id: 77, role: 'student' },
+      } as any;
+
+      mockTaskModel.findByPk.mockResolvedValue({
+        id: 31,
+        title: 'Essay',
+        topic: {
+          id: 12,
+          status: 'published',
+          deadline: '2026-03-01',
+        },
+      });
+
+      await submitTask(req, response);
+
+      expect(response.status).toHaveBeenCalledWith(403);
+      expect(response.json).toHaveBeenCalledWith({
+        success: false,
+        error: 'Submission deadline has passed',
+      });
+      expect(mockSubmissionModel.findOne).not.toHaveBeenCalled();
     });
 
     it('returns submissions for the task owner', async () => {
@@ -360,7 +491,7 @@ describe('Workflow API coverage', () => {
             taskId: '31',
             studentId: '77',
             content: 'My answer',
-            fileUrl: '/uploads/answer.txt',
+            fileUrl: '/api/submissions/91/attachment',
             submittedAt: '2026-04-01T10:00:00.000Z',
             student: {
               id: '77',
@@ -407,7 +538,7 @@ describe('Workflow API coverage', () => {
             taskId: '31',
             studentId: '77',
             content: 'My answer',
-            fileUrl: '/uploads/answer.txt',
+            fileUrl: '/api/submissions/91/attachment',
             submittedAt: '2026-04-01T10:00:00.000Z',
             task: {
               id: '31',
@@ -424,6 +555,50 @@ describe('Workflow API coverage', () => {
   });
 
   describe('Review endpoints', () => {
+    it('rejects review creation when the score is out of range', async () => {
+      (jwt.verify as jest.Mock).mockReturnValue({ id: 41 });
+      mockUserModel.findByPk.mockResolvedValue({
+        id: 41,
+        username: 'teacher-one',
+        email: 'teacher1@example.com',
+        role: 'teacher',
+      });
+
+      const response = await request(app)
+        .post('/api/submissions/91/review')
+        .set('Authorization', 'Bearer teacher-token')
+        .send({ score: 101, feedback: 'Too high' });
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({
+        success: false,
+        error: 'Score must be a number between 0 and 100',
+      });
+      expect(mockSubmissionModel.findByPk).not.toHaveBeenCalled();
+    });
+
+    it('rejects review updates when the score is out of range', async () => {
+      (jwt.verify as jest.Mock).mockReturnValue({ id: 41 });
+      mockUserModel.findByPk.mockResolvedValue({
+        id: 41,
+        username: 'teacher-one',
+        email: 'teacher1@example.com',
+        role: 'teacher',
+      });
+
+      const response = await request(app)
+        .put('/api/reviews/7')
+        .set('Authorization', 'Bearer teacher-token')
+        .send({ score: -1, feedback: 'Too low' });
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({
+        success: false,
+        error: 'Score must be a number between 0 and 100',
+      });
+      expect(mockReviewModel.findByPk).not.toHaveBeenCalled();
+    });
+
     it('creates a review for a submission owned by the teacher topic', async () => {
       (jwt.verify as jest.Mock).mockReturnValue({ id: 41 });
       mockUserModel.findByPk.mockResolvedValue({

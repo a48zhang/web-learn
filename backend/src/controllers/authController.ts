@@ -7,7 +7,7 @@ import { AuthRequest } from '../middlewares/authMiddleware';
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const { username, email, password, role } = req.body;
+    const { username, email, password } = req.body;
 
     if (!username || !email || !password) {
       return res.status(400).json({
@@ -15,10 +15,6 @@ export const register = async (req: Request, res: Response) => {
         error: 'Username, email, and password are required',
       });
     }
-
-    // Validate role
-    const validRoles = ['admin', 'teacher', 'student', 'guest'];
-    const userRole = role && validRoles.includes(role) ? role : 'student';
 
     const existingUser = await User.findOne({
       where: {
@@ -37,7 +33,7 @@ export const register = async (req: Request, res: Response) => {
       username,
       email,
       password,
-      role: userRole,
+      role: 'student',
     });
 
     const token = jwt.sign(

@@ -1,3 +1,26 @@
+const mockConfig = {
+  port: 3001,
+  jwt: {
+    secret: 'test-secret',
+    expiresIn: '7d',
+  },
+  cors: {
+    origins: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  },
+  database: {
+    host: 'localhost',
+    port: 3306,
+    name: 'web_learn',
+    user: 'root',
+    password: '',
+  },
+  uploadsDir: '/tmp/web-learn-test-uploads',
+};
+
+jest.mock('../src/utils/config', () => ({
+  config: mockConfig,
+}));
+
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 
@@ -98,6 +121,38 @@ describe('Auth API', () => {
         error: 'Username, email, and password are required',
       });
       expect(mockUserModel.findOne).not.toHaveBeenCalled();
+    });
+
+    it('forces public registration to student even when a privileged role is requested', async () => {
+      mockUserModel.findOne.mockResolvedValue(null);
+      mockUserModel.create.mockResolvedValue({
+        id: 4,
+        username: 'eve',
+        email: 'eve@example.com',
+        role: 'student',
+      });
+      (jwt.sign as jest.Mock).mockReturnValue('forced-student-token');
+
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send({
+          username: 'eve',
+          email: 'eve@example.com',
+          password: 'password123',
+          role: 'admin',
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.data.user).toMatchObject({
+        id: 4,
+        role: 'student',
+      });
+      expect(mockUserModel.create).toHaveBeenCalledWith({
+        username: 'eve',
+        email: 'eve@example.com',
+        password: 'password123',
+        role: 'student',
+      });
     });
 
     it('rejects duplicate username or email', async () => {

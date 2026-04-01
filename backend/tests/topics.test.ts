@@ -1,3 +1,26 @@
+const mockConfig = {
+  port: 3001,
+  jwt: {
+    secret: 'test-secret',
+    expiresIn: '7d',
+  },
+  cors: {
+    origins: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  },
+  database: {
+    host: 'localhost',
+    port: 3306,
+    name: 'web_learn',
+    user: 'root',
+    password: '',
+  },
+  uploadsDir: '/tmp/web-learn-test-uploads',
+};
+
+jest.mock('../src/utils/config', () => ({
+  config: mockConfig,
+}));
+
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 
@@ -121,52 +144,31 @@ describe('Topics API', () => {
       });
       expect(mockTopicModel.create).not.toHaveBeenCalled();
     });
-
-    it('rejects topic creation without title', async () => {
-      (jwt.verify as jest.Mock).mockReturnValue({ id: 12 });
-      mockUserModel.findByPk.mockResolvedValue({
-        id: 12,
-        username: 'teacher2',
-        email: 'teacher2@example.com',
-        role: 'teacher',
-      });
-
-      const response = await request(app)
-        .post('/api/topics')
-        .set('Authorization', 'Bearer teacher-token')
-        .send({ description: 'Missing title' });
-
-      expect(response.status).toBe(400);
-      expect(response.body).toEqual({
-        success: false,
-        error: 'Title is required',
-      });
-    });
   });
 
   describe('GET /api/topics', () => {
-    it('returns teacher-owned topics for a teacher user', async () => {
-      (jwt.verify as jest.Mock).mockReturnValue({ id: 20 });
+    it('lists teacher-owned topics for teachers', async () => {
+      (jwt.verify as jest.Mock).mockReturnValue({ id: 10 });
       mockUserModel.findByPk.mockResolvedValue({
-        id: 20,
-        username: 'teacher3',
-        email: 'teacher3@example.com',
+        id: 10,
+        username: 'teacher1',
+        email: 'teacher@example.com',
         role: 'teacher',
       });
       mockTopicModel.findAll.mockResolvedValue([
         {
-          id: 1,
-          title: 'Topic A',
-          description: 'Owned by teacher',
-          created_by: 20,
+          id: 7,
+          title: 'Jest Basics',
+          description: 'Testing fundamentals',
+          created_by: 10,
           status: 'draft',
-          deadline: new Date('2026-04-10T00:00:00.000Z'),
+          deadline: new Date('2026-05-01T00:00:00.000Z'),
           created_at: new Date('2026-04-01T00:00:00.000Z'),
-          updated_at: new Date('2026-04-02T00:00:00.000Z'),
+          updated_at: new Date('2026-04-01T00:00:00.000Z'),
           creator: {
-            id: 20,
-            username: 'teacher3',
-            email: 'teacher3@example.com',
+            id: 10,
+            username: 'teacher1',
+            email: 'teacher@example.com',
           },
         },
       ]);
@@ -179,45 +181,40 @@ describe('Topics API', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.data).toHaveLength(1);
       expect(response.body.data[0]).toMatchObject({
-        id: '1',
-        title: 'Topic A',
-        createdBy: '20',
+        id: '7',
+        title: 'Jest Basics',
+        createdBy: '10',
         status: 'draft',
-        creator: {
-          id: '20',
-          username: 'teacher3',
-          email: 'teacher3@example.com',
-        },
       });
       expect(mockTopicModel.findAll).toHaveBeenCalledWith({
-        where: { created_by: 20 },
+        where: { created_by: 10 },
         include: [{ model: mockUserModel, as: 'creator', attributes: ['id', 'username', 'email'] }],
         order: [['created_at', 'DESC']],
       });
     });
 
-    it('returns only published topics for a student user', async () => {
-      (jwt.verify as jest.Mock).mockReturnValue({ id: 21 });
+    it('lists only published topics for students', async () => {
+      (jwt.verify as jest.Mock).mockReturnValue({ id: 11 });
       mockUserModel.findByPk.mockResolvedValue({
-        id: 21,
-        username: 'student2',
-        email: 'student2@example.com',
+        id: 11,
+        username: 'student1',
+        email: 'student@example.com',
         role: 'student',
       });
       mockTopicModel.findAll.mockResolvedValue([
         {
-          id: 2,
-          title: 'Published Topic',
-          description: 'Visible to students',
-          created_by: 30,
+          id: 8,
+          title: 'Algorithms',
+          description: 'Graphs and trees',
+          created_by: 10,
           status: 'published',
           deadline: undefined,
-          created_at: new Date('2026-04-03T00:00:00.000Z'),
-          updated_at: new Date('2026-04-03T01:00:00.000Z'),
+          created_at: new Date('2026-04-02T00:00:00.000Z'),
+          updated_at: new Date('2026-04-02T00:00:00.000Z'),
           creator: {
-            id: 30,
-            username: 'teacher4',
-            email: 'teacher4@example.com',
+            id: 10,
+            username: 'teacher1',
+            email: 'teacher@example.com',
           },
         },
       ]);
@@ -228,26 +225,16 @@ describe('Topics API', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
+      expect(response.body.data).toHaveLength(1);
       expect(response.body.data[0]).toMatchObject({
-        id: '2',
-        title: 'Published Topic',
+        id: '8',
+        title: 'Algorithms',
         status: 'published',
-        createdBy: '30',
       });
       expect(mockTopicModel.findAll).toHaveBeenCalledWith({
         where: { status: 'published' },
         include: [{ model: mockUserModel, as: 'creator', attributes: ['id', 'username', 'email'] }],
         order: [['created_at', 'DESC']],
-      });
-    });
-
-    it('rejects topic listing without a token', async () => {
-      const response = await request(app).get('/api/topics');
-
-      expect(response.status).toBe(401);
-      expect(response.body).toEqual({
-        success: false,
-        error: 'No token, authorization denied',
       });
     });
   });

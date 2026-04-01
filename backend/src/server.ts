@@ -1,12 +1,25 @@
 import dotenv from 'dotenv';
+dotenv.config();
+
 import app from './app';
 import { config } from './utils/config';
-
-dotenv.config();
+import { testDatabaseConnection, syncDatabase } from './utils/database';
 
 const PORT = config.port;
 
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-  console.log(`Health check: http://localhost:${PORT}/api/health`);
-});
+async function startServer() {
+  try {
+    await testDatabaseConnection();
+    await syncDatabase();
+
+    app.listen(PORT, () => {
+      console.log(`Server is running on http://localhost:${PORT}`);
+      console.log(`Health check: http://localhost:${PORT}/api/health`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();

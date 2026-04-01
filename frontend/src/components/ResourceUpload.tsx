@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Resource } from '@web-learn/shared';
+import { resourceApi } from '../services/api';
 
 interface ResourceUploadProps {
   topicId: string;
@@ -40,28 +41,16 @@ function ResourceUpload({ topicId, onUploadSuccess, onUploadError }: ResourceUpl
         formData.append('file', file);
       }
 
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/topics/${topicId}/resources`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        body: formData,
-      });
+      const resource = await resourceApi.upload(topicId, formData);
 
-      const result = await response.json();
-      if (!result.success) {
-        throw new Error(result.error || '上传失败');
-      }
-
-      onUploadSuccess(result.data);
+      onUploadSuccess(resource);
       setType('document');
       setTitle('');
       setUri('');
       setFile(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Upload error:', error);
-      onUploadError?.(error instanceof Error ? error.message : '上传失败');
+      onUploadError?.(error.response?.data?.error || error.message || '上传失败');
     } finally {
       setUploading(false);
     }

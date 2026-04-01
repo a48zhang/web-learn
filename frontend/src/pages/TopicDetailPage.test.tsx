@@ -47,16 +47,6 @@ vi.mock('../components/TaskList', () => ({
   default: ({ tasks }: { tasks: unknown[] }) => <div>任务数量：{tasks.length}</div>,
 }));
 
-const fetchMock = vi.fn();
-const localStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
-};
-vi.stubGlobal('fetch', fetchMock);
-vi.stubGlobal('localStorage', localStorageMock);
-
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
   return {
@@ -72,12 +62,6 @@ describe('TopicDetailPage', () => {
     taskApiMock.getByTopic.mockReset();
     resourceApiMock.getByTopic.mockReset();
     resourceApiMock.delete.mockReset();
-    fetchMock.mockReset();
-    localStorageMock.getItem.mockReset();
-    localStorageMock.setItem.mockReset();
-    localStorageMock.removeItem.mockReset();
-    localStorageMock.clear.mockReset();
-    localStorageMock.getItem.mockReturnValue('token-123');
   });
 
   it('loads topic resources and tasks successfully', async () => {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { submissionApi, reviewApi } from '../services/api';
+import { submissionApi, reviewApi, API_ORIGIN } from '../services/api';
 import type { Submission, Review } from '@web-learn/shared';
 import ReviewForm from './ReviewForm';
 import ReviewDisplay from './ReviewDisplay';
@@ -158,7 +158,7 @@ function SubmissionList({ taskId, isTeacher = false }: SubmissionListProps) {
                   <div>
                     <h5 className="text-sm font-medium text-gray-700 mb-1">附件</h5>
                     <a
-                      href={`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${submission.fileUrl}`}
+                      href={`${API_ORIGIN}${submission.fileUrl}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:text-blue-800 underline"

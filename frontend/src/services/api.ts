@@ -16,9 +16,11 @@ import type {
   Review,
   CreateReviewDto,
   UpdateReviewDto,
+  SubmissionWithContext,
 } from '@web-learn/shared';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+export const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, '');
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -119,6 +121,8 @@ export const resourceApi = {
     return response.data.data as Resource[];
   },
 
+  downloadUrl: (id: string): string => `${API_BASE_URL}/resources/${id}/download`,
+
   delete: async (id: string): Promise<void> => {
     await api.delete(`/resources/${id}`);
   },
@@ -153,9 +157,9 @@ export const submissionApi = {
     return response.data.data as Submission[];
   },
 
-  getMySubmissions: async (): Promise<Submission[]> => {
-    const response = await api.get<ApiResponse<Submission[]>>('/submissions/me');
-    return response.data.data as Submission[];
+  getMySubmissions: async (): Promise<SubmissionWithContext[]> => {
+    const response = await api.get<ApiResponse<SubmissionWithContext[]>>('/submissions/me');
+    return response.data.data as SubmissionWithContext[];
   },
 };
 

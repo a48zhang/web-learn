@@ -9,18 +9,11 @@ import {
 import {
   uploadResource,
   getResources,
-  downloadResource,
-  deleteResource,
 } from '../controllers/resourceController';
 import {
   createTask,
   getTasksForTopic,
 } from '../controllers/taskController';
-import {
-  submitTask,
-  getSubmissionsForTask,
-  getMySubmissions,
-} from '../controllers/submissionController';
 import { authMiddleware } from '../middlewares/authMiddleware';
 import { upload } from '../middlewares/uploadMiddleware';
 
@@ -51,27 +44,11 @@ router.post('/:id/resources', upload.single('file'), uploadResource);
 // GET /api/topics/:id/resources - Get resources for topic
 router.get('/:id/resources', getResources);
 
-// GET /api/resources/:id/download - Download resource
-router.get('/resources/:id/download', downloadResource);
-
-// DELETE /api/resources/:id - Delete resource
-router.delete('/resources/:id', deleteResource);
-
 // Task routes
 // POST /api/topics/:id/tasks - Create task (teacher only)
 router.post('/:id/tasks', createTask);
 
 // GET /api/topics/:id/tasks - Get tasks for topic
 router.get('/:id/tasks', getTasksForTopic);
-
-// Submission routes
-// POST /api/tasks/:id/submit - Submit task (student only)
-router.post('/tasks/:id/submit', upload.single('file'), submitTask);
-
-// GET /api/tasks/:id/submissions - Get submissions for task (teacher)
-router.get('/tasks/:id/submissions', getSubmissionsForTask);
-
-// GET /api/submissions/me - Get my submissions (student)
-router.get('/submissions/me', getMySubmissions);
 
 export default router;

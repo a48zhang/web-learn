@@ -5,6 +5,9 @@ import { config } from './utils/config';
 import authRoutes from './routes/authRoutes';
 import userRoutes from './routes/userRoutes';
 import topicRoutes from './routes/topicRoutes';
+import resourceRoutes from './routes/resourceRoutes';
+import taskRoutes from './routes/taskRoutes';
+import submissionRoutes from './routes/submissionRoutes';
 import reviewRoutes from './routes/reviewRoutes';
 
 const app: Application = express();
@@ -30,6 +33,9 @@ app.get('/api/health', (req: Request, res: Response) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/topics', topicRoutes);
+app.use('/api/resources', resourceRoutes);
+app.use('/api/tasks', taskRoutes);
+app.use('/api/submissions', submissionRoutes);
 app.use('/api', reviewRoutes);
 
 // Error handling middleware

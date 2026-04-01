@@ -1,4 +1,5 @@
 import type { Resource } from '@web-learn/shared';
+import { resourceApi } from '../services/api';
 
 interface ResourceListProps {
   resources: Resource[];
@@ -64,38 +65,37 @@ function ResourceList({ resources, canDelete = false, onDelete, onDownload }: Re
 
     if (resource.type === 'link') {
       window.open(resource.uri, '_blank');
-    } else {
-      const token = localStorage.getItem('auth_token');
-      const url = `${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/resources/${resource.id}/download`;
-
-      // For file downloads, we need to handle it differently
-      fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
-        .then(response => {
-          if (response.headers.get('content-type')?.includes('application/json')) {
-            response.json().then(data => {
-              if (data.success && data.data?.uri) {
-                window.open(data.data.uri, '_blank');
-              }
-            });
-            return;
-          }
-          response.blob().then(blob => {
-            const downloadUrl = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = downloadUrl;
-            a.download = resource.title || 'download';
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(downloadUrl);
-            document.body.removeChild(a);
-          });
-        })
-        .catch(error => console.error('Download error:', error));
+      return;
     }
+
+    const token = localStorage.getItem('auth_token');
+
+    fetch(resourceApi.downloadUrl(resource.id), {
+      headers: token ? {
+        'Authorization': `Bearer ${token}`,
+      } : undefined,
+    })
+      .then(response => {
+        if (response.headers.get('content-type')?.includes('application/json')) {
+          response.json().then(data => {
+            if (data.success && data.data?.uri) {
+              window.open(data.data.uri, '_blank');
+            }
+          });
+          return;
+        }
+        response.blob().then(blob => {
+          const downloadUrl = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = downloadUrl;
+          a.download = resource.title || 'download';
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(downloadUrl);
+          document.body.removeChild(a);
+        });
+      })
+      .catch(error => console.error('Download error:', error));
   };
 
   if (resources.length === 0) {

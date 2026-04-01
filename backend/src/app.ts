@@ -1,5 +1,6 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
+import path from 'path';
 import { config } from './utils/config';
 import authRoutes from './routes/authRoutes';
 import userRoutes from './routes/userRoutes';
@@ -11,6 +12,9 @@ const app: Application = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve uploads statically
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Health check route
 app.get('/api/health', (req: Request, res: Response) => {

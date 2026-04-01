@@ -57,18 +57,17 @@ export interface UpdateTopicStatusDto {
 export interface Resource {
   id: string;
   topicId: string;
-  title: string;
-  type: 'document' | 'link' | 'file';
-  url: string;
-  uploadedBy: string;
-  createdAt: string;
+  ownerId: string;
+  type: 'document' | 'video' | 'link' | 'other';
+  title?: string;
+  uri: string;
+  uploadedAt: string;
 }
 
 export interface CreateResourceDto {
-  topicId: string;
-  title: string;
-  type: 'document' | 'link' | 'file';
-  url: string;
+  type: 'document' | 'video' | 'link' | 'other';
+  title?: string;
+  uri?: string; // For links
 }
 
 // Task types

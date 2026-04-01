@@ -8,7 +8,8 @@ import type {
   Topic,
   CreateTopicDto,
   UpdateTopicDto,
-  UpdateTopicStatusDto
+  UpdateTopicStatusDto,
+  Resource,
 } from '@web-learn/shared';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
@@ -93,6 +94,27 @@ export const topicApi = {
   updateStatus: async (id: string, data: UpdateTopicStatusDto): Promise<Topic> => {
     const response = await api.patch<ApiResponse<Topic>>(`/topics/${id}/status`, data);
     return response.data.data as Topic;
+  },
+};
+
+// Resource API
+export const resourceApi = {
+  upload: async (topicId: string, formData: FormData): Promise<Resource> => {
+    const response = await api.post<ApiResponse<Resource>>(`/topics/${topicId}/resources`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data.data as Resource;
+  },
+
+  getByTopic: async (topicId: string): Promise<Resource[]> => {
+    const response = await api.get<ApiResponse<Resource[]>>(`/topics/${topicId}/resources`);
+    return response.data.data as Resource[];
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/resources/${id}`);
   },
 };
 

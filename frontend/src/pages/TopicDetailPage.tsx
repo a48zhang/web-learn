@@ -2,17 +2,43 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuthStore } from '../stores/useAuthStore';
 import { topicApi } from '../services/api';
-import type { Topic } from '@web-learn/shared';
+import type { Topic, Resource } from '@web-learn/shared';
+import ResourceUpload from '../components/ResourceUpload';
+import ResourceList from '../components/ResourceList';
 
 function TopicDetailPage() {
   const { user } = useAuthStore();
   const { id } = useParams<{ id: string }>();
   const [topic, setTopic] = useState<Topic | null>(null);
+  const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
+  const [resourcesLoading, setResourcesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [showUpload, setShowUpload] = useState(false);
 
   const isOwner = user?.role === 'teacher' && topic?.createdBy === user.id;
+
+  const fetchResources = async () => {
+    if (!id) return;
+    setResourcesLoading(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/topics/${id}/resources`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      const result = await response.json();
+      if (result.success) {
+        setResources(result.data || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch resources:', err);
+    } finally {
+      setResourcesLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchTopic = async () => {
@@ -31,6 +57,40 @@ function TopicDetailPage() {
 
     fetchTopic();
   }, [id]);
+
+  useEffect(() => {
+    if (topic) {
+      fetchResources();
+    }
+  }, [topic?.id]);
+
+  const handleUploadSuccess = (resource: Resource) => {
+    setResources(prev => [resource, ...prev]);
+    setShowUpload(false);
+  };
+
+  const handleDeleteResource = async (resourceId: string) => {
+    if (!confirm('确定要删除这个资源吗？')) return;
+
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/resources/${resourceId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      const result = await response.json();
+      if (result.success) {
+        setResources(prev => prev.filter(r => r.id !== resourceId));
+      } else {
+        alert('删除失败: ' + (result.error || '未知错误'));
+      }
+    } catch (err) {
+      console.error('Delete error:', err);
+      alert('删除失败');
+    }
+  };
 
   const handleStatusChange = async (newStatus: 'draft' | 'published' | 'closed') => {
     if (!topic) return;
@@ -168,12 +228,40 @@ function TopicDetailPage() {
               )}
             </div>
 
-            {/* Resources (Placeholder) */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">学习资源</h2>
-              <div className="text-gray-500 text-center py-8">
-                资源模块开发中...
+            {/* Resources */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900">学习资源</h2>
+                {isOwner && (
+                  <button
+                    onClick={() => setShowUpload(!showUpload)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+                  >
+                    {showUpload ? '取消上传' : '上传资源'}
+                  </button>
+                )}
               </div>
+
+              {showUpload && isOwner && (
+                <ResourceUpload
+                  topicId={topic!.id}
+                  onUploadSuccess={handleUploadSuccess}
+                  onUploadError={(error) => alert(error)}
+                />
+              )}
+
+              {resourcesLoading ? (
+                <div className="bg-white shadow rounded-lg p-6 text-center">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                  <p className="text-gray-600">加载资源中...</p>
+                </div>
+              ) : (
+                <ResourceList
+                  resources={resources}
+                  canDelete={isOwner}
+                  onDelete={handleDeleteResource}
+                />
+              )}
             </div>
 
             {/* Tasks (Placeholder) */}

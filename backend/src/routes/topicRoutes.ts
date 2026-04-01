@@ -6,7 +6,14 @@ import {
   updateTopic,
   updateTopicStatus,
 } from '../controllers/topicController';
+import {
+  uploadResource,
+  getResources,
+  downloadResource,
+  deleteResource,
+} from '../controllers/resourceController';
 import { authMiddleware } from '../middlewares/authMiddleware';
+import { upload } from '../middlewares/uploadMiddleware';
 
 const router: Router = express.Router();
 
@@ -27,5 +34,18 @@ router.put('/:id', updateTopic);
 
 // PATCH /api/topics/:id/status - Publish/close topic
 router.patch('/:id/status', updateTopicStatus);
+
+// Resource routes
+// POST /api/topics/:id/resources - Upload resource to topic
+router.post('/:id/resources', upload.single('file'), uploadResource);
+
+// GET /api/topics/:id/resources - Get resources for topic
+router.get('/:id/resources', getResources);
+
+// GET /api/resources/:id/download - Download resource
+router.get('/resources/:id/download', downloadResource);
+
+// DELETE /api/resources/:id - Delete resource
+router.delete('/resources/:id', deleteResource);
 
 export default router;

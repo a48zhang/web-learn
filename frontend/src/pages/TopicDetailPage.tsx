@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useAuthStore } from '../stores/useAuthStore';
 import { toast } from '../stores/useToastStore';
 import { LoadingOverlay, LoadingSpinner } from '../components/Loading';
-import { topicApi, taskApi } from '../services/api';
+import { topicApi, taskApi, resourceApi } from '../services/api';
 import type { Topic, Resource, Task } from '@web-learn/shared';
 import ResourceUpload from '../components/ResourceUpload';
 import ResourceList from '../components/ResourceList';
@@ -19,6 +19,8 @@ function TopicDetailPage() {
   const [loading, setLoading] = useState(true);
   const [resourcesLoading, setResourcesLoading] = useState(false);
   const [tasksLoading, setTasksLoading] = useState(false);
+  const [resourcesError, setResourcesError] = useState<string | null>(null);
+  const [tasksError, setTasksError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
@@ -29,18 +31,12 @@ function TopicDetailPage() {
   const fetchResources = async () => {
     if (!id) return;
     setResourcesLoading(true);
+    setResourcesError(null);
     try {
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/topics/${id}/resources`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      const result = await response.json();
-      if (result.success) {
-        setResources(result.data || []);
-      }
+      const data = await resourceApi.getByTopic(id);
+      setResources(data || []);
     } catch (err) {
+      setResourcesError('暂时无法获取资源列表，请稍后重试。');
       console.error('Failed to fetch resources:', err);
     } finally {
       setResourcesLoading(false);
@@ -50,10 +46,12 @@ function TopicDetailPage() {
   const fetchTasks = async () => {
     if (!id) return;
     setTasksLoading(true);
+    setTasksError(null);
     try {
       const data = await taskApi.getByTopic(id);
       setTasks(data || []);
     } catch (err) {
+      setTasksError('暂时无法获取任务列表，请稍后重试。');
       console.error('Failed to fetch tasks:', err);
     } finally {
       setTasksLoading(false);
@@ -96,7 +94,6 @@ function TopicDetailPage() {
   };
 
   const handleSubmissionSuccess = () => {
-    // Optionally update state to show that submission was made
     toast.success('提交成功！');
   };
 
@@ -104,23 +101,12 @@ function TopicDetailPage() {
     if (!confirm('确定要删除这个资源吗？')) return;
 
     try {
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/resources/${resourceId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      const result = await response.json();
-      if (result.success) {
-        setResources(prev => prev.filter(r => r.id !== resourceId));
-        toast.success('资源已删除');
-      } else {
-        toast.error('删除失败: ' + (result.error || '未知错误'));
-      }
-    } catch (err) {
+      await resourceApi.delete(resourceId);
+      setResources(prev => prev.filter(r => r.id !== resourceId));
+      toast.success('资源已删除');
+    } catch (err: any) {
       console.error('Delete error:', err);
-      toast.error('删除失败');
+      toast.error('删除失败: ' + (err.response?.data?.error || '未知错误'));
     }
   };
 
@@ -189,7 +175,6 @@ function TopicDetailPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        {/* Header */}
         <div className="mb-6">
           <Link to="/topics" className="text-blue-600 hover:text-blue-500 mb-2 inline-block">
             ← 返回专题列表
@@ -240,11 +225,8 @@ function TopicDetailPage() {
           </div>
         </div>
 
-        {/* Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Description */}
             <div className="bg-white shadow rounded-lg p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">专题描述</h2>
               {topic.description ? (
@@ -254,7 +236,6 @@ function TopicDetailPage() {
               )}
             </div>
 
-            {/* Resources */}
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <h2 className="text-lg font-semibold text-gray-900">学习资源</h2>
@@ -270,7 +251,7 @@ function TopicDetailPage() {
 
               {showUpload && isOwner && (
                 <ResourceUpload
-                  topicId={topic!.id}
+                  topicId={topic.id}
                   onUploadSuccess={handleUploadSuccess}
                   onUploadError={(error) => toast.error(error)}
                 />
@@ -281,6 +262,11 @@ function TopicDetailPage() {
                   <LoadingSpinner size="md" className="mr-2" />
                   <span className="text-gray-600">加载资源中...</span>
                 </div>
+              ) : resourcesError ? (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <p className="text-red-600 font-medium">资源加载失败</p>
+                  <p className="text-red-500 text-sm mt-1">{resourcesError}</p>
+                </div>
               ) : (
                 <ResourceList
                   resources={resources}
@@ -290,7 +276,6 @@ function TopicDetailPage() {
               )}
             </div>
 
-            {/* Tasks */}
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <h2 className="text-lg font-semibold text-gray-900">任务列表</h2>
@@ -306,7 +291,7 @@ function TopicDetailPage() {
 
               {showTaskCreate && isOwner && (
                 <TaskCreate
-                  topicId={topic!.id}
+                  topicId={topic.id}
                   onTaskCreated={handleTaskCreated}
                   onCancel={() => setShowTaskCreate(false)}
                 />
@@ -316,6 +301,11 @@ function TopicDetailPage() {
                 <div className="bg-white shadow rounded-lg p-6 flex items-center justify-center">
                   <LoadingSpinner size="md" className="mr-2" />
                   <span className="text-gray-600">加载任务中...</span>
+                </div>
+              ) : tasksError ? (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <p className="text-red-600 font-medium">任务加载失败</p>
+                  <p className="text-red-500 text-sm mt-1">{tasksError}</p>
                 </div>
               ) : (
                 <TaskList
@@ -328,9 +318,7 @@ function TopicDetailPage() {
             </div>
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-6">
-            {/* Info Card */}
             <div className="bg-white shadow rounded-lg p-6">
               <h3 className="text-md font-semibold text-gray-900 mb-4">专题信息</h3>
               <div className="space-y-3">

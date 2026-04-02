@@ -37,6 +37,12 @@ const mockTopicModel = {
   findByPk: jest.fn(),
 };
 
+const mockTopicMemberModel = {
+  create: jest.fn(),
+  findAll: jest.fn(),
+  findOne: jest.fn(),
+};
+
 const mockResourceModel = {
   create: jest.fn(),
   findAll: jest.fn(),
@@ -66,6 +72,7 @@ const mockReviewModel = {
 jest.mock('../src/models', () => ({
   User: mockUserModel,
   Topic: mockTopicModel,
+  TopicMember: mockTopicMemberModel,
   Resource: mockResourceModel,
   Task: mockTaskModel,
   Submission: mockSubmissionModel,
@@ -249,6 +256,11 @@ describe('Workflow API coverage', () => {
           status: 'published',
         },
       });
+      mockTopicMemberModel.findOne.mockResolvedValue({
+        id: 1,
+        topic_id: 12,
+        user_id: 77,
+      });
 
       await downloadResource(req, response);
 
@@ -307,6 +319,11 @@ describe('Workflow API coverage', () => {
           status: 'published',
         },
       });
+      mockTopicMemberModel.findOne.mockResolvedValue({
+        id: 1,
+        topic_id: 12,
+        user_id: 77,
+      });
       jest.spyOn(fs, 'existsSync').mockReturnValue(false);
 
       await downloadResource(req, response);
@@ -364,6 +381,11 @@ describe('Workflow API coverage', () => {
           status: 'published',
           deadline: '2026-05-01',
         },
+      });
+      mockTopicMemberModel.findOne.mockResolvedValue({
+        id: 1,
+        topic_id: 12,
+        user_id: 77,
       });
       mockSubmissionModel.findOne.mockResolvedValue(null);
       mockSubmissionModel.create.mockResolvedValue({
@@ -441,6 +463,11 @@ describe('Workflow API coverage', () => {
           status: 'published',
           deadline: '2026-03-01',
         },
+      });
+      mockTopicMemberModel.findOne.mockResolvedValue({
+        id: 1,
+        topic_id: 12,
+        user_id: 77,
       });
 
       await submitTask(req, response);

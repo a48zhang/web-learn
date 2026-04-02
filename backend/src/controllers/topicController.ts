@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middlewares/authMiddleware';
-import { Topic, User } from '../models';
+import { Topic, User, TopicMember } from '../models';
 
 // Create a new topic (teacher only)
 export const createTopic = async (req: AuthRequest, res: Response) => {
@@ -34,6 +34,13 @@ export const createTopic = async (req: AuthRequest, res: Response) => {
       created_by: req.user.id,
       deadline: deadline ? new Date(deadline) : undefined,
       status: 'draft',
+    });
+
+    // Automatically add the teacher as a topic member
+    await TopicMember.create({
+      topic_id: topic.id,
+      user_id: req.user.id,
+      joined_at: new Date(),
     });
 
     res.status(201).json({
@@ -70,7 +77,13 @@ export const getTopics = async (req: AuthRequest, res: Response) => {
 
     let topics;
 
-    if (req.user.role === 'teacher') {
+    if (req.user.role === 'admin') {
+      // Admin sees all topics
+      topics = await Topic.findAll({
+        include: [{ model: User, as: 'creator', attributes: ['id', 'username', 'email'] }],
+        order: [['created_at', 'DESC']],
+      });
+    } else if (req.user.role === 'teacher') {
       // Teacher sees their own topics
       topics = await Topic.findAll({
         where: { created_by: req.user.id },
@@ -78,9 +91,15 @@ export const getTopics = async (req: AuthRequest, res: Response) => {
         order: [['created_at', 'DESC']],
       });
     } else {
-      // Student sees published topics (for now, we'll enhance this later with enrollment)
+      // Student sees only topics they have joined
+      const memberships = await TopicMember.findAll({
+        where: { user_id: req.user.id },
+        attributes: ['topic_id'],
+      });
+      const topicIds = memberships.map((m) => m.topic_id);
+
       topics = await Topic.findAll({
-        where: { status: 'published' },
+        where: { id: topicIds, status: 'published' },
         include: [{ model: User, as: 'creator', attributes: ['id', 'username', 'email'] }],
         order: [['created_at', 'DESC']],
       });
@@ -149,19 +168,36 @@ export const getTopicById = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Check access: teacher who created it, or student (only if published)
-    if (req.user.role === 'student' && topic.status !== 'published') {
-      return res.status(403).json({
-        success: false,
-        error: 'Access denied',
-      });
-    }
+    // Check access: admin, teacher who created it, or student who joined
+    if (req.user.role === 'admin') {
+      // Admin can access all topics
+    } else if (req.user.role === 'teacher') {
+      // Teacher can access their own topics
+      if (topic.created_by !== req.user.id) {
+        return res.status(403).json({
+          success: false,
+          error: 'Access denied',
+        });
+      }
+    } else {
+      // Student must have joined the topic and it must be published
+      if (topic.status !== 'published') {
+        return res.status(403).json({
+          success: false,
+          error: 'Access denied',
+        });
+      }
 
-    if (req.user.role === 'teacher' && topic.created_by !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        error: 'Access denied',
+      const membership = await TopicMember.findOne({
+        where: { topic_id: topicId, user_id: req.user.id },
       });
+
+      if (!membership) {
+        return res.status(403).json({
+          success: false,
+          error: 'Access denied. You have not joined this topic.',
+        });
+      }
     }
 
     const topicWithCreator = topic as any; // Type assertion for association

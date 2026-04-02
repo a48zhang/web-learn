@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Submission, Task, Topic, User } from '../models';
+import { Submission, Task, Topic, User, TopicMember } from '../models';
 import path from 'path';
 import fs from 'fs';
 import { config } from '../utils/config';
@@ -42,6 +42,18 @@ export const submitTask = async (req: Request, res: Response) => {
       return res.status(403).json({
         success: false,
         error: 'Task submissions are only allowed for published topics',
+      });
+    }
+
+    // Check if student has joined the topic
+    const membership = await TopicMember.findOne({
+      where: { topic_id: topic.id, user_id: userId },
+    });
+
+    if (!membership) {
+      return res.status(403).json({
+        success: false,
+        error: 'You must join the topic before submitting tasks',
       });
     }
 

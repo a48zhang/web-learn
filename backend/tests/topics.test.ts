@@ -36,9 +36,16 @@ const mockTopicModel = {
   findByPk: jest.fn(),
 };
 
+const mockTopicMemberModel = {
+  create: jest.fn(),
+  findAll: jest.fn(),
+  findOne: jest.fn(),
+};
+
 jest.mock('../src/models', () => ({
   User: mockUserModel,
   Topic: mockTopicModel,
+  TopicMember: mockTopicMemberModel,
   Resource: {
     create: jest.fn(),
     findAll: jest.fn(),
@@ -94,6 +101,12 @@ describe('Topics API', () => {
         created_at: new Date('2026-04-01T00:00:00.000Z'),
         updated_at: new Date('2026-04-01T00:00:00.000Z'),
       });
+      mockTopicMemberModel.create.mockResolvedValue({
+        id: 1,
+        topic_id: 7,
+        user_id: 10,
+        joined_at: new Date('2026-04-01T00:00:00.000Z'),
+      });
 
       const response = await request(app)
         .post('/api/topics')
@@ -120,6 +133,11 @@ describe('Topics API', () => {
         created_by: 10,
         deadline: new Date('2026-05-01'),
         status: 'draft',
+      });
+      expect(mockTopicMemberModel.create).toHaveBeenCalledWith({
+        topic_id: 7,
+        user_id: 10,
+        joined_at: expect.any(Date),
       });
     });
 
@@ -201,6 +219,9 @@ describe('Topics API', () => {
         email: 'student@example.com',
         role: 'student',
       });
+      mockTopicMemberModel.findAll.mockResolvedValue([
+        { topic_id: 8 },
+      ]);
       mockTopicModel.findAll.mockResolvedValue([
         {
           id: 8,
@@ -231,10 +252,131 @@ describe('Topics API', () => {
         title: 'Algorithms',
         status: 'published',
       });
+      expect(mockTopicMemberModel.findAll).toHaveBeenCalledWith({
+        where: { user_id: 11 },
+        attributes: ['topic_id'],
+      });
       expect(mockTopicModel.findAll).toHaveBeenCalledWith({
-        where: { status: 'published' },
+        where: { id: [8], status: 'published' },
         include: [{ model: mockUserModel, as: 'creator', attributes: ['id', 'username', 'email'] }],
         order: [['created_at', 'DESC']],
+      });
+    });
+  });
+
+  describe('GET /api/topics/:id', () => {
+    it('denies access for student not joined to topic', async () => {
+      (jwt.verify as jest.Mock).mockReturnValue({ id: 11 });
+      mockUserModel.findByPk.mockResolvedValue({
+        id: 11,
+        username: 'student1',
+        email: 'student@example.com',
+        role: 'student',
+      });
+      mockTopicModel.findByPk.mockResolvedValue({
+        id: 8,
+        title: 'Algorithms',
+        description: 'Graphs and trees',
+        created_by: 10,
+        status: 'published',
+        deadline: undefined,
+        created_at: new Date('2026-04-02T00:00:00.000Z'),
+        updated_at: new Date('2026-04-02T00:00:00.000Z'),
+        creator: {
+          id: 10,
+          username: 'teacher1',
+          email: 'teacher@example.com',
+        },
+      });
+      mockTopicMemberModel.findOne.mockResolvedValue(null);
+
+      const response = await request(app)
+        .get('/api/topics/8')
+        .set('Authorization', 'Bearer student-token');
+
+      expect(response.status).toBe(403);
+      expect(response.body).toEqual({
+        success: false,
+        error: 'Access denied. You have not joined this topic.',
+      });
+    });
+
+    it('allows access for student who joined the topic', async () => {
+      (jwt.verify as jest.Mock).mockReturnValue({ id: 11 });
+      mockUserModel.findByPk.mockResolvedValue({
+        id: 11,
+        username: 'student1',
+        email: 'student@example.com',
+        role: 'student',
+      });
+      mockTopicModel.findByPk.mockResolvedValue({
+        id: 8,
+        title: 'Algorithms',
+        description: 'Graphs and trees',
+        created_by: 10,
+        status: 'published',
+        deadline: undefined,
+        created_at: new Date('2026-04-02T00:00:00.000Z'),
+        updated_at: new Date('2026-04-02T00:00:00.000Z'),
+        creator: {
+          id: 10,
+          username: 'teacher1',
+          email: 'teacher@example.com',
+        },
+      });
+      mockTopicMemberModel.findOne.mockResolvedValue({
+        id: 1,
+        topic_id: 8,
+        user_id: 11,
+        joined_at: new Date('2026-04-01T00:00:00.000Z'),
+      });
+
+      const response = await request(app)
+        .get('/api/topics/8')
+        .set('Authorization', 'Bearer student-token');
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toMatchObject({
+        id: '8',
+        title: 'Algorithms',
+        status: 'published',
+      });
+    });
+
+    it('allows access for teacher who created the topic', async () => {
+      (jwt.verify as jest.Mock).mockReturnValue({ id: 10 });
+      mockUserModel.findByPk.mockResolvedValue({
+        id: 10,
+        username: 'teacher1',
+        email: 'teacher@example.com',
+        role: 'teacher',
+      });
+      mockTopicModel.findByPk.mockResolvedValue({
+        id: 8,
+        title: 'Algorithms',
+        description: 'Graphs and trees',
+        created_by: 10,
+        status: 'published',
+        deadline: undefined,
+        created_at: new Date('2026-04-02T00:00:00.000Z'),
+        updated_at: new Date('2026-04-02T00:00:00.000Z'),
+        creator: {
+          id: 10,
+          username: 'teacher1',
+          email: 'teacher@example.com',
+        },
+      });
+
+      const response = await request(app)
+        .get('/api/topics/8')
+        .set('Authorization', 'Bearer teacher-token');
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toMatchObject({
+        id: '8',
+        title: 'Algorithms',
       });
     });
   });

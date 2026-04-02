@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Task, Topic, User } from '../models';
+import { Task, Topic, User, TopicMember } from '../models';
 
 export const createTask = async (req: Request, res: Response) => {
   try {
@@ -56,6 +56,8 @@ export const createTask = async (req: Request, res: Response) => {
 export const getTasksForTopic = async (req: Request, res: Response) => {
   try {
     const { id: topicId } = req.params;
+    const userId = (req as any).user.id;
+    const userRole = (req as any).user.role;
 
     // Verify topic exists
     const topic = await Topic.findByPk(topicId);
@@ -64,6 +66,38 @@ export const getTasksForTopic = async (req: Request, res: Response) => {
         success: false,
         error: 'Topic not found',
       });
+    }
+
+    // Check access
+    if (userRole === 'admin') {
+      // Admin can access all tasks
+    } else if (userRole === 'teacher') {
+      // Teacher can access tasks in their own topics
+      if (topic.created_by !== userId) {
+        return res.status(403).json({
+          success: false,
+          error: 'Access denied',
+        });
+      }
+    } else {
+      // Student must have joined the topic
+      if (topic.status !== 'published') {
+        return res.status(403).json({
+          success: false,
+          error: 'Access denied',
+        });
+      }
+
+      const membership = await TopicMember.findOne({
+        where: { topic_id: parseInt(topicId), user_id: userId },
+      });
+
+      if (!membership) {
+        return res.status(403).json({
+          success: false,
+          error: 'Access denied',
+        });
+      }
     }
 
     const tasks = await Task.findAll({

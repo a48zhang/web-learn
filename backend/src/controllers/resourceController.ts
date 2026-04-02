@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middlewares/authMiddleware';
-import { Resource, Topic, User } from '../models';
+import { Resource, Topic, User, TopicMember } from '../models';
 import path from 'path';
 import fs from 'fs';
 import { config } from '../utils/config';
@@ -130,12 +130,27 @@ export const getResources = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ success: false, error: 'Topic not found' });
     }
 
-    if (req.user.role === 'student' && topic.status !== 'published') {
-      return res.status(403).json({ success: false, error: 'Access denied' });
-    }
+    // Check access
+    if (req.user.role === 'admin') {
+      // Admin can access all resources
+    } else if (req.user.role === 'teacher') {
+      // Teacher can upload to their own topics
+      if (topic.created_by !== req.user.id) {
+        return res.status(403).json({ success: false, error: 'Access denied' });
+      }
+    } else {
+      // Student must have joined the topic
+      if (topic.status !== 'published') {
+        return res.status(403).json({ success: false, error: 'Access denied' });
+      }
 
-    if (req.user.role === 'teacher' && topic.created_by !== req.user.id) {
-      return res.status(403).json({ success: false, error: 'Access denied' });
+      const membership = await TopicMember.findOne({
+        where: { topic_id: topicId, user_id: req.user.id },
+      });
+
+      if (!membership) {
+        return res.status(403).json({ success: false, error: 'Access denied' });
+      }
     }
 
     const resources = await Resource.findAll({
@@ -192,12 +207,28 @@ export const downloadResource = async (req: AuthRequest, res: Response) => {
     }
 
     const topic = (resource as any).topic;
-    if (req.user.role === 'student' && topic.status !== 'published') {
-      return res.status(403).json({ success: false, error: 'Access denied' });
-    }
 
-    if (req.user.role === 'teacher' && topic.created_by !== req.user.id) {
-      return res.status(403).json({ success: false, error: 'Access denied' });
+    // Check access
+    if (req.user.role === 'admin') {
+      // Admin can download all resources
+    } else if (req.user.role === 'teacher') {
+      // Teacher can download from their own topics
+      if (topic.created_by !== req.user.id) {
+        return res.status(403).json({ success: false, error: 'Access denied' });
+      }
+    } else {
+      // Student must have joined the topic
+      if (topic.status !== 'published') {
+        return res.status(403).json({ success: false, error: 'Access denied' });
+      }
+
+      const membership = await TopicMember.findOne({
+        where: { topic_id: topic.id, user_id: req.user.id },
+      });
+
+      if (!membership) {
+        return res.status(403).json({ success: false, error: 'Access denied' });
+      }
     }
 
     if (resource.type === 'link') {

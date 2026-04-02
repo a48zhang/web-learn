@@ -219,9 +219,6 @@ describe('Topics API', () => {
         email: 'student@example.com',
         role: 'student',
       });
-      mockTopicMemberModel.findAll.mockResolvedValue([
-        { topic_id: 8 },
-      ]);
       mockTopicModel.findAll.mockResolvedValue([
         {
           id: 8,
@@ -238,6 +235,24 @@ describe('Topics API', () => {
             email: 'teacher@example.com',
           },
         },
+        {
+          id: 9,
+          title: 'Data Structures',
+          description: 'Arrays and linked lists',
+          created_by: 10,
+          status: 'published',
+          deadline: undefined,
+          created_at: new Date('2026-04-03T00:00:00.000Z'),
+          updated_at: new Date('2026-04-03T00:00:00.000Z'),
+          creator: {
+            id: 10,
+            username: 'teacher1',
+            email: 'teacher@example.com',
+          },
+        },
+      ]);
+      mockTopicMemberModel.findAll.mockResolvedValue([
+        { topic_id: 8 },
       ]);
 
       const response = await request(app)
@@ -246,18 +261,25 @@ describe('Topics API', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
-      expect(response.body.data).toHaveLength(1);
+      expect(response.body.data).toHaveLength(2);
       expect(response.body.data[0]).toMatchObject({
         id: '8',
         title: 'Algorithms',
         status: 'published',
+        hasJoined: true,
+      });
+      expect(response.body.data[1]).toMatchObject({
+        id: '9',
+        title: 'Data Structures',
+        status: 'published',
+        hasJoined: false,
       });
       expect(mockTopicMemberModel.findAll).toHaveBeenCalledWith({
         where: { user_id: 11 },
         attributes: ['topic_id'],
       });
       expect(mockTopicModel.findAll).toHaveBeenCalledWith({
-        where: { id: [8], status: 'published' },
+        where: { status: 'published' },
         include: [{ model: mockUserModel, as: 'creator', attributes: ['id', 'username', 'email'] }],
         order: [['created_at', 'DESC']],
       });
@@ -378,6 +400,139 @@ describe('Topics API', () => {
         id: '8',
         title: 'Algorithms',
       });
+    });
+  });
+
+  describe('POST /api/topics/:id/join', () => {
+    it('allows student to join a published topic', async () => {
+      (jwt.verify as jest.Mock).mockReturnValue({ id: 11 });
+      mockUserModel.findByPk.mockResolvedValue({
+        id: 11,
+        username: 'student1',
+        email: 'student@example.com',
+        role: 'student',
+      });
+      mockTopicModel.findByPk.mockResolvedValue({
+        id: 8,
+        title: 'Algorithms',
+        description: 'Graphs and trees',
+        created_by: 10,
+        status: 'published',
+        deadline: undefined,
+        created_at: new Date('2026-04-02T00:00:00.000Z'),
+        updated_at: new Date('2026-04-02T00:00:00.000Z'),
+      });
+      mockTopicMemberModel.findOne.mockResolvedValue(null);
+      mockTopicMemberModel.create.mockResolvedValue({
+        id: 1,
+        topic_id: 8,
+        user_id: 11,
+        joined_at: new Date('2026-04-01T00:00:00.000Z'),
+      });
+
+      const response = await request(app)
+        .post('/api/topics/8/join')
+        .set('Authorization', 'Bearer student-token');
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toMatchObject({
+        message: 'Successfully joined the topic',
+      });
+      expect(mockTopicMemberModel.create).toHaveBeenCalledWith({
+        topic_id: 8,
+        user_id: 11,
+        joined_at: expect.any(Date),
+      });
+    });
+
+    it('rejects student from joining a draft topic', async () => {
+      (jwt.verify as jest.Mock).mockReturnValue({ id: 11 });
+      mockUserModel.findByPk.mockResolvedValue({
+        id: 11,
+        username: 'student1',
+        email: 'student@example.com',
+        role: 'student',
+      });
+      mockTopicModel.findByPk.mockResolvedValue({
+        id: 7,
+        title: 'Jest Basics',
+        description: 'Testing fundamentals',
+        created_by: 10,
+        status: 'draft',
+        deadline: new Date('2026-05-01T00:00:00.000Z'),
+        created_at: new Date('2026-04-01T00:00:00.000Z'),
+        updated_at: new Date('2026-04-01T00:00:00.000Z'),
+      });
+
+      const response = await request(app)
+        .post('/api/topics/7/join')
+        .set('Authorization', 'Bearer student-token');
+
+      expect(response.status).toBe(403);
+      expect(response.body).toEqual({
+        success: false,
+        error: 'Cannot join a topic that is not published',
+      });
+      expect(mockTopicMemberModel.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects duplicate join attempts', async () => {
+      (jwt.verify as jest.Mock).mockReturnValue({ id: 11 });
+      mockUserModel.findByPk.mockResolvedValue({
+        id: 11,
+        username: 'student1',
+        email: 'student@example.com',
+        role: 'student',
+      });
+      mockTopicModel.findByPk.mockResolvedValue({
+        id: 8,
+        title: 'Algorithms',
+        description: 'Graphs and trees',
+        created_by: 10,
+        status: 'published',
+        deadline: undefined,
+        created_at: new Date('2026-04-02T00:00:00.000Z'),
+        updated_at: new Date('2026-04-02T00:00:00.000Z'),
+      });
+      mockTopicMemberModel.findOne.mockResolvedValue({
+        id: 1,
+        topic_id: 8,
+        user_id: 11,
+        joined_at: new Date('2026-04-01T00:00:00.000Z'),
+      });
+
+      const response = await request(app)
+        .post('/api/topics/8/join')
+        .set('Authorization', 'Bearer student-token');
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({
+        success: false,
+        error: 'Already joined this topic',
+      });
+      expect(mockTopicMemberModel.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects teacher from joining a topic', async () => {
+      (jwt.verify as jest.Mock).mockReturnValue({ id: 10 });
+      mockUserModel.findByPk.mockResolvedValue({
+        id: 10,
+        username: 'teacher1',
+        email: 'teacher@example.com',
+        role: 'teacher',
+      });
+
+      const response = await request(app)
+        .post('/api/topics/8/join')
+        .set('Authorization', 'Bearer teacher-token');
+
+      expect(response.status).toBe(403);
+      expect(response.body).toEqual({
+        success: false,
+        error: 'Only students can join topics',
+      });
+      expect(mockTopicMemberModel.create).not.toHaveBeenCalled();
     });
   });
 });

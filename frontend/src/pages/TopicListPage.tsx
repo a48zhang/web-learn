@@ -4,14 +4,16 @@ import { useAuthStore } from '../stores/useAuthStore';
 import { LoadingOverlay } from '../components/Loading';
 import { EmptyState } from '../components/EmptyState';
 import { topicApi } from '../services/api';
-import type { Topic } from '@web-learn/shared';
+import { toast } from '../stores/useToastStore';
+import type { TopicWithMembership } from '@web-learn/shared';
 
 function TopicListPage() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
-  const [topics, setTopics] = useState<Topic[]>([]);
+  const [topics, setTopics] = useState<TopicWithMembership[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [joiningTopicId, setJoiningTopicId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchTopics = async () => {
@@ -28,6 +30,25 @@ function TopicListPage() {
 
     fetchTopics();
   }, []);
+
+  const handleJoinTopic = async (topicId: string) => {
+    setJoiningTopicId(topicId);
+    try {
+      await topicApi.join(topicId);
+      toast.success('成功加入专题');
+      // Update the topic list to reflect the join
+      setTopics((prev) =>
+        prev.map((topic) =>
+          topic.id === topicId ? { ...topic, hasJoined: true } : topic
+        )
+      );
+    } catch (err: any) {
+      console.error('Join topic error:', err);
+      toast.error(err.response?.data?.error || '加入专题失败');
+    } finally {
+      setJoiningTopicId(null);
+    }
+  };
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
@@ -120,6 +141,11 @@ function TopicListPage() {
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(topic.status)}`}>
                         {getStatusText(topic.status)}
                       </span>
+                      {user?.role === 'student' && topic.hasJoined && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          已加入
+                        </span>
+                      )}
                     </div>
                     {topic.description && (
                       <p className="text-gray-600 mb-3 line-clamp-2">{topic.description}</p>
@@ -130,13 +156,24 @@ function TopicListPage() {
                       )}
                     </div>
                   </div>
-                  <div className="sm:ml-4 flex-shrink-0">
-                    <Link
-                      to={`/topics/${topic.id}`}
-                      className="text-blue-600 hover:text-blue-500 font-medium inline-block"
-                    >
-                      查看详情 →
-                    </Link>
+                  <div className="sm:ml-4 flex-shrink-0 flex flex-col sm:flex-row gap-2">
+                    {user?.role === 'student' && !topic.hasJoined && topic.status === 'published' && (
+                      <button
+                        onClick={() => handleJoinTopic(topic.id)}
+                        disabled={joiningTopicId === topic.id}
+                        className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors disabled:opacity-50"
+                      >
+                        {joiningTopicId === topic.id ? '加入中...' : '加入专题'}
+                      </button>
+                    )}
+                    {(topic.hasJoined || user?.role !== 'student') && (
+                      <Link
+                        to={`/topics/${topic.id}`}
+                        className="w-full sm:w-auto text-blue-600 hover:text-blue-500 font-medium inline-block text-center"
+                      >
+                        查看详情 →
+                      </Link>
+                    )}
                   </div>
                 </div>
               </div>

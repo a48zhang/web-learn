@@ -26,6 +26,8 @@ function TopicDetailPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
   const [showTaskCreate, setShowTaskCreate] = useState(false);
+  const [joiningTopic, setJoiningTopic] = useState(false);
+  const [notJoinedError, setNotJoinedError] = useState(false);
 
   const isOwner = user?.role === 'teacher' && topic?.createdBy === user.id;
 
@@ -66,16 +68,35 @@ function TopicDetailPage() {
       try {
         const data = await topicApi.getById(id);
         setTopic(data);
-      } catch (err) {
-        setError('获取专题详情失败');
+        setNotJoinedError(false);
+      } catch (err: any) {
         console.error(err);
+        // Check if it's a "not joined" error for students
+        if (user?.role === 'student' && err.response?.data?.error?.includes('not joined')) {
+          setNotJoinedError(true);
+          // Try to get basic topic info for display
+          try {
+            // We can use the topics list to get basic info
+            const allTopics = await topicApi.getAll();
+            const foundTopic = allTopics.find((t: any) => t.id === id);
+            if (foundTopic) {
+              setTopic(foundTopic);
+            } else {
+              setError('专题不存在');
+            }
+          } catch {
+            setError('获取专题详情失败');
+          }
+        } else {
+          setError('获取专题详情失败');
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchTopic();
-  }, [id]);
+  }, [id, user?.role]);
 
   useEffect(() => {
     if (topic) {
@@ -127,6 +148,28 @@ function TopicDetailPage() {
     }
   };
 
+  const handleJoinTopic = async () => {
+    if (!id) return;
+
+    setJoiningTopic(true);
+    try {
+      await topicApi.join(id);
+      toast.success('成功加入专题');
+      setNotJoinedError(false);
+      // Fetch full topic details now that we've joined
+      const data = await topicApi.getById(id);
+      setTopic(data);
+      // Fetch resources and tasks
+      fetchResources();
+      fetchTasks();
+    } catch (err: any) {
+      console.error('Join topic error:', err);
+      toast.error(err.response?.data?.error || '加入专题失败');
+    } finally {
+      setJoiningTopic(false);
+    }
+  };
+
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
       case 'draft':
@@ -167,6 +210,54 @@ function TopicDetailPage() {
           <div className="bg-white shadow rounded-lg p-8 text-center">
             <h2 className="text-xl font-semibold text-gray-900 mb-2">出错了</h2>
             <p className="text-gray-600">{error || '专题不存在'}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show join UI for students who haven't joined
+  if (notJoinedError && user?.role === 'student') {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+          <Link to="/topics" className="text-blue-600 hover:text-blue-500 mb-2 inline-block">
+            ← 返回专题列表
+          </Link>
+          <div className="bg-white shadow rounded-lg p-6">
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-2xl font-bold text-gray-900">{topic.title}</h1>
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(topic.status)}`}>
+                {getStatusText(topic.status)}
+              </span>
+            </div>
+            <p className="text-gray-500 mb-4">
+              创建于 {new Date(topic.createdAt).toLocaleString('zh-CN')}
+            </p>
+            {topic.description && (
+              <div className="mb-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-2">专题描述</h2>
+                <p className="text-gray-700 whitespace-pre-wrap">{topic.description}</p>
+              </div>
+            )}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <p className="text-blue-800 font-medium">你还没有加入这个专题</p>
+              <p className="text-blue-700 text-sm mt-1">加入专题后才能查看详细内容、资源和任务。</p>
+            </div>
+            {topic.status === 'published' ? (
+              <button
+                onClick={handleJoinTopic}
+                disabled={joiningTopic}
+                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors disabled:opacity-50"
+              >
+                {joiningTopic ? '加入中...' : '加入专题'}
+              </button>
+            ) : (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p className="text-yellow-800 font-medium">该专题尚未发布</p>
+                <p className="text-yellow-700 text-sm mt-1">只有已发布的专题才能加入。</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

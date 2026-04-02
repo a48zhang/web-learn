@@ -103,6 +103,11 @@ export const topicApi = {
     const response = await api.patch<ApiResponse<Topic>>(`/topics/${id}/status`, data);
     return response.data.data as Topic;
   },
+
+  join: async (id: string): Promise<{ message: string }> => {
+    const response = await api.post<ApiResponse<{ message: string }>>(`/topics/${id}/join`);
+    return response.data.data as { message: string };
+  },
 };
 
 // Resource API

@@ -37,6 +37,10 @@ export interface Topic {
   updatedAt: string;
 }
 
+export interface TopicWithMembership extends Topic {
+  hasJoined?: boolean;
+}
+
 export interface CreateTopicDto {
   title: string;
   description?: string;

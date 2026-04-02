@@ -5,6 +5,7 @@ import {
   getTopicById,
   updateTopic,
   updateTopicStatus,
+  joinTopic,
 } from '../controllers/topicController';
 import {
   uploadResource,
@@ -36,6 +37,9 @@ router.put('/:id', updateTopic);
 
 // PATCH /api/topics/:id/status - Publish/close topic
 router.patch('/:id/status', updateTopicStatus);
+
+// POST /api/topics/:id/join - Join topic (student only)
+router.post('/:id/join', joinTopic);
 
 // Resource routes
 // POST /api/topics/:id/resources - Upload resource to topic

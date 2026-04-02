@@ -91,17 +91,24 @@ export const getTopics = async (req: AuthRequest, res: Response) => {
         order: [['created_at', 'DESC']],
       });
     } else {
-      // Student sees only topics they have joined
+      // Student sees all published topics, with membership info
+      topics = await Topic.findAll({
+        where: { status: 'published' },
+        include: [{ model: User, as: 'creator', attributes: ['id', 'username', 'email'] }],
+        order: [['created_at', 'DESC']],
+      });
+
+      // Get student's memberships
       const memberships = await TopicMember.findAll({
         where: { user_id: req.user.id },
         attributes: ['topic_id'],
       });
-      const topicIds = memberships.map((m) => m.topic_id);
+      const joinedTopicIds = new Set(memberships.map((m) => m.topic_id));
 
-      topics = await Topic.findAll({
-        where: { id: topicIds, status: 'published' },
-        include: [{ model: User, as: 'creator', attributes: ['id', 'username', 'email'] }],
-        order: [['created_at', 'DESC']],
+      // Add hasJoined flag to each topic
+      topics = topics.map((topic) => {
+        (topic as any).hasJoined = joinedTopicIds.has(topic.id);
+        return topic;
       });
     }
 
@@ -121,6 +128,7 @@ export const getTopics = async (req: AuthRequest, res: Response) => {
         deadline: topic.deadline ? topic.deadline.toISOString() : undefined,
         createdAt: topic.created_at.toISOString(),
         updatedAt: topic.updated_at.toISOString(),
+        hasJoined: topicWithCreator.hasJoined,
       };
     });
 
@@ -357,6 +365,85 @@ export const updateTopicStatus = async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     console.error('Update topic status error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+    });
+  }
+};
+
+// Join a topic (student only)
+export const joinTopic = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Not authorized',
+      });
+    }
+
+    // Only students can join topics
+    if (req.user.role !== 'student') {
+      return res.status(403).json({
+        success: false,
+        error: 'Only students can join topics',
+      });
+    }
+
+    const { id } = req.params;
+    const topicId = parseInt(id, 10);
+
+    if (isNaN(topicId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid topic ID',
+      });
+    }
+
+    const topic = await Topic.findByPk(topicId);
+
+    if (!topic) {
+      return res.status(404).json({
+        success: false,
+        error: 'Topic not found',
+      });
+    }
+
+    // Topic must be published for students to join
+    if (topic.status !== 'published') {
+      return res.status(403).json({
+        success: false,
+        error: 'Cannot join a topic that is not published',
+      });
+    }
+
+    // Check if already joined
+    const existingMembership = await TopicMember.findOne({
+      where: { topic_id: topicId, user_id: req.user.id },
+    });
+
+    if (existingMembership) {
+      return res.status(400).json({
+        success: false,
+        error: 'Already joined this topic',
+      });
+    }
+
+    // Create membership
+    await TopicMember.create({
+      topic_id: topicId,
+      user_id: req.user.id,
+      joined_at: new Date(),
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: 'Successfully joined the topic',
+      },
+    });
+  } catch (error) {
+    console.error('Join topic error:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error',

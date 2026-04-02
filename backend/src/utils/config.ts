@@ -1,4 +1,8 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import path from 'path';
+
+// Load .env from root directory (monorepo root)
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
 const parseRequiredJwtSecret = () => {
   const secret = process.env.JWT_SECRET?.trim();

@@ -8,11 +8,9 @@ interface TopicAttributes {
   created_by: number;
   deadline?: Date;
   status: 'draft' | 'published' | 'closed';
-  created_at: Date;
-  updated_at: Date;
 }
 
-interface TopicCreationAttributes extends Optional<TopicAttributes, 'id' | 'created_at' | 'updated_at' | 'description' | 'deadline' | 'status'> {}
+interface TopicCreationAttributes extends Optional<TopicAttributes, 'id' | 'description' | 'deadline' | 'status'> {}
 
 class Topic extends Model<TopicAttributes, TopicCreationAttributes> implements TopicAttributes {
   public id!: number;
@@ -21,8 +19,8 @@ class Topic extends Model<TopicAttributes, TopicCreationAttributes> implements T
   public created_by!: number;
   public deadline?: Date;
   public status!: 'draft' | 'published' | 'closed';
-  public readonly created_at!: Date;
-  public readonly updated_at!: Date;
+  public declare createdAt: Date;
+  public declare updatedAt: Date;
 }
 
 Topic.init(
@@ -57,18 +55,11 @@ Topic.init(
       allowNull: false,
       defaultValue: 'draft',
     },
-    created_at: {
-      type: DataTypes.DATE,
-      allowNull: false,
-    },
-    updated_at: {
-      type: DataTypes.DATE,
-      allowNull: false,
-    },
   },
   {
     sequelize,
     tableName: 'topics',
+    underscored: true,
   }
 );
 

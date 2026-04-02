@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { AuthRequest } from '../middlewares/authMiddleware';
 import { Submission, Task, Topic, User, TopicMember } from '../models';
 import path from 'path';
 import fs from 'fs';
@@ -13,12 +14,19 @@ const endOfDeadlineDay = (deadline: string | Date) => {
 const toSubmissionFileUri = (submissionId: number | string) => `/api/submissions/${submissionId}/attachment`;
 const getSubmissionFilePath = (storedFilename: string) => path.join(config.uploadsDir, storedFilename);
 
-export const submitTask = async (req: Request, res: Response) => {
+export const submitTask = async (req: AuthRequest, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Not authorized',
+      });
+    }
+
     const { id: taskId } = req.params;
     const { content } = req.body;
-    const userId = (req as any).user.id;
-    const user = (req as any).user;
+    const userId = req.user.id;
+    const user = req.user;
 
     if (user.role !== 'student') {
       return res.status(403).json({
@@ -37,7 +45,7 @@ export const submitTask = async (req: Request, res: Response) => {
       });
     }
 
-    const topic = (task as any).topic;
+    const topic = task.topic;
     if (!topic || topic.status !== 'published') {
       return res.status(403).json({
         success: false,
@@ -90,7 +98,6 @@ export const submitTask = async (req: Request, res: Response) => {
       student_id: userId,
       content: typeof content === 'string' ? content.trim() : content,
       file_url: req.file?.filename,
-      submitted_at: new Date(),
     });
 
     res.status(201).json({
@@ -113,10 +120,17 @@ export const submitTask = async (req: Request, res: Response) => {
   }
 };
 
-export const getSubmissionsForTask = async (req: Request, res: Response) => {
+export const getSubmissionsForTask = async (req: AuthRequest, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Not authorized',
+      });
+    }
+
     const { id: taskId } = req.params;
-    const userId = (req as any).user.id;
+    const userId = req.user.id;
 
     const task = await Task.findByPk(taskId, {
       include: [{ model: Topic, as: 'topic' }],
@@ -160,10 +174,17 @@ export const getSubmissionsForTask = async (req: Request, res: Response) => {
   }
 };
 
-export const getMySubmissions = async (req: Request, res: Response) => {
+export const getMySubmissions = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = (req as any).user.id;
-    const user = (req as any).user;
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Not authorized',
+      });
+    }
+
+    const userId = req.user.id;
+    const user = req.user;
 
     if (user.role !== 'student') {
       return res.status(403).json({
@@ -207,10 +228,17 @@ export const getMySubmissions = async (req: Request, res: Response) => {
   }
 };
 
-export const downloadSubmissionAttachment = async (req: Request, res: Response) => {
+export const downloadSubmissionAttachment = async (req: AuthRequest, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Not authorized',
+      });
+    }
+
     const submissionId = parseInt(req.params.id, 10);
-    const user = (req as any).user;
+    const user = req.user;
 
     if (isNaN(submissionId)) {
       return res.status(400).json({ success: false, error: 'Invalid submission ID' });

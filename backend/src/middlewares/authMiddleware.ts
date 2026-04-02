@@ -13,6 +13,9 @@ interface AuthRequest extends Request {
 }
 
 export const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (req.method === 'OPTIONS') {
+    return next();
+  }
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
 

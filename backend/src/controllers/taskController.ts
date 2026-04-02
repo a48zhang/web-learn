@@ -1,11 +1,19 @@
 import { Request, Response } from 'express';
+import { AuthRequest } from '../middlewares/authMiddleware';
 import { Task, Topic, User, TopicMember } from '../models';
 
-export const createTask = async (req: Request, res: Response) => {
+export const createTask = async (req: AuthRequest, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Not authorized',
+      });
+    }
+
     const { id: topicId } = req.params;
     const { title, description } = req.body;
-    const userId = (req as any).user.id;
+    const userId = req.user.id;
 
     // Verify topic exists and user is the owner
     const topic = await Topic.findByPk(topicId);
@@ -28,8 +36,6 @@ export const createTask = async (req: Request, res: Response) => {
       title,
       description,
       created_by: userId,
-      created_at: new Date(),
-      updated_at: new Date(),
     });
 
     res.status(201).json({
@@ -40,8 +46,8 @@ export const createTask = async (req: Request, res: Response) => {
         title: task.title,
         description: task.description,
         createdBy: task.created_by.toString(),
-        createdAt: task.created_at.toISOString(),
-        updatedAt: task.updated_at.toISOString(),
+        createdAt: task.createdAt.toISOString(),
+        updatedAt: task.updatedAt.toISOString(),
       },
     });
   } catch (error) {
@@ -53,11 +59,18 @@ export const createTask = async (req: Request, res: Response) => {
   }
 };
 
-export const getTasksForTopic = async (req: Request, res: Response) => {
+export const getTasksForTopic = async (req: AuthRequest, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Not authorized',
+      });
+    }
+
     const { id: topicId } = req.params;
-    const userId = (req as any).user.id;
-    const userRole = (req as any).user.role;
+    const userId = req.user.id;
+    const userRole = req.user.role;
 
     // Verify topic exists
     const topic = await Topic.findByPk(topicId);
@@ -114,8 +127,8 @@ export const getTasksForTopic = async (req: Request, res: Response) => {
       title: task.title,
       description: task.description,
       createdBy: task.created_by.toString(),
-      createdAt: task.created_at.toISOString(),
-      updatedAt: task.updated_at.toISOString(),
+      createdAt: task.createdAt.toISOString(),
+      updatedAt: task.updatedAt.toISOString(),
     }));
 
     res.json({

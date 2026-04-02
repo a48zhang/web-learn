@@ -1,6 +1,5 @@
-import express, { Application, Request, Response } from 'express';
+import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import { config } from './utils/config';
 import authRoutes from './routes/authRoutes';
 import userRoutes from './routes/userRoutes';
 import topicRoutes from './routes/topicRoutes';
@@ -10,21 +9,9 @@ import submissionRoutes from './routes/submissionRoutes';
 import reviewRoutes from './routes/reviewRoutes';
 
 const app: Application = express();
-const allowedOrigins = new Set(config.cors.origins);
 
 // Middleware
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.has(origin)) {
-        callback(null, true);
-        return;
-      }
-
-      callback(new Error('Not allowed by CORS'));
-    },
-  })
-);
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -47,7 +34,7 @@ app.use('/api/submissions', submissionRoutes);
 app.use('/api', reviewRoutes);
 
 // Error handling middleware
-app.use((err: Error, req: Request, res: Response) => {
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error('Error:', err.message);
   res.status(500).json({
     success: false,

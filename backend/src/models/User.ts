@@ -8,11 +8,9 @@ interface UserAttributes {
   email: string;
   password: string;
   role: 'admin' | 'teacher' | 'student' | 'guest';
-  created_at: Date;
-  updated_at: Date;
 }
 
-interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'created_at' | 'updated_at'> {}
+interface UserCreationAttributes extends Optional<UserAttributes, 'id'> {}
 
 class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
   public id!: number;
@@ -20,8 +18,8 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   public email!: string;
   public password!: string;
   public role!: 'admin' | 'teacher' | 'student' | 'guest';
-  public readonly created_at!: Date;
-  public readonly updated_at!: Date;
+  public declare createdAt: Date;
+  public declare updatedAt: Date;
 
   public async comparePassword(candidatePassword: string): Promise<boolean> {
     return bcrypt.compare(candidatePassword, this.password);
@@ -57,18 +55,11 @@ User.init(
       allowNull: false,
       defaultValue: 'student',
     },
-    created_at: {
-      type: DataTypes.DATE,
-      allowNull: false,
-    },
-    updated_at: {
-      type: DataTypes.DATE,
-      allowNull: false,
-    },
   },
   {
     sequelize,
     tableName: 'users',
+    underscored: true,
     hooks: {
       beforeCreate: async (user: User) => {
         if (user.password) {

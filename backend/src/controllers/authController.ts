@@ -7,7 +7,7 @@ import { AuthRequest } from '../middlewares/authMiddleware';
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const { username, email, password } = req.body;
+    const { username, email, password, role: bodyRole } = req.body;
 
     if (!username || !email || !password) {
       return res.status(400).json({
@@ -15,6 +15,8 @@ export const register = async (req: Request, res: Response) => {
         error: 'Username, email, and password are required',
       });
     }
+
+    const role = bodyRole === 'teacher' ? 'teacher' : 'student';
 
     const existingUser = await User.findOne({
       where: {
@@ -33,7 +35,7 @@ export const register = async (req: Request, res: Response) => {
       username,
       email,
       password,
-      role: 'student',
+      role,
     });
 
     const token = jwt.sign(
@@ -52,10 +54,12 @@ export const register = async (req: Request, res: Response) => {
       data: {
         token,
         user: {
-          id: user.id,
+          id: user.id.toString(),
           username: user.username,
           email: user.email,
           role: user.role,
+          createdAt: user.createdAt.toISOString(),
+          updatedAt: user.updatedAt.toISOString(),
         },
       },
     });
@@ -113,10 +117,12 @@ export const login = async (req: Request, res: Response) => {
       data: {
         token,
         user: {
-          id: user.id,
+          id: user.id.toString(),
           username: user.username,
           email: user.email,
           role: user.role,
+          createdAt: user.createdAt.toISOString(),
+          updatedAt: user.updatedAt.toISOString(),
         },
       },
     });
@@ -138,9 +144,7 @@ export const getCurrentUser = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const user = await User.findByPk(req.user.id, {
-      attributes: ['id', 'username', 'email', 'role', 'created_at', 'updated_at'],
-    });
+    const user = await User.findByPk(req.user.id);
 
     if (!user) {
       return res.status(404).json({
@@ -151,7 +155,14 @@ export const getCurrentUser = async (req: AuthRequest, res: Response) => {
 
     res.json({
       success: true,
-      data: user,
+      data: {
+        id: user.id.toString(),
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt.toISOString(),
+        updatedAt: user.updatedAt.toISOString(),
+      },
     });
   } catch (error) {
     console.error('Get current user error:', error);

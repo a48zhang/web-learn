@@ -162,16 +162,15 @@ export const getResources = async (req: AuthRequest, res: Response) => {
     res.json({
       success: true,
       data: resources.map((resource) => {
-        const resourceWithOwner = resource as any;
         return {
           id: resource.id.toString(),
           topicId: resource.topic_id.toString(),
           ownerId: resource.owner_id.toString(),
-          owner: resourceWithOwner.owner
+          owner: resource.owner
             ? {
-                id: resourceWithOwner.owner.id.toString(),
-                username: resourceWithOwner.owner.username,
-                email: resourceWithOwner.owner.email,
+                id: resource.owner.id.toString(),
+                username: resource.owner.username,
+                email: resource.owner.email,
               }
             : undefined,
           type: resource.type,
@@ -206,7 +205,10 @@ export const downloadResource = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ success: false, error: 'Resource not found' });
     }
 
-    const topic = (resource as any).topic;
+    const topic = resource.topic;
+    if (!topic) {
+      return res.status(404).json({ success: false, error: 'Topic not found' });
+    }
 
     // Check access
     if (req.user.role === 'admin') {

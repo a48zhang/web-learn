@@ -1,5 +1,6 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 import { sequelize } from '../utils/database';
+import { Submission, User } from './index';
 
 interface ReviewAttributes {
   id: number;
@@ -10,7 +11,7 @@ interface ReviewAttributes {
   reviewed_at: Date;
 }
 
-interface ReviewCreationAttributes extends Optional<ReviewAttributes, 'id' | 'reviewed_at' | 'score' | 'feedback'> {}
+interface ReviewCreationAttributes extends Optional<ReviewAttributes, 'id' | 'score' | 'feedback' | 'reviewed_at'> {}
 
 class Review extends Model<ReviewAttributes, ReviewCreationAttributes> implements ReviewAttributes {
   public id!: number;
@@ -18,7 +19,9 @@ class Review extends Model<ReviewAttributes, ReviewCreationAttributes> implement
   public reviewer_id!: number;
   public score?: number;
   public feedback?: string;
-  public readonly reviewed_at!: Date;
+  public reviewed_at!: Date;
+  public submission?: Submission;
+  public reviewer?: User;
 }
 
 Review.init(
@@ -54,13 +57,13 @@ Review.init(
     },
     reviewed_at: {
       type: DataTypes.DATE,
-      allowNull: false,
       defaultValue: DataTypes.NOW,
     },
   },
   {
     sequelize,
     tableName: 'reviews',
+    underscored: true,
     timestamps: false,
   }
 );

@@ -1,5 +1,6 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 import { sequelize } from '../utils/database';
+import { Topic, User } from './index';
 
 interface ResourceAttributes {
   id: number;
@@ -11,7 +12,7 @@ interface ResourceAttributes {
   uploaded_at: Date;
 }
 
-interface ResourceCreationAttributes extends Optional<ResourceAttributes, 'id' | 'uploaded_at' | 'title'> {}
+interface ResourceCreationAttributes extends Optional<ResourceAttributes, 'id' | 'title' | 'uploaded_at'> {}
 
 class Resource extends Model<ResourceAttributes, ResourceCreationAttributes> implements ResourceAttributes {
   public id!: number;
@@ -20,7 +21,9 @@ class Resource extends Model<ResourceAttributes, ResourceCreationAttributes> imp
   public type!: 'document' | 'video' | 'link' | 'other';
   public title?: string;
   public uri!: string;
-  public readonly uploaded_at!: Date;
+  public uploaded_at!: Date;
+  public topic?: Topic;
+  public owner?: User;
 }
 
 Resource.init(
@@ -60,13 +63,13 @@ Resource.init(
     },
     uploaded_at: {
       type: DataTypes.DATE,
-      allowNull: false,
       defaultValue: DataTypes.NOW,
     },
   },
   {
     sequelize,
     tableName: 'resources',
+    underscored: true,
     timestamps: false,
   }
 );

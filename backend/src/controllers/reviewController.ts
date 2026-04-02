@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middlewares/authMiddleware';
-import { Review, Submission, User, Task, Topic } from '../models';
+import { Review, Submission, SubmissionWithAssocs, User, Task, Topic } from '../models';
 
 const parseValidatedScore = (score: unknown) => {
   if (score === undefined || score === null || score === '') {
@@ -59,7 +59,7 @@ export const createReview = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ success: false, error: 'Submission not found' });
     }
 
-    if ((submission as any).task?.topic?.created_by !== req.user.id) {
+    if ((submission as unknown as SubmissionWithAssocs).task?.topic?.created_by !== req.user.id) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
 
@@ -83,7 +83,7 @@ export const createReview = async (req: AuthRequest, res: Response) => {
         reviewerId: review.reviewer_id.toString(),
         score: review.score !== undefined && review.score !== null ? Number(review.score) : undefined,
         feedback: review.feedback,
-        reviewedAt: review.reviewed_at.toISOString(),
+        reviewedAt: review.reviewed_at ? review.reviewed_at.toISOString() : undefined,
       },
     });
   } catch (error) {
@@ -115,15 +115,17 @@ export const getReviewBySubmissionId = async (req: AuthRequest, res: Response) =
       return res.status(404).json({ success: false, error: 'Review not found' });
     }
 
-    const reviewWithAssoc = review as any;
-    const submission = reviewWithAssoc.submission;
+    const submission = review.submission;
+    if (!submission) {
+      return res.status(404).json({ success: false, error: 'Submission not found' });
+    }
     const hasDirectAccess = review.reviewer_id === req.user.id || submission.student_id === req.user.id;
 
     if (!hasDirectAccess && req.user.role === 'teacher') {
       const fullSubmission = await Submission.findByPk(submissionId, {
         include: [{ model: Task, as: 'task', include: [{ model: Topic, as: 'topic' }] }],
       });
-      if ((fullSubmission as any)?.task?.topic?.created_by !== req.user.id) {
+      if ((fullSubmission as unknown as SubmissionWithAssocs)?.task?.topic?.created_by !== req.user.id) {
         return res.status(403).json({ success: false, error: 'Access denied' });
       }
     } else if (!hasDirectAccess) {
@@ -136,16 +138,16 @@ export const getReviewBySubmissionId = async (req: AuthRequest, res: Response) =
         id: review.id.toString(),
         submissionId: review.submission_id.toString(),
         reviewerId: review.reviewer_id.toString(),
-        reviewer: reviewWithAssoc.reviewer
+        reviewer: review.reviewer
           ? {
-              id: reviewWithAssoc.reviewer.id.toString(),
-              username: reviewWithAssoc.reviewer.username,
-              email: reviewWithAssoc.reviewer.email,
+              id: review.reviewer.id.toString(),
+              username: review.reviewer.username,
+              email: review.reviewer.email,
             }
           : undefined,
         score: review.score !== undefined && review.score !== null ? Number(review.score) : undefined,
         feedback: review.feedback,
-        reviewedAt: review.reviewed_at.toISOString(),
+        reviewedAt: review.reviewed_at ? review.reviewed_at.toISOString() : undefined,
       },
     });
   } catch (error) {
@@ -182,7 +184,8 @@ export const updateReview = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ success: false, error: 'Review not found' });
     }
 
-    if (review.reviewer_id !== req.user.id && (review as any).submission?.task?.topic?.created_by !== req.user.id) {
+    const submissionWithAssocs = review.submission as unknown as SubmissionWithAssocs;
+    if (review.reviewer_id !== req.user.id && submissionWithAssocs?.task?.topic?.created_by !== req.user.id) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
 
@@ -199,7 +202,7 @@ export const updateReview = async (req: AuthRequest, res: Response) => {
         reviewerId: review.reviewer_id.toString(),
         score: review.score !== undefined && review.score !== null ? Number(review.score) : undefined,
         feedback: review.feedback,
-        reviewedAt: review.reviewed_at.toISOString(),
+        reviewedAt: review.reviewed_at ? review.reviewed_at.toISOString() : undefined,
       },
     });
   } catch (error) {

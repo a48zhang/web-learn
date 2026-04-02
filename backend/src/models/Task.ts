@@ -9,12 +9,10 @@ interface TaskAttributes {
   title: string;
   description?: string;
   created_by: number;
-  created_at: Date;
-  updated_at: Date;
   topic?: Topic;
 }
 
-interface TaskCreationAttributes extends Optional<TaskAttributes, 'id' | 'created_at' | 'updated_at' | 'description' | 'topic'> {}
+interface TaskCreationAttributes extends Optional<TaskAttributes, 'id' | 'description' | 'topic'> {}
 
 class Task extends Model<TaskAttributes, TaskCreationAttributes> implements TaskAttributes {
   public id!: number;
@@ -22,9 +20,9 @@ class Task extends Model<TaskAttributes, TaskCreationAttributes> implements Task
   public title!: string;
   public description?: string;
   public created_by!: number;
-  public readonly created_at!: Date;
-  public readonly updated_at!: Date;
   public topic?: Topic;
+  public declare createdAt: Date;
+  public declare updatedAt: Date;
 }
 
 Task.init(
@@ -58,18 +56,11 @@ Task.init(
         key: 'id',
       },
     },
-    created_at: {
-      type: DataTypes.DATE,
-      allowNull: false,
-    },
-    updated_at: {
-      type: DataTypes.DATE,
-      allowNull: false,
-    },
   },
   {
     sequelize,
     tableName: 'tasks',
+    underscored: true,
   }
 );
 

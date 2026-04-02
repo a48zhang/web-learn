@@ -3,7 +3,7 @@ import Topic from './Topic';
 import TopicMember from './TopicMember';
 import Resource from './Resource';
 import Task from './Task';
-import Submission from './Submission';
+import Submission, { SubmissionWithAssocs } from './Submission';
 import Review from './Review';
 
 // User associations
@@ -50,5 +50,6 @@ export {
   Resource,
   Task,
   Submission,
+  SubmissionWithAssocs,
   Review,
 };

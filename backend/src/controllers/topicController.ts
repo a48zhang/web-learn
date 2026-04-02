@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middlewares/authMiddleware';
 import { Topic, User, TopicMember } from '../models';
+import { sequelize } from '../utils/database';
 
 // Create a new topic (teacher only)
 export const createTopic = async (req: AuthRequest, res: Response) => {
@@ -28,19 +29,23 @@ export const createTopic = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const topic = await Topic.create({
-      title,
-      description,
-      created_by: req.user.id,
-      deadline: deadline ? new Date(deadline) : undefined,
-      status: 'draft',
-    });
+    const userId = req.user.id;
+    const topic = await sequelize.transaction(async (t) => {
+      const newTopic = await Topic.create({
+        title,
+        description,
+        created_by: userId,
+        deadline: deadline ? new Date(deadline) : undefined,
+        status: 'draft',
+      }, { transaction: t });
 
-    // Automatically add the teacher as a topic member
-    await TopicMember.create({
-      topic_id: topic.id,
-      user_id: req.user.id,
-      joined_at: new Date(),
+      // Automatically add the teacher as a topic member
+      await TopicMember.create({
+        topic_id: newTopic.id,
+        user_id: userId,
+      }, { transaction: t });
+
+      return newTopic;
     });
 
     res.status(201).json({
@@ -51,9 +56,9 @@ export const createTopic = async (req: AuthRequest, res: Response) => {
         description: topic.description,
         createdBy: topic.created_by.toString(),
         status: topic.status,
-        deadline: topic.deadline ? topic.deadline.toISOString() : undefined,
-        createdAt: topic.created_at.toISOString(),
-        updatedAt: topic.updated_at.toISOString(),
+        deadline: topic.deadline ? (typeof topic.deadline === 'string' ? topic.deadline : topic.deadline.toISOString().split('T')[0]) : undefined,
+        createdAt: topic.createdAt.toISOString(),
+        updatedAt: topic.updatedAt.toISOString(),
       },
     });
   } catch (error) {
@@ -106,6 +111,7 @@ export const getTopics = async (req: AuthRequest, res: Response) => {
       const joinedTopicIds = new Set(memberships.map((m) => m.topic_id));
 
       // Add hasJoined flag to each topic
+      // Note: hasJoined is a computed property not in the model definition
       topics = topics.map((topic) => {
         (topic as any).hasJoined = joinedTopicIds.has(topic.id);
         return topic;
@@ -113,7 +119,9 @@ export const getTopics = async (req: AuthRequest, res: Response) => {
     }
 
     const formattedTopics = topics.map((topic) => {
-      const topicWithCreator = topic as any; // Type assertion for association
+      // Sequelize association 'creator' is not statically typed
+      // Using type assertion to access the joined user data
+      const topicWithCreator = topic as any;
       return {
         id: topic.id.toString(),
         title: topic.title,
@@ -125,9 +133,9 @@ export const getTopics = async (req: AuthRequest, res: Response) => {
           email: topicWithCreator.creator.email,
         } : undefined,
         status: topic.status,
-        deadline: topic.deadline ? topic.deadline.toISOString() : undefined,
-        createdAt: topic.created_at.toISOString(),
-        updatedAt: topic.updated_at.toISOString(),
+        deadline: topic.deadline ? (typeof topic.deadline === 'string' ? topic.deadline : topic.deadline.toISOString().split('T')[0]) : undefined,
+        createdAt: topic.createdAt.toISOString(),
+        updatedAt: topic.updatedAt.toISOString(),
         hasJoined: topicWithCreator.hasJoined,
       };
     });
@@ -208,7 +216,9 @@ export const getTopicById = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    const topicWithCreator = topic as any; // Type assertion for association
+    // Sequelize association 'creator' is not statically typed
+    // Using type assertion to access the joined user data
+    const topicWithCreator = topic as any;
     res.json({
       success: true,
       data: {
@@ -222,9 +232,9 @@ export const getTopicById = async (req: AuthRequest, res: Response) => {
           email: topicWithCreator.creator.email,
         } : undefined,
         status: topic.status,
-        deadline: topic.deadline ? topic.deadline.toISOString() : undefined,
-        createdAt: topic.created_at.toISOString(),
-        updatedAt: topic.updated_at.toISOString(),
+        deadline: topic.deadline ? (typeof topic.deadline === 'string' ? topic.deadline : topic.deadline.toISOString().split('T')[0]) : undefined,
+        createdAt: topic.createdAt.toISOString(),
+        updatedAt: topic.updatedAt.toISOString(),
       },
     });
   } catch (error) {
@@ -288,9 +298,9 @@ export const updateTopic = async (req: AuthRequest, res: Response) => {
         description: topic.description,
         createdBy: topic.created_by.toString(),
         status: topic.status,
-        deadline: topic.deadline ? topic.deadline.toISOString() : undefined,
-        createdAt: topic.created_at.toISOString(),
-        updatedAt: topic.updated_at.toISOString(),
+        deadline: topic.deadline ? (typeof topic.deadline === 'string' ? topic.deadline : topic.deadline.toISOString().split('T')[0]) : undefined,
+        createdAt: topic.createdAt.toISOString(),
+        updatedAt: topic.updatedAt.toISOString(),
       },
     });
   } catch (error) {
@@ -358,9 +368,9 @@ export const updateTopicStatus = async (req: AuthRequest, res: Response) => {
         description: topic.description,
         createdBy: topic.created_by.toString(),
         status: topic.status,
-        deadline: topic.deadline ? topic.deadline.toISOString() : undefined,
-        createdAt: topic.created_at.toISOString(),
-        updatedAt: topic.updated_at.toISOString(),
+        deadline: topic.deadline ? (typeof topic.deadline === 'string' ? topic.deadline : topic.deadline.toISOString().split('T')[0]) : undefined,
+        createdAt: topic.createdAt.toISOString(),
+        updatedAt: topic.updatedAt.toISOString(),
       },
     });
   } catch (error) {
@@ -433,7 +443,6 @@ export const joinTopic = async (req: AuthRequest, res: Response) => {
     await TopicMember.create({
       topic_id: topicId,
       user_id: req.user.id,
-      joined_at: new Date(),
     });
 
     res.json({

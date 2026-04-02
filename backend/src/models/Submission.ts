@@ -1,7 +1,6 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 import { sequelize } from '../utils/database';
-
-import { Task, User } from './index';
+import { Task, Topic, User } from './index';
 
 interface SubmissionAttributes {
   id: number;
@@ -10,11 +9,9 @@ interface SubmissionAttributes {
   content?: string;
   file_url?: string;
   submitted_at: Date;
-  task?: Task;
-  student?: User;
 }
 
-interface SubmissionCreationAttributes extends Optional<SubmissionAttributes, 'id' | 'submitted_at' | 'content' | 'file_url' | 'task' | 'student'> {}
+interface SubmissionCreationAttributes extends Optional<SubmissionAttributes, 'id' | 'content' | 'file_url' | 'submitted_at'> {}
 
 class Submission extends Model<SubmissionAttributes, SubmissionCreationAttributes> implements SubmissionAttributes {
   public id!: number;
@@ -22,9 +19,13 @@ class Submission extends Model<SubmissionAttributes, SubmissionCreationAttribute
   public student_id!: number;
   public content?: string;
   public file_url?: string;
-  public readonly submitted_at!: Date;
+  public submitted_at!: Date;
   public task?: Task;
   public student?: User;
+}
+
+export interface SubmissionWithAssocs extends Submission {
+  task?: Task & { topic?: Topic };
 }
 
 Submission.init(
@@ -60,13 +61,13 @@ Submission.init(
     },
     submitted_at: {
       type: DataTypes.DATE,
-      allowNull: false,
       defaultValue: DataTypes.NOW,
     },
   },
   {
     sequelize,
     tableName: 'submissions',
+    underscored: true,
     timestamps: false,
   }
 );

@@ -59,6 +59,8 @@ export const createReview = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ success: false, error: 'Submission not found' });
     }
 
+    // Sequelize associations are not statically typed, so we need a type assertion
+    // to access the nested task.topic relationship for authorization check
     if ((submission as unknown as SubmissionWithAssocs).task?.topic?.created_by !== req.user.id) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
@@ -125,6 +127,8 @@ export const getReviewBySubmissionId = async (req: AuthRequest, res: Response) =
       const fullSubmission = await Submission.findByPk(submissionId, {
         include: [{ model: Task, as: 'task', include: [{ model: Topic, as: 'topic' }] }],
       });
+      // Sequelize associations are not statically typed, so we need a type assertion
+      // to access the nested task.topic relationship for authorization check
       if ((fullSubmission as unknown as SubmissionWithAssocs)?.task?.topic?.created_by !== req.user.id) {
         return res.status(403).json({ success: false, error: 'Access denied' });
       }
@@ -184,6 +188,8 @@ export const updateReview = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ success: false, error: 'Review not found' });
     }
 
+    // Sequelize associations are not statically typed, so we need a type assertion
+    // to access the nested task.topic relationship for authorization check
     const submissionWithAssocs = review.submission as unknown as SubmissionWithAssocs;
     if (review.reviewer_id !== req.user.id && submissionWithAssocs?.task?.topic?.created_by !== req.user.id) {
       return res.status(403).json({ success: false, error: 'Access denied' });

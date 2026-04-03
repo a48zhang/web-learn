@@ -3,15 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { AIChatAgentType, AIChatMessage } from '@web-learn/shared';
 import { aiApi } from '../services/api';
-
-const getErrorMessage = (error: unknown) => {
-  if (typeof error === 'object' && error && 'response' in error) {
-    const response = (error as { response?: { data?: { error?: string } } }).response;
-    if (response?.data?.error) return response.data.error;
-  }
-  if (error instanceof Error) return error.message;
-  return '未知错误';
-};
+import { getApiErrorMessage } from '../utils/errors';
 
 interface AIChatSidebarProps {
   topicId: string;
@@ -54,7 +46,7 @@ function AIChatSidebar({ topicId, agentType, title }: AIChatSidebarProps) {
         ...prev,
         {
           role: 'assistant',
-          content: `请求失败：${getErrorMessage(error)}`,
+          content: `请求失败：${getApiErrorMessage(error, '未知错误')}`,
         },
       ]);
     } finally {

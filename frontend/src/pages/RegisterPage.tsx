@@ -6,14 +6,7 @@ import { z } from 'zod';
 import { useAuthStore } from '../stores/useAuthStore';
 import { toast } from '../stores/useToastStore';
 import { UserRole } from '@web-learn/shared';
-
-const getErrorMessage = (error: unknown, fallback: string) => {
-  if (typeof error === 'object' && error && 'response' in error) {
-    const response = (error as { response?: { data?: { error?: string } } }).response;
-    if (response?.data?.error) return response.data.error;
-  }
-  return fallback;
-};
+import { getApiErrorMessage } from '../utils/errors';
 
 const registerSchema = z.object({
   username: z.string().min(2, '用户名至少需要2个字符'),
@@ -55,7 +48,7 @@ function RegisterPage() {
       toast.success('注册成功！');
       navigate('/dashboard');
     } catch (err: unknown) {
-      const errorMsg = getErrorMessage(err, '注册失败，请稍后重试');
+      const errorMsg = getApiErrorMessage(err, '注册失败，请稍后重试');
       setError(errorMsg);
       toast.error(errorMsg);
     }
@@ -154,7 +147,7 @@ function RegisterPage() {
                 选择角色
               </label>
               <div className="grid grid-cols-2 gap-3">
-                <label className="flex items-center justify-center p-4 border-2 rounded-md cursor-pointer hover:border-blue-500 transition-colors has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+                <label className="flex items-center justify-center p-4 border-2 rounded-md cursor-pointer hover:border-blue-500 transition-colors">
                   <input
                     type="radio"
                     value={UserRole.STUDENT}
@@ -166,7 +159,7 @@ function RegisterPage() {
                     <div className="font-medium text-gray-900">学生</div>
                   </div>
                 </label>
-                <label className="flex items-center justify-center p-4 border-2 rounded-md cursor-pointer hover:border-blue-500 transition-colors has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+                <label className="flex items-center justify-center p-4 border-2 rounded-md cursor-pointer hover:border-blue-500 transition-colors">
                   <input
                     type="radio"
                     value={UserRole.TEACHER}

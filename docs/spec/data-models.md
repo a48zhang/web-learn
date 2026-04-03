@@ -31,11 +31,12 @@
 | username | VARCHAR(50) | UNIQUE, NOT NULL | 用户名 |
 | email | VARCHAR(100) | UNIQUE, NOT NULL | 邮箱 |
 | password | CHAR(60) | NOT NULL | 密码（bcrypt加密） |
-| role | ENUM | NOT NULL | 角色：teacher, student |
+| role | ENUM | NOT NULL | 角色：admin, teacher, student |
 | created_at | TIMESTAMP | AUTO | 创建时间 |
 | updated_at | TIMESTAMP | AUTO | 更新时间 |
 
 **角色定义：**
+- `admin` - 管理员（保留角色，不通过注册创建）
 - `teacher` - 教师（可创建和管理专题）
 - `student` - 学生（可浏览专题、使用学习助手）
 

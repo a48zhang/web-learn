@@ -1,5 +1,6 @@
 // User types
 export type UserRoleType = 'admin' | 'teacher' | 'student';
+// Admin accounts are reserved and should be provisioned manually, not via public registration.
 
 export interface User {
   id: string;

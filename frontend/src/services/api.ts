@@ -33,16 +33,7 @@ const api = axios.create({
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = localStorage.getItem('auth_token');
-    const method = config.method?.toUpperCase() ?? 'GET';
-    const isPublicGet =
-      method === 'GET' &&
-      (config.url?.startsWith('/topics') || config.url?.startsWith('/pages/'));
-
-    if (token && config.headers && !isPublicGet) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-
-    if (token && config.headers && isPublicGet) {
+    if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 

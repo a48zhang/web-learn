@@ -32,7 +32,7 @@ GET    /api/users/me         - 获取当前用户信息（需认证）
 ```
 POST   /api/topics           - 创建专题（教师，需认证）
 GET    /api/topics           - 获取专题列表（公开访问）
-GET    /api/topics/:id       - 获取专题详情（公开访问）
+GET    /api/topics/:id       - 获取专题详情（公开访问，已发布）
 PUT    /api/topics/:id       - 更新专题（创建者，需认证）
 PATCH  /api/topics/:id/status - 更新专题状态（创建者，需认证）
 ```

@@ -5,14 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuthStore } from '../stores/useAuthStore';
 import { toast } from '../stores/useToastStore';
-
-const getErrorMessage = (error: unknown, fallback: string) => {
-  if (typeof error === 'object' && error && 'response' in error) {
-    const response = (error as { response?: { data?: { error?: string } } }).response;
-    if (response?.data?.error) return response.data.error;
-  }
-  return fallback;
-};
+import { getApiErrorMessage } from '../utils/errors';
 
 const loginSchema = z.object({
   email: z.string().email('请输入有效的邮箱地址'),
@@ -45,7 +38,7 @@ function LoginPage() {
       toast.success('登录成功！');
       navigate('/dashboard');
     } catch (err: unknown) {
-      const errorMsg = getErrorMessage(err, '登录失败，请检查您的邮箱和密码');
+      const errorMsg = getApiErrorMessage(err, '登录失败，请检查您的邮箱和密码');
       setError(errorMsg);
       toast.error(errorMsg);
     }

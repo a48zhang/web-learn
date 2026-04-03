@@ -7,15 +7,7 @@ import { useAuthStore } from '../stores/useAuthStore';
 import { toast } from '../stores/useToastStore';
 import PageTreeEditor from '../components/PageTreeEditor';
 import AIChatSidebar from '../components/AIChatSidebar';
-
-const getErrorMessage = (error: unknown, fallback: string) => {
-  if (typeof error === 'object' && error && 'response' in error) {
-    const response = (error as { response?: { data?: { error?: string } } }).response;
-    if (response?.data?.error) return response.data.error;
-  }
-  if (error instanceof Error && error.message) return error.message;
-  return fallback;
-};
+import { getApiErrorMessage } from '../utils/errors';
 
 function flattenPages(nodes: TopicPageTreeNode[]): TopicPageTreeNode[] {
   const result: TopicPageTreeNode[] = [];
@@ -126,7 +118,7 @@ function KnowledgeEditorPage() {
       setContent(page.content || '');
       toast.success('页面已创建');
     } catch (err: unknown) {
-      toast.error(getErrorMessage(err, '创建页面失败'));
+      toast.error(getApiErrorMessage(err, '创建页面失败'));
     }
   };
 
@@ -138,7 +130,7 @@ function KnowledgeEditorPage() {
       await refreshPages(id, false);
       toast.success('页面已删除');
     } catch (err: unknown) {
-      toast.error(getErrorMessage(err, '删除页面失败'));
+      toast.error(getApiErrorMessage(err, '删除页面失败'));
     }
   };
 
@@ -156,7 +148,7 @@ function KnowledgeEditorPage() {
       await refreshPages(id);
       toast.success('页面顺序已更新');
     } catch (err: unknown) {
-      toast.error(getErrorMessage(err, '更新顺序失败'));
+      toast.error(getApiErrorMessage(err, '更新顺序失败'));
     }
   };
 
@@ -169,7 +161,7 @@ function KnowledgeEditorPage() {
       setContent(updated.content || '');
       toast.success('保存成功');
     } catch (err: unknown) {
-      toast.error(getErrorMessage(err, '保存失败'));
+      toast.error(getApiErrorMessage(err, '保存失败'));
     } finally {
       setSaving(false);
     }

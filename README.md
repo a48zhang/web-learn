@@ -82,6 +82,13 @@ web-learn/
 - ✅ 任务发布与作业提交
 - ✅ 教师评分与反馈
 
+## 文档
+
+- [产品规格说明](docs/SPEC.md) - 完整的产品定义和技术架构
+- [数据模型文档](docs/data-models.md) - 数据库表结构和关联关系
+- [实现状况报告](docs/implementation-status.md) - 开发进度和已知问题
+- [开发规范](docs/README.md) - 代码规范和提交规范
+
 ## 测试
 
 ```bash

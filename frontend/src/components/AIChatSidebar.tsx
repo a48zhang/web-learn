@@ -4,6 +4,15 @@ import remarkGfm from 'remark-gfm';
 import type { AIChatAgentType, AIChatMessage } from '@web-learn/shared';
 import { aiApi } from '../services/api';
 
+const getErrorMessage = (error: unknown) => {
+  if (typeof error === 'object' && error && 'response' in error) {
+    const response = (error as { response?: { data?: { error?: string } } }).response;
+    if (response?.data?.error) return response.data.error;
+  }
+  if (error instanceof Error) return error.message;
+  return '未知错误';
+};
+
 interface AIChatSidebarProps {
   topicId: string;
   agentType: AIChatAgentType;
@@ -40,12 +49,12 @@ function AIChatSidebar({ topicId, agentType, title }: AIChatSidebarProps) {
       if (assistant) {
         setMessages((prev) => [...prev, assistant as AIChatMessage]);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content: `请求失败：${error?.response?.data?.error || error?.message || '未知错误'}`,
+          content: `请求失败：${getErrorMessage(error)}`,
         },
       ]);
     } finally {

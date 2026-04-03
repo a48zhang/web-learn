@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import MDEditor from '@uiw/react-md-editor';
 import type { Topic, TopicPage, TopicPageTreeNode } from '@web-learn/shared';
@@ -7,6 +7,15 @@ import { useAuthStore } from '../stores/useAuthStore';
 import { toast } from '../stores/useToastStore';
 import PageTreeEditor from '../components/PageTreeEditor';
 import AIChatSidebar from '../components/AIChatSidebar';
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (typeof error === 'object' && error && 'response' in error) {
+    const response = (error as { response?: { data?: { error?: string } } }).response;
+    if (response?.data?.error) return response.data.error;
+  }
+  if (error instanceof Error && error.message) return error.message;
+  return fallback;
+};
 
 function flattenPages(nodes: TopicPageTreeNode[]): TopicPageTreeNode[] {
   const result: TopicPageTreeNode[] = [];
@@ -47,7 +56,7 @@ function KnowledgeEditorPage() {
 
   const canEdit = user?.role === 'teacher' && topic?.createdBy === user.id;
 
-  const refreshPages = async (topicId: string, keepSelected = true) => {
+  const refreshPages = useCallback(async (topicId: string, keepSelected = true) => {
     const tree = await pageApi.getByTopic(topicId);
     setPages(tree);
     if (tree.length === 0) {
@@ -63,7 +72,7 @@ function KnowledgeEditorPage() {
     const detail = await pageApi.getById(target.id);
     setCurrentPage(detail);
     setContent(detail.content || '');
-  };
+  }, [selectedPageId]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -87,7 +96,7 @@ function KnowledgeEditorPage() {
       }
     };
     fetchData();
-  }, [id]);
+  }, [id, refreshPages]);
 
   const selectedPageTitle = useMemo(() => {
     if (!selectedPageId) return '';
@@ -116,8 +125,8 @@ function KnowledgeEditorPage() {
       setCurrentPage(page);
       setContent(page.content || '');
       toast.success('页面已创建');
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || '创建页面失败');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, '创建页面失败'));
     }
   };
 
@@ -128,8 +137,8 @@ function KnowledgeEditorPage() {
       await pageApi.delete(pageId);
       await refreshPages(id, false);
       toast.success('页面已删除');
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || '删除页面失败');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, '删除页面失败'));
     }
   };
 
@@ -146,8 +155,8 @@ function KnowledgeEditorPage() {
       });
       await refreshPages(id);
       toast.success('页面顺序已更新');
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || '更新顺序失败');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, '更新顺序失败'));
     }
   };
 
@@ -159,8 +168,8 @@ function KnowledgeEditorPage() {
       setCurrentPage(updated);
       setContent(updated.content || '');
       toast.success('保存成功');
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || '保存失败');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, '保存失败'));
     } finally {
       setSaving(false);
     }

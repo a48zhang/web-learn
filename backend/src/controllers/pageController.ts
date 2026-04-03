@@ -42,12 +42,12 @@ const toTree = (pages: TopicPage[]) => {
 
 const assertTopicWritableByUser = async (topicId: number, req: AuthRequest) => {
   const topic = await Topic.findByPk(topicId);
-  if (!topic) return { status: 404, error: 'Topic not found' } as const;
-  if (topic.type !== 'knowledge') return { status: 400, error: 'Only knowledge topics support pages' } as const;
+  if (!topic) return { ok: false, status: 404, error: 'Topic not found' } as const;
+  if (topic.type !== 'knowledge') return { ok: false, status: 400, error: 'Only knowledge topics support pages' } as const;
   if (!req.user || req.user.role !== 'teacher' || topic.created_by !== req.user.id) {
-    return { status: 403, error: 'Access denied' } as const;
+    return { ok: false, status: 403, error: 'Access denied' } as const;
   }
-  return { topic } as const;
+  return { ok: true, topic } as const;
 };
 
 export const createPage = async (req: AuthRequest, res: Response) => {
@@ -56,7 +56,7 @@ export const createPage = async (req: AuthRequest, res: Response) => {
     if (!topicId) return res.status(400).json({ success: false, error: 'Invalid topic ID' });
 
     const auth = await assertTopicWritableByUser(topicId, req);
-    if ('error' in auth) return res.status(auth.status).json({ success: false, error: auth.error });
+    if (!auth.ok) return res.status(auth.status).json({ success: false, error: auth.error });
 
     const { title, content = '', parent_page_id } = req.body;
     if (!title) return res.status(400).json({ success: false, error: 'Title is required' });
@@ -166,7 +166,7 @@ export const updatePage = async (req: AuthRequest, res: Response) => {
     if (!page) return res.status(404).json({ success: false, error: 'Page not found' });
 
     const auth = await assertTopicWritableByUser(page.topic_id, req);
-    if ('error' in auth) return res.status(auth.status).json({ success: false, error: auth.error });
+    if (!auth.ok) return res.status(auth.status).json({ success: false, error: auth.error });
 
     const { title, content, parent_page_id } = req.body;
     if (title !== undefined) page.title = title;
@@ -203,7 +203,7 @@ export const deletePage = async (req: AuthRequest, res: Response) => {
     if (!page) return res.status(404).json({ success: false, error: 'Page not found' });
 
     const auth = await assertTopicWritableByUser(page.topic_id, req);
-    if ('error' in auth) return res.status(auth.status).json({ success: false, error: auth.error });
+    if (!auth.ok) return res.status(auth.status).json({ success: false, error: auth.error });
 
     const queue: number[] = [page.id];
     const toDelete = new Set<number>();
@@ -229,7 +229,7 @@ export const reorderPages = async (req: AuthRequest, res: Response) => {
     if (!topicId) return res.status(400).json({ success: false, error: 'Invalid topic ID' });
 
     const auth = await assertTopicWritableByUser(topicId, req);
-    if ('error' in auth) return res.status(auth.status).json({ success: false, error: auth.error });
+    if (!auth.ok) return res.status(auth.status).json({ success: false, error: auth.error });
 
     const { pages } = req.body as {
       pages?: Array<{ id: number | string; order: number; parent_page_id?: number | string | null }>;

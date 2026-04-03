@@ -7,6 +7,14 @@ import { useAuthStore } from '../stores/useAuthStore';
 import { toast } from '../stores/useToastStore';
 import { UserRole } from '@web-learn/shared';
 
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (typeof error === 'object' && error && 'response' in error) {
+    const response = (error as { response?: { data?: { error?: string } } }).response;
+    if (response?.data?.error) return response.data.error;
+  }
+  return fallback;
+};
+
 const registerSchema = z.object({
   username: z.string().min(2, '用户名至少需要2个字符'),
   email: z.string().email('请输入有效的邮箱地址'),
@@ -46,8 +54,8 @@ function RegisterPage() {
       await registerUser(data.username, data.email, data.password, data.role);
       toast.success('注册成功！');
       navigate('/dashboard');
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.error || '注册失败，请稍后重试';
+    } catch (err: unknown) {
+      const errorMsg = getErrorMessage(err, '注册失败，请稍后重试');
       setError(errorMsg);
       toast.error(errorMsg);
     }

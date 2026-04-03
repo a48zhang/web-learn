@@ -5,6 +5,15 @@ import { topicApi } from '../services/api';
 import { useAuthStore } from '../stores/useAuthStore';
 import { toast } from '../stores/useToastStore';
 
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (typeof error === 'object' && error && 'response' in error) {
+    const response = (error as { response?: { data?: { error?: string } } }).response;
+    if (response?.data?.error) return response.data.error;
+  }
+  if (error instanceof Error && error.message) return error.message;
+  return fallback;
+};
+
 function WebsiteEditorPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuthStore();
@@ -35,8 +44,8 @@ function WebsiteEditorPage() {
       if (!id) return;
       try {
         await refresh(id);
-      } catch (err: any) {
-        setError(err?.message || '加载失败');
+      } catch (err: unknown) {
+        setError(getErrorMessage(err, '加载失败'));
       } finally {
         setLoading(false);
       }
@@ -58,8 +67,8 @@ function WebsiteEditorPage() {
       setTopic(updated);
       await refresh(id);
       toast.success('上传成功');
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || '上传失败');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, '上传失败'));
     } finally {
       setSubmitting(false);
     }
@@ -74,8 +83,8 @@ function WebsiteEditorPage() {
       setTopic(updated);
       await refresh(id);
       toast.success('删除成功');
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || '删除失败');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, '删除失败'));
     } finally {
       setSubmitting(false);
     }

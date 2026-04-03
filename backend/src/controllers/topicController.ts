@@ -1,3 +1,4 @@
+import { Op } from 'sequelize';
 import { Response } from 'express';
 import fs from 'fs';
 import path from 'path';
@@ -49,7 +50,6 @@ export const createTopic = async (req: AuthRequest, res: Response) => {
 
     const normalizedType = type === 'website' ? 'website' : 'knowledge';
     const normalizedWebsiteUrl = website_url ?? websiteUrl ?? null;
-
     if (normalizedType === 'knowledge' && normalizedWebsiteUrl) {
       return res
         .status(400)
@@ -72,13 +72,23 @@ export const createTopic = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Get topic list (public published)
+// Get topic list (public for published, teachers also see own drafts/closed)
 export const getTopics = async (req: AuthRequest | any, res: Response) => {
   try {
-    const where: any = { status: 'published' };
     const { type } = req.query as { type?: string };
+
+    const basePublished: any = { status: 'published' };
     if (type === 'knowledge' || type === 'website') {
-      where.type = type;
+      basePublished.type = type;
+    }
+
+    let where: any = basePublished;
+    if (req.user?.role === 'teacher') {
+      const own: any = { created_by: req.user.id };
+      if (type === 'knowledge' || type === 'website') {
+        own.type = type;
+      }
+      where = { [Op.or]: [basePublished, own] };
     }
 
     const topics = await Topic.findAll({
@@ -97,7 +107,7 @@ export const getTopics = async (req: AuthRequest | any, res: Response) => {
   }
 };
 
-// Get topic detail (public published)
+// Get topic detail (public for published, owner/admin can see non-published)
 export const getTopicById = async (req: AuthRequest | any, res: Response) => {
   try {
     const topicId = parseTopicId(req.params.id);
@@ -108,7 +118,14 @@ export const getTopicById = async (req: AuthRequest | any, res: Response) => {
     const topic = await Topic.findByPk(topicId, {
       include: [{ model: User, as: 'creator', attributes: ['id', 'username', 'email'] }],
     });
-    if (!topic || topic.status !== 'published') {
+    if (!topic) {
+      return res.status(404).json({ success: false, error: 'Topic not found' });
+    }
+    if (
+      topic.status !== 'published' &&
+      !(req.user?.role === 'teacher' && req.user.id === topic.created_by) &&
+      req.user?.role !== 'admin'
+    ) {
       return res.status(404).json({ success: false, error: 'Topic not found' });
     }
 

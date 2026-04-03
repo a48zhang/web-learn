@@ -55,32 +55,12 @@ function DashboardPage() {
             <>
               <div className="bg-white shadow rounded-lg p-6 hover:shadow-lg transition-shadow">
                 <h2 className="text-lg font-semibold text-gray-900 mb-2">浏览专题</h2>
-                <p className="text-gray-600 mb-4">浏览可学习的专题与任务</p>
+                <p className="text-gray-600 mb-4">浏览公开专题与知识内容</p>
                 <button
                   onClick={() => navigate('/topics')}
                   className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
                 >
                   去浏览
-                </button>
-              </div>
-              <div className="bg-white shadow rounded-lg p-6 hover:shadow-lg transition-shadow">
-                <h2 className="text-lg font-semibold text-gray-900 mb-2">我的提交</h2>
-                <p className="text-gray-600 mb-4">查看自己已经提交的任务内容与状态</p>
-                <button
-                  onClick={() => navigate('/my-submissions')}
-                  className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
-                >
-                  查看提交
-                </button>
-              </div>
-              <div className="bg-white shadow rounded-lg p-6 hover:shadow-lg transition-shadow">
-                <h2 className="text-lg font-semibold text-gray-900 mb-2">我的反馈</h2>
-                <p className="text-gray-600 mb-4">集中查看教师评分与反馈意见</p>
-                <button
-                  onClick={() => navigate('/my-feedback')}
-                  className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
-                >
-                  查看反馈
                 </button>
               </div>
             </>

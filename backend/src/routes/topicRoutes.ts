@@ -11,6 +11,7 @@ import {
   getWebsiteStats,
 } from '../controllers/topicController';
 import { authMiddleware } from '../middlewares/authMiddleware';
+import { optionalAuthMiddleware } from '../middlewares/optionalAuthMiddleware';
 import { upload } from '../middlewares/uploadMiddleware';
 
 const router: Router = express.Router();
@@ -19,10 +20,10 @@ const router: Router = express.Router();
 router.post('/', authMiddleware, createTopic);
 
 // GET /api/topics - Get topic list
-router.get('/', getTopics);
+router.get('/', optionalAuthMiddleware, getTopics);
 
 // GET /api/topics/:id - Get topic detail
-router.get('/:id', getTopicById);
+router.get('/:id', optionalAuthMiddleware, getTopicById);
 
 // PUT /api/topics/:id - Update topic (owner only)
 router.put('/:id', authMiddleware, updateTopic);

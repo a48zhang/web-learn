@@ -33,7 +33,8 @@ describe('TopicListPage', () => {
         description: '图论与最短路',
         createdBy: 'teacher-1',
         status: 'published',
-        deadline: '2026-04-15T00:00:00.000Z',
+        type: 'knowledge',
+        createdAt: '2026-04-10T00:00:00.000Z',
       },
     ]);
 
@@ -49,6 +50,7 @@ describe('TopicListPage', () => {
 
     expect(screen.getByText('图论与最短路')).toBeInTheDocument();
     expect(screen.getByText('已发布')).toBeInTheDocument();
+    expect(screen.getByText('知识库型')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '查看详情 →' })).toHaveAttribute('href', '/topics/topic-1');
   });
 

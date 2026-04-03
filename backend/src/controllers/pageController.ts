@@ -98,7 +98,15 @@ export const getPagesByTopic = async (req: Request, res: Response) => {
     if (!topicId) return res.status(400).json({ success: false, error: 'Invalid topic ID' });
 
     const topic = await Topic.findByPk(topicId);
-    if (!topic || topic.status !== 'published') {
+    if (!topic) {
+      return res.status(404).json({ success: false, error: 'Topic not found' });
+    }
+    const authReq = req as AuthRequest;
+    const canViewPrivate =
+      authReq.user &&
+      (authReq.user.role === 'admin' ||
+        (authReq.user.role === 'teacher' && authReq.user.id === topic.created_by));
+    if (topic.status !== 'published' && !canViewPrivate) {
       return res.status(404).json({ success: false, error: 'Topic not found' });
     }
     if (topic.type !== 'knowledge') {
@@ -130,7 +138,15 @@ export const getPageById = async (req: Request, res: Response) => {
     if (!page) return res.status(404).json({ success: false, error: 'Page not found' });
 
     const topic = await Topic.findByPk(page.topic_id);
-    if (!topic || topic.status !== 'published') {
+    if (!topic) {
+      return res.status(404).json({ success: false, error: 'Page not found' });
+    }
+    const authReq = req as AuthRequest;
+    const canViewPrivate =
+      authReq.user &&
+      (authReq.user.role === 'admin' ||
+        (authReq.user.role === 'teacher' && authReq.user.id === topic.created_by));
+    if (topic.status !== 'published' && !canViewPrivate) {
       return res.status(404).json({ success: false, error: 'Page not found' });
     }
 

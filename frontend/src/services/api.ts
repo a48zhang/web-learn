@@ -9,14 +9,14 @@ import type {
   CreateTopicDto,
   UpdateTopicDto,
   UpdateTopicStatusDto,
-  Resource,
-  Task,
-  CreateTaskDto,
-  Submission,
-  Review,
-  CreateReviewDto,
-  UpdateReviewDto,
-  SubmissionWithContext,
+  TopicPage,
+  TopicPageTreeNode,
+  CreateTopicPageDto,
+  UpdateTopicPageDto,
+  ReorderTopicPagesDto,
+  AIChatRequestDto,
+  AIChatResponseDto,
+  WebsiteStats,
 } from '@web-learn/shared';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
@@ -33,14 +33,22 @@ const api = axios.create({
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = localStorage.getItem('auth_token');
-    if (token && config.headers) {
+    const method = config.method?.toUpperCase() ?? 'GET';
+    const isPublicGet =
+      method === 'GET' &&
+      (config.url?.startsWith('/topics') || config.url?.startsWith('/pages/'));
+
+    if (token && config.headers && !isPublicGet) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    if (token && config.headers && isPublicGet) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 // Response interceptor to handle 401 errors
@@ -48,8 +56,13 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('auth_token');
-      window.location.href = '/login';
+      const method = error.config?.method?.toUpperCase() ?? 'GET';
+      const url: string = error.config?.url || '';
+      const isPublicGet = method === 'GET' && (url.startsWith('/topics') || url.startsWith('/pages/'));
+      if (!isPublicGet) {
+        localStorage.removeItem('auth_token');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
@@ -80,12 +93,16 @@ export const authApi = {
 // Topic API
 export const topicApi = {
   create: async (data: CreateTopicDto): Promise<Topic> => {
-    const response = await api.post<ApiResponse<Topic>>('/topics', data);
+    const payload = {
+      ...data,
+      website_url: data.websiteUrl,
+    };
+    const response = await api.post<ApiResponse<Topic>>('/topics', payload);
     return response.data.data as Topic;
   },
 
-  getAll: async (): Promise<Topic[]> => {
-    const response = await api.get<ApiResponse<Topic[]>>('/topics');
+  getAll: async (params?: { type?: 'knowledge' | 'website' }): Promise<Topic[]> => {
+    const response = await api.get<ApiResponse<Topic[]>>('/topics', { params });
     return response.data.data as Topic[];
   },
 
@@ -95,7 +112,11 @@ export const topicApi = {
   },
 
   update: async (id: string, data: UpdateTopicDto): Promise<Topic> => {
-    const response = await api.put<ApiResponse<Topic>>(`/topics/${id}`, data);
+    const payload = {
+      ...data,
+      website_url: data.websiteUrl,
+    };
+    const response = await api.put<ApiResponse<Topic>>(`/topics/${id}`, payload);
     return response.data.data as Topic;
   },
 
@@ -104,85 +125,80 @@ export const topicApi = {
     return response.data.data as Topic;
   },
 
-  join: async (id: string): Promise<{ message: string }> => {
-    const response = await api.post<ApiResponse<{ message: string }>>(`/topics/${id}/join`);
-    return response.data.data as { message: string };
-  },
-};
-
-// Resource API
-export const resourceApi = {
-  upload: async (topicId: string, formData: FormData): Promise<Resource> => {
-    const response = await api.post<ApiResponse<Resource>>(`/topics/${topicId}/resources`, formData, {
+  uploadWebsite: async (id: string, file: File): Promise<Topic> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post<ApiResponse<Topic>>(`/topics/${id}/website/upload`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
-    return response.data.data as Resource;
+    return response.data.data as Topic;
   },
 
-  getByTopic: async (topicId: string): Promise<Resource[]> => {
-    const response = await api.get<ApiResponse<Resource[]>>(`/topics/${topicId}/resources`);
-    return response.data.data as Resource[];
-  },
-
-  downloadUrl: (id: string): string => `${API_BASE_URL}/resources/${id}/download`,
-
-  delete: async (id: string): Promise<void> => {
-    await api.delete(`/resources/${id}`);
-  },
-};
-
-// Task API
-export const taskApi = {
-  create: async (topicId: string, data: CreateTaskDto): Promise<Task> => {
-    const response = await api.post<ApiResponse<Task>>(`/topics/${topicId}/tasks`, data);
-    return response.data.data as Task;
-  },
-
-  getByTopic: async (topicId: string): Promise<Task[]> => {
-    const response = await api.get<ApiResponse<Task[]>>(`/topics/${topicId}/tasks`);
-    return response.data.data as Task[];
-  },
-};
-
-// Submission API
-export const submissionApi = {
-  submit: async (taskId: string, formData: FormData): Promise<Submission> => {
-    const response = await api.post<ApiResponse<Submission>>(`/tasks/${taskId}/submit`, formData, {
+  updateWebsite: async (id: string, file: File): Promise<Topic> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.put<ApiResponse<Topic>>(`/topics/${id}/website/upload`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
-    return response.data.data as Submission;
+    return response.data.data as Topic;
   },
 
-  getByTask: async (taskId: string): Promise<Submission[]> => {
-    const response = await api.get<ApiResponse<Submission[]>>(`/tasks/${taskId}/submissions`);
-    return response.data.data as Submission[];
+  deleteWebsite: async (id: string): Promise<Topic> => {
+    const response = await api.delete<ApiResponse<Topic>>(`/topics/${id}/website`);
+    return response.data.data as Topic;
   },
 
-  getMySubmissions: async (): Promise<SubmissionWithContext[]> => {
-    const response = await api.get<ApiResponse<SubmissionWithContext[]>>('/submissions/me');
-    return response.data.data as SubmissionWithContext[];
+  getWebsiteStats: async (id: string): Promise<WebsiteStats> => {
+    const response = await api.get<ApiResponse<WebsiteStats>>(`/topics/${id}/website/stats`);
+    return response.data.data as WebsiteStats;
   },
 };
 
-// Review API
-export const reviewApi = {
-  create: async (submissionId: string, data: CreateReviewDto): Promise<Review> => {
-    const response = await api.post<ApiResponse<Review>>(`/submissions/${submissionId}/review`, data);
-    return response.data.data as Review;
+// Topic pages API
+export const pageApi = {
+  create: async (topicId: string, data: CreateTopicPageDto): Promise<TopicPage> => {
+    const response = await api.post<ApiResponse<TopicPage>>(`/topics/${topicId}/pages`, data);
+    return response.data.data as TopicPage;
   },
 
-  getBySubmission: async (submissionId: string): Promise<Review> => {
-    const response = await api.get<ApiResponse<Review>>(`/submissions/${submissionId}/review`);
-    return response.data.data as Review;
+  getByTopic: async (topicId: string): Promise<TopicPageTreeNode[]> => {
+    const response = await api.get<ApiResponse<TopicPageTreeNode[]>>(`/topics/${topicId}/pages`);
+    return response.data.data as TopicPageTreeNode[];
   },
 
-  update: async (reviewId: string, data: UpdateReviewDto): Promise<Review> => {
-    const response = await api.put<ApiResponse<Review>>(`/reviews/${reviewId}`, data);
-    return response.data.data as Review;
+  getById: async (id: string): Promise<TopicPage> => {
+    const response = await api.get<ApiResponse<TopicPage>>(`/pages/${id}`);
+    return response.data.data as TopicPage;
+  },
+
+  update: async (id: string, data: UpdateTopicPageDto): Promise<TopicPage> => {
+    const response = await api.put<ApiResponse<TopicPage>>(`/pages/${id}`, data);
+    return response.data.data as TopicPage;
+  },
+
+  delete: async (id: string): Promise<{ deleted: string[] }> => {
+    const response = await api.delete<ApiResponse<{ deleted: string[] }>>(`/pages/${id}`);
+    return response.data.data as { deleted: string[] };
+  },
+
+  reorder: async (topicId: string, data: ReorderTopicPagesDto): Promise<TopicPageTreeNode[]> => {
+    const response = await api.patch<ApiResponse<TopicPageTreeNode[]>>(
+      `/topics/${topicId}/pages/reorder`,
+      data
+    );
+    return response.data.data as TopicPageTreeNode[];
+  },
+};
+
+// AI API
+export const aiApi = {
+  chat: async (data: AIChatRequestDto): Promise<AIChatResponseDto> => {
+    const response = await api.post<AIChatResponseDto>('/ai/chat', data);
+    return response.data;
   },
 };
 

@@ -146,7 +146,7 @@ function RegisterPage() {
                 选择角色
               </label>
               <div className="grid grid-cols-2 gap-3">
-                <label className="flex items-center justify-center p-4 border-2 rounded-md cursor-pointer hover:border-blue-500 transition-colors">
+                <label className="flex items-center justify-center p-4 border-2 rounded-md cursor-pointer hover:border-blue-500 transition-colors has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
                   <input
                     type="radio"
                     value={UserRole.STUDENT}
@@ -158,7 +158,7 @@ function RegisterPage() {
                     <div className="font-medium text-gray-900">学生</div>
                   </div>
                 </label>
-                <label className="flex items-center justify-center p-4 border-2 rounded-md cursor-pointer hover:border-blue-500 transition-colors">
+                <label className="flex items-center justify-center p-4 border-2 rounded-md cursor-pointer hover:border-blue-500 transition-colors has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
                   <input
                     type="radio"
                     value={UserRole.TEACHER}

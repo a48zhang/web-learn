@@ -28,22 +28,18 @@ describe('DashboardPage', () => {
     authState.user = { username: 'alice', role: 'student' };
   });
 
-  it('shows student quick actions for topics, submissions, and feedback', () => {
+  it('shows student quick actions for topics', () => {
     render(<DashboardPage />);
 
     expect(screen.getByText('控制台')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '去浏览' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '查看提交' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '查看反馈' })).toBeInTheDocument();
   });
 
-  it('navigates to the student submission and feedback pages from quick actions', () => {
+  it('navigates to topics from quick actions', () => {
     render(<DashboardPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: '查看提交' }));
-    fireEvent.click(screen.getByRole('button', { name: '查看反馈' }));
+    fireEvent.click(screen.getByRole('button', { name: '去浏览' }));
 
-    expect(navigateMock).toHaveBeenCalledWith('/my-submissions');
-    expect(navigateMock).toHaveBeenCalledWith('/my-feedback');
+    expect(navigateMock).toHaveBeenCalledWith('/topics');
   });
 });

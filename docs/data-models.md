@@ -6,20 +6,26 @@
 
 ## 概述
 
-系统采用 MySQL 关系型数据库，使用 Sequelize ORM 进行数据操作。共包含 **7 个核心数据模型**：
+系统采用 MySQL 关系型数据库，使用 Sequelize ORM 进行数据操作。共包含 **7 个数据模型**：
 
-**推荐使用的模型：**
+**核心模型（推荐使用）：**
 - **User** - 用户
-- **Topic** - 专题
-- **TopicMember** - 专题成员（关联表）
+- **Topic** - 专题学习空间
 - **Resource** - 学习资源
+- **Submission** - 学习成果提交
+- **Review** - 评价反馈
 
-**⚠️ 不推荐使用的模型：**
+**待调整/移除的模型：**
+- ⚠️ **TopicMember** - 专题成员（根据新设计，专题默认公开，此模型应移除或重构）
 - ~~**Task** - 任务~~（对产品规格理解偏差，已实现但不推荐使用）
-- ~~**Submission** - 作业提交~~（依赖 Task 模型，不推荐使用）
-- ~~**Review** - 评价~~（依赖 Submission 模型，不推荐使用）
 
-> **注意：** Task、Submission、Review 三个模型已完整实现且功能可用，但由于对原始产品规格理解存在偏差，建议后续重新设计或移除。详见 [实现状况报告](./implementation-status.md#六phase-4任务与提交-️)。
+> **设计原则（2026-04-03 更新）：**
+> - **完全公开访问：** 所有已发布的专题对所有人公开可见（包括未登录访客）
+> - **无需加入：** 访客可自由浏览专题和下载资源，无需登录
+> - **提交需登录：** 只有提交成果和查看评价需要登录
+> - **简化流程：** 移除复杂的权限和加入机制
+>
+> 详见 [SPEC.md](./SPEC.md#专题学习平台-产品规格说明)
 
 ## ER 图
 
@@ -72,9 +78,9 @@ erDiagram
 
 ---
 
-### 2. Topic（专题）
+### 2. Topic（专题学习空间）
 
-专题模型表示教师创建的学习专题。
+专题模型表示教师创建的学习专题空间。
 
 **表名：** `topics`
 
@@ -95,14 +101,16 @@ erDiagram
 
 **业务规则：**
 - 只有教师可以创建专题
-- 发布后学生才能加入
-- 关闭后不能再提交作业
+- **发布后所有人可见（完全公开，包括访客）**
+- **关闭后不能再提交成果**
 
 ---
 
-### 3. TopicMember（专题成员）
+### 3. TopicMember（专题成员）⚠️ 待调整
 
-专题与用户的多对多关联表，记录学生加入专题的信息。
+> **设计变更：** 根据新的公开访问设计，专题默认对学生公开，此模型应考虑移除或重构。
+
+专题与用户的多对多关联表，原设计用于记录学生加入专题的信息。
 
 **表名：** `topic_members`
 
@@ -116,10 +124,10 @@ erDiagram
 **索引：**
 - UNIQUE INDEX (`topic_id`, `user_id`) - 防止重复加入
 
-**业务规则：**
-- 学生可以主动加入已发布的专题
-- 教师创建专题时自动成为成员
-- 成员才能查看专题详细内容和提交作业
+**当前状态：**
+- ✅ 已实现
+- ⚠️ 根据新设计应移除或重构
+- 💡 可考虑保留用于其他用途（如学习进度跟踪、收藏等）
 
 ---
 
@@ -148,11 +156,37 @@ erDiagram
 
 ---
 
-### 5. Submission（作业提交）⚠️ 不推荐使用
+### 5. Submission（学习成果提交）
 
-> **警告：** 此模型依赖 Task 模型，因此也不推荐使用。
+> **简化设计：** 学生直接向专题提交成果，无需通过任务系统。所有学生可向任何已发布的专题提交。
 
-学生提交的作业记录。
+学生提交的学习成果记录。
+
+**表名：** `submissions`
+
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | INTEGER | PRIMARY KEY, AUTO_INCREMENT | 提交 ID |
+| topic_id | INTEGER | NOT NULL, FK → topics.id | 所属专题 ID |
+| student_id | INTEGER | NOT NULL, FK → users.id | 学生 ID |
+| content | TEXT | NULLABLE | 文本内容 |
+| file_url | VARCHAR(300) | NULLABLE | 附件文件路径 |
+| submitted_at | TIMESTAMP | NOT NULL, DEFAULT NOW | 提交时间 |
+
+**业务规则：**
+- 学生可以向任何已发布的专题提交成果（需登录）
+- 访客可浏览但不能提交（需先注册登录）
+- 专题关闭后不能提交
+- 可以同时提交文本内容和附件
+- 每个学生每个专题可多次提交
+
+---
+
+### 6. Review（评价反馈）
+
+> **简化设计：** 教师直接评价学生提交，无需任务系统。
+
+教师对学生成果的评价记录。
 
 **表名：** `submissions`
 
@@ -164,31 +198,6 @@ erDiagram
 | content | TEXT | NULLABLE | 文本内容 |
 | file_url | VARCHAR(300) | NULLABLE | 附件文件路径 |
 | submitted_at | TIMESTAMP | NOT NULL, DEFAULT NOW | 提交时间 |
-
-**业务规则：**
-- 学生只能提交自己已加入专题的任务
-- 专题关闭后不能提交
-- 可以同时提交文本内容和附件
-- 每个任务每个学生可多次提交
-
----
-
-### 6. Review（评价）⚠️ 不推荐使用
-
-> **警告：** 此模型依赖 Submission 模型，因此也不推荐使用。
-
-教师对学生作业的评价记录。
-
-**表名：** `reviews`
-
-| 字段 | 类型 | 约束 | 说明 |
-|------|------|------|------|
-| id | INTEGER | PRIMARY KEY, AUTO_INCREMENT | 评价 ID |
-| submission_id | INTEGER | NOT NULL, FK → submissions.id | 提交 ID |
-| reviewer_id | INTEGER | NOT NULL, FK → users.id | 评价者 ID（教师） |
-| score | DECIMAL(5,2) | NULLABLE | 分数（0-100） |
-| feedback | TEXT | NULLABLE | 反馈意见 |
-| reviewed_at | TIMESTAMP | NOT NULL, DEFAULT NOW | 评价时间 |
 
 **业务规则：**
 - 只有专题创建者教师可以评价
@@ -221,8 +230,8 @@ erDiagram
 - `other` - 其他类型
 
 **业务规则：**
-- 教师和学生都可以上传资源
-- 专题成员可以下载资源
+- 教师和学生都可以上传资源（需登录）
+- **已发布专题的资源对所有人公开下载（包括访客）**
 - 链接类型直接返回 URL
 - 文件类型存储在服务器本地（生产环境建议使用 OSS/S3）
 
@@ -262,10 +271,10 @@ Submission.hasOne(Review, { foreignKey: 'submission_id', as: 'review' });
 Review.belongsTo(Submission, { foreignKey: 'submission_id', as: 'submission' });
 ```
 
-### 多对多关系
+### 多对多关系（待调整）
 
 ```typescript
-// Topic <-> User (专题和用户的多对多关系)
+// Topic <-> User (专题和用户的多对多关系) - ⚠️ 根据新设计应移除
 Topic.belongsToMany(User, {
   through: TopicMember,
   foreignKey: 'topic_id',
@@ -280,6 +289,8 @@ User.belongsToMany(Topic, {
   as: 'joinedTopics'
 });
 ```
+
+> **设计变更：** 根据新的完全公开访问设计，TopicMember 关联应考虑移除或重构。所有已发布的专题对所有人公开可见（包括未登录访客），无需加入机制。
 
 ---
 

@@ -2,9 +2,24 @@
 
 ## 核心文档
 
-- **[SPEC.md](./SPEC.md)** - 产品规格说明（完整的产品定义、功能需求、技术架构）
-- **[data-models.md](./data-models.md)** - 数据模型文档（数据库表结构、字段定义、关联关系）
-- **[implementation-status.md](./implementation-status.md)** - 实现状况报告（开发进度跟踪、已知问题）
+### 产品规格文档
+
+**[spec/](./spec/)** - 完整的产品规格文档，按模块组织
+
+[spec/README.md](./spec/README.md) 获取完整的文档导航和快速查找指南
+
+- **[产品概述](./spec/overview.md)** - 产品定位、目标用户、核心价值
+- **[用户角色与权限](./spec/user-roles.md)** - 角色定义、权限矩阵
+- **[功能清单](./spec/features.md)** - 详细功能列表
+- **[数据模型](./spec/data-models.md)** - 数据库设计
+- **[API 设计](./spec/api-design.md)** - RESTful API 规范
+- **[技术架构](./spec/architecture.md)** - 系统架构设计
+
+
+### 技术文档
+
+- **[data-models.md](./data-models.md)** - 完整数据模型文档（详细的表结构和字段说明）
+- **[implementation-status.md](./implementation-status.md)** - 实现状况报告（开发进度、已知问题）
 
 ## 开发规范
 

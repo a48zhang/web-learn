@@ -43,5 +43,10 @@ export const config = {
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
   },
+  ai: {
+    apiKey: process.env.OPENAI_API_KEY || '',
+    baseUrl: process.env.OPENAI_BASE_URL || '',
+    model: process.env.OPENAI_MODEL || 'gpt-4.1-mini',
+  },
   uploadsDir: process.env.UPLOADS_DIR || `${process.cwd()}/uploads`,
 };

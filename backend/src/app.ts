@@ -3,10 +3,8 @@ import cors from 'cors';
 import authRoutes from './routes/authRoutes';
 import userRoutes from './routes/userRoutes';
 import topicRoutes from './routes/topicRoutes';
-import resourceRoutes from './routes/resourceRoutes';
-import taskRoutes from './routes/taskRoutes';
-import submissionRoutes from './routes/submissionRoutes';
-import reviewRoutes from './routes/reviewRoutes';
+import pageRoutes from './routes/pageRoutes';
+import aiRoutes from './routes/aiRoutes';
 
 const app: Application = express();
 
@@ -28,10 +26,8 @@ app.get('/api/health', (req: Request, res: Response) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/topics', topicRoutes);
-app.use('/api/resources', resourceRoutes);
-app.use('/api/tasks', taskRoutes);
-app.use('/api/submissions', submissionRoutes);
-app.use('/api', reviewRoutes);
+app.use('/api', pageRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {

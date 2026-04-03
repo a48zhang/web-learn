@@ -5,26 +5,18 @@ import {
   getTopicById,
   updateTopic,
   updateTopicStatus,
-  joinTopic,
+  uploadWebsite,
+  updateWebsite,
+  deleteWebsite,
+  getWebsiteStats,
 } from '../controllers/topicController';
-import {
-  uploadResource,
-  getResources,
-} from '../controllers/resourceController';
-import {
-  createTask,
-  getTasksForTopic,
-} from '../controllers/taskController';
 import { authMiddleware } from '../middlewares/authMiddleware';
 import { upload } from '../middlewares/uploadMiddleware';
 
 const router: Router = express.Router();
 
-// All topic routes require authentication
-router.use(authMiddleware);
-
 // POST /api/topics - Create topic (teacher only)
-router.post('/', createTopic);
+router.post('/', authMiddleware, createTopic);
 
 // GET /api/topics - Get topic list
 router.get('/', getTopics);
@@ -33,26 +25,16 @@ router.get('/', getTopics);
 router.get('/:id', getTopicById);
 
 // PUT /api/topics/:id - Update topic (owner only)
-router.put('/:id', updateTopic);
+router.put('/:id', authMiddleware, updateTopic);
 
 // PATCH /api/topics/:id/status - Publish/close topic
-router.patch('/:id/status', updateTopicStatus);
+router.patch('/:id/status', authMiddleware, updateTopicStatus);
 
-// POST /api/topics/:id/join - Join topic (student only)
-router.post('/:id/join', joinTopic);
+// Website topic routes
+router.post('/:id/website/upload', authMiddleware, upload.single('file'), uploadWebsite);
+router.put('/:id/website/upload', authMiddleware, upload.single('file'), updateWebsite);
+router.delete('/:id/website', authMiddleware, deleteWebsite);
+router.get('/:id/website/stats', authMiddleware, getWebsiteStats);
 
-// Resource routes
-// POST /api/topics/:id/resources - Upload resource to topic
-router.post('/:id/resources', upload.single('file'), uploadResource);
-
-// GET /api/topics/:id/resources - Get resources for topic
-router.get('/:id/resources', getResources);
-
-// Task routes
-// POST /api/topics/:id/tasks - Create task (teacher only)
-router.post('/:id/tasks', createTask);
-
-// GET /api/topics/:id/tasks - Get tasks for topic
-router.get('/:id/tasks', getTasksForTopic);
 
 export default router;

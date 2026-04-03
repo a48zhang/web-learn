@@ -9,34 +9,9 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 const allowedMimeTypes = new Set([
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/vnd.ms-powerpoint',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  'text/plain',
-  'text/markdown',
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'video/mp4',
-  'video/webm',
-  'audio/mpeg',
-  'audio/wav',
   'application/zip',
   'application/x-zip-compressed',
-]);
-
-const blockedExtensions = new Set([
-  '.html',
-  '.htm',
-  '.js',
-  '.mjs',
-  '.cjs',
-  '.svg',
-  '.xml',
+  'application/octet-stream',
 ]);
 
 const storage = multer.diskStorage({
@@ -53,9 +28,10 @@ const storage = multer.diskStorage({
 
 const fileFilter = (_req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   const ext = path.extname(file.originalname).toLowerCase();
+  const isZipExt = ext === '.zip';
 
-  if (blockedExtensions.has(ext) || !allowedMimeTypes.has(file.mimetype)) {
-    cb(new Error('Unsupported file type'));
+  if (!isZipExt || !allowedMimeTypes.has(file.mimetype)) {
+    cb(new Error('Only ZIP files are supported'));
     return;
   }
 

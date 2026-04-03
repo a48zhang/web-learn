@@ -5,19 +5,21 @@ interface TopicAttributes {
   id: number;
   title: string;
   description?: string;
+  type: 'knowledge' | 'website';
+  website_url?: string | null;
   created_by: number;
-  deadline?: Date;
   status: 'draft' | 'published' | 'closed';
 }
 
-interface TopicCreationAttributes extends Optional<TopicAttributes, 'id' | 'description' | 'deadline' | 'status'> {}
+interface TopicCreationAttributes extends Optional<TopicAttributes, 'id' | 'description' | 'website_url' | 'status' | 'type'> {}
 
 class Topic extends Model<TopicAttributes, TopicCreationAttributes> implements TopicAttributes {
   public id!: number;
   public title!: string;
   public description?: string;
+  public type!: 'knowledge' | 'website';
+  public website_url?: string | null;
   public created_by!: number;
-  public deadline?: Date;
   public status!: 'draft' | 'published' | 'closed';
   public declare createdAt: Date;
   public declare updatedAt: Date;
@@ -38,6 +40,15 @@ Topic.init(
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    type: {
+      type: DataTypes.ENUM('knowledge', 'website'),
+      allowNull: false,
+      defaultValue: 'knowledge',
+    },
+    website_url: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+    },
     created_by: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -45,10 +56,6 @@ Topic.init(
         model: 'users',
         key: 'id',
       },
-    },
-    deadline: {
-      type: DataTypes.DATEONLY,
-      allowNull: true,
     },
     status: {
       type: DataTypes.ENUM('draft', 'published', 'closed'),

@@ -202,9 +202,11 @@ web-learn/
 | 问题 | 修复 |
 |------|------|
 | `frontend/.env` 不存在，axios 回退到 `http://localhost:3000/api` 直接请求后端跨域失败 | 创建 `frontend/.env`，设置 `VITE_API_URL=/api` 走 Vite proxy |
-| backend CORS origin 白名单逻辑复杂且端口不匹配 | 简化为 `app.use(cors())` 完全开放本地开发 |
+| backend CORS origin 白名单逻辑复杂且端口不匹配 | 简化为 `app.use(cors())` 开放策略（适用于开发环境） |
 | authMiddleware 拦截 OPTIONS preflight 请求返回 401 | 增加 `if (req.method === 'OPTIONS') return next()` |
 | `frontend/.env.example` 值为 `http://localhost:3000/api` 会导致相同问题 | 同步更新为 `/api` |
+
+**注意：** CORS 开放策略适用于开发环境。生产环境建议在 `app.ts` 中配置具体的允许域名。
 
 ---
 

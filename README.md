@@ -102,7 +102,7 @@ cd frontend && pnpm test
 
 1. 修改所有 `.env` 文件中的敏感配置
 2. 使用安全的 `JWT_SECRET`
-3. 配置正确的 CORS 白名单
+3. 配置 CORS 策略（当前为开放策略，生产环境建议配置具体域名）
 4. 使用 HTTPS
 5. 配置文件上传存储方案（OSS/S3）
 6. 禁用 Sequelize 自动同步，使用迁移脚本

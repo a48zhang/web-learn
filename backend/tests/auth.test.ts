@@ -81,6 +81,8 @@ describe('Auth API', () => {
         username: 'alice',
         email: 'alice@example.com',
         role: 'student',
+        createdAt: new Date('2026-04-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-04-01T00:00:00.000Z'),
       });
       (jwt.sign as jest.Mock).mockReturnValue('mock-jwt-token');
 
@@ -96,10 +98,12 @@ describe('Auth API', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.data.token).toBe('mock-jwt-token');
       expect(response.body.data.user).toEqual({
-        id: 1,
+        id: '1',
         username: 'alice',
         email: 'alice@example.com',
         role: 'student',
+        createdAt: '2026-04-01T00:00:00.000Z',
+        updatedAt: '2026-04-01T00:00:00.000Z',
       });
       expect(mockUserModel.findOne).toHaveBeenCalled();
       expect(mockUserModel.create).toHaveBeenCalledWith({
@@ -130,6 +134,8 @@ describe('Auth API', () => {
         username: 'eve',
         email: 'eve@example.com',
         role: 'student',
+        createdAt: new Date('2026-04-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-04-01T00:00:00.000Z'),
       });
       (jwt.sign as jest.Mock).mockReturnValue('forced-student-token');
 
@@ -144,7 +150,7 @@ describe('Auth API', () => {
 
       expect(response.status).toBe(201);
       expect(response.body.data.user).toMatchObject({
-        id: 4,
+        id: '4',
         role: 'student',
       });
       expect(mockUserModel.create).toHaveBeenCalledWith({
@@ -183,6 +189,8 @@ describe('Auth API', () => {
         username: 'bob',
         email: 'bob@example.com',
         role: 'teacher',
+        createdAt: new Date('2026-04-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-04-01T00:00:00.000Z'),
         comparePassword,
       });
       (jwt.sign as jest.Mock).mockReturnValue('login-token');
@@ -198,10 +206,12 @@ describe('Auth API', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.data.token).toBe('login-token');
       expect(response.body.data.user).toEqual({
-        id: 2,
+        id: '2',
         username: 'bob',
         email: 'bob@example.com',
         role: 'teacher',
+        createdAt: '2026-04-01T00:00:00.000Z',
+        updatedAt: '2026-04-01T00:00:00.000Z',
       });
       expect(comparePassword).toHaveBeenCalledWith('secret123');
     });
@@ -263,8 +273,8 @@ describe('Auth API', () => {
           username: 'diana',
           email: 'diana@example.com',
           role: 'student',
-          created_at: new Date('2026-04-01T00:00:00.000Z'),
-          updated_at: new Date('2026-04-01T01:00:00.000Z'),
+          createdAt: new Date('2026-04-01T00:00:00.000Z'),
+          updatedAt: new Date('2026-04-01T01:00:00.000Z'),
         });
 
       const response = await request(app)
@@ -274,7 +284,7 @@ describe('Auth API', () => {
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.data).toMatchObject({
-        id: 5,
+        id: '5',
         username: 'diana',
         email: 'diana@example.com',
         role: 'student',
@@ -282,9 +292,7 @@ describe('Auth API', () => {
       expect(mockUserModel.findByPk).toHaveBeenNthCalledWith(1, 5, {
         attributes: ['id', 'username', 'email', 'role'],
       });
-      expect(mockUserModel.findByPk).toHaveBeenNthCalledWith(2, 5, {
-        attributes: ['id', 'username', 'email', 'role', 'created_at', 'updated_at'],
-      });
+      expect(mockUserModel.findByPk).toHaveBeenNthCalledWith(2, 5);
     });
 
     it('rejects requests without a token', async () => {

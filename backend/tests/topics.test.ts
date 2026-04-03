@@ -75,6 +75,20 @@ jest.mock('jsonwebtoken', () => ({
   JsonWebTokenError: class JsonWebTokenError extends Error {},
 }));
 
+// Mock sequelize to avoid real database connections
+const mockTransaction = {
+  commit: jest.fn(),
+  rollback: jest.fn(),
+};
+
+jest.mock('../src/utils/database', () => ({
+  sequelize: {
+    transaction: jest.fn((callback) => callback(mockTransaction)),
+    authenticate: jest.fn(),
+    sync: jest.fn(),
+  },
+}));
+
 import app from '../src/app';
 
 describe('Topics API', () => {
@@ -98,8 +112,8 @@ describe('Topics API', () => {
         created_by: 10,
         status: 'draft',
         deadline: new Date('2026-05-01T00:00:00.000Z'),
-        created_at: new Date('2026-04-01T00:00:00.000Z'),
-        updated_at: new Date('2026-04-01T00:00:00.000Z'),
+        createdAt: new Date('2026-04-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-04-01T00:00:00.000Z'),
       });
       mockTopicMemberModel.create.mockResolvedValue({
         id: 1,
@@ -125,7 +139,7 @@ describe('Topics API', () => {
         description: 'Testing fundamentals',
         createdBy: '10',
         status: 'draft',
-        deadline: '2026-05-01T00:00:00.000Z',
+        deadline: '2026-05-01',
       });
       expect(mockTopicModel.create).toHaveBeenCalledWith({
         title: 'Jest Basics',

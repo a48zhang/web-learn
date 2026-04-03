@@ -1,291 +1,113 @@
 # 开发计划：从当前状态到 Spec 目标状态
 
-> 最后更新：2026-04-03
+> 最后更新：2026-04-03（v2）
 
 ## 概述
 
-本文档指导如何将当前项目从现有状态开发到最新 spec 描述的目标状态。主要工作包括：
-- 简化数据模型（移除不必要的模型）
-- 新增专题类型支持（知识库型和网站型）
+将当前项目重构为专题学习平台。主要工作：
+- 简化数据模型（移除 Task/Submission/Review/Resource/TopicMember）
+- 新增专题类型支持（知识库型 + 网站型）
 - 新增 TopicPage 模型（Markdown 内容）
-- 移除不必要的功能模块
-- 新增 AI Agent 系统
+- 新增 AI Agent 系统（学习助手 + 搭建助手）
 
-
----
-
-## 当前状态与 Spec 差异分析
-
-### 1. 数据模型差异
-
-#### User 模型
-
-**当前状态：**
-- 角色：`admin | teacher | student | guest`
-- 字段：id, username, email, password, role
-
-**Spec 要求：**
-- 角色：`teacher | student`（移除 admin 和 guest）
-- 字段：id, username, email, password, role, created_at, updated_at
-
-**差异：**
-- ❌ 需移除 `admin` 和 `guest` 角色
-- ✅ 字段基本匹配
-
-#### Topic 模型
-
-**当前状态：**
-- 字段：id, title, description, created_by, deadline, status
-- 状态：`draft | published | closed`
-
-**Spec 要求：**
-- 字段：id, title, description, **type**, **website_url**, created_by, status
-- 类型：`knowledge | website`
-- 状态：`draft | published | closed`
-
-**差异：**
-- ❌ 需移除 `deadline` 字段（spec 不需要）
-- ❌ 需新增 `type` 字段（专题类型）
-- ❌ 需新增 `website_url` 字段（网站型专题）
-- ✅ 状态枚举匹配
-
-#### TopicPage 模型
-
-**当前状态：**
-- ❌ 不存在
-
-**Spec 要求：**
-- 字段：id, topic_id, title, content (Markdown), parent_page_id, order
-- 支持页面嵌套
-- 仅知识库型专题使用
-
-**差异：**
-- ❌ 需新建模型
-
-#### TopicMember 模型
-
-**当前状态：**
-- ✅ 存在（专题成员关系表）
-
-**Spec 要求：**
-- ❌ 不需要（专题完全公开，无需成员管理）
-
-**差异：**
-- ❌ 需删除整个模型及相关代码
-
-#### Resource 模型
-
-**当前状态：**
-- ✅ 存在（独立学习资源表）
-
-**Spec 要求：**
-- ❌ 不需要（资源作为 Markdown 内容的一部分）
-
-**差异：**
-- ❌ 需删除整个模型及相关代码
-
-#### Task 模型
-
-**当前状态：**
-- ✅ 存在（任务表）
-
-**Spec 要求：**
-- ❌ 不需要（移除任务系统）
-
-**差异：**
-- ❌ 需删除整个模型及相关代码
-
-#### Submission 模型
-
-**当前状态：**
-- ✅ 存在（学习成果提交表）
-
-**Spec 要求：**
-- ❌ 不需要（移除提交评价流程）
-
-**差异：**
-- ❌ 需删除整个模型及相关代码
-
-#### Review 模型
-
-**当前状态：**
-- ✅ 存在（评价反馈表）
-
-**Spec 要求：**
-- ❌ 不需要（移除提交评价流程）
-
-**差异：**
-- ❌ 需删除整个模型及相关代码
-
----
-
-### 2. Controllers 和 Routes 差异
-
-#### 需删除的 Controllers
-
-- ❌ `resourceController.ts` - 资源管理（已废弃）
-- ❌ `taskController.ts` - 任务管理（已废弃）
-- ❌ `submissionController.ts` - 提交管理（已废弃）
-- ❌ `reviewController.ts` - 评价管理（已废弃）
-
-#### 需删除的 Routes
-
-- ❌ `resourceRoutes.ts` - 资源路由
-- ❌ `taskRoutes.ts` - 任务路由
-- ❌ `submissionRoutes.ts` - 提交路由
-- ❌ `reviewRoutes.ts` - 评价路由
-
-#### 需新建的 Controllers
-
-- ✅ `pageController.ts` - 页面管理（知识库型专题）
-- ✅ `aiController.ts` - AI Agent 对话
-
-#### 需新建的 Routes
-
-- ✅ `pageRoutes.ts` - 页面路由
-- ✅ `aiRoutes.ts` - AI Agent 路由
-
-#### 需修改的 Controllers
-
-- `authController.ts` - 移除 admin/guest 角色支持
-- `topicController.ts` - 新增专题类型支持、网站代码上传、移除 deadline
-
----
-
-### 3. API 端点差异
-
-#### 需删除的 API 端点
+### Phase 划分与并行策略
 
 ```
-POST   /api/topics/:id/resources         - 上传资源（废弃）
-GET    /api/topics/:id/resources         - 查看资源列表（废弃）
-DELETE /api/resources/:id                - 删除资源（废弃）
+Phase 1: 后端基础重构（模型 + 清理 + 知识库 API）
+Phase 2: 前端重构（知识库型完整体验）
+Phase 3: AI Agent - 学习助手
+Phase 4: AI Agent - 搭建助手（知识库型）
+Phase 5: 网站型专题（后端 + 前端 + AI）
+Phase 6: 测试 + 文档
 
-POST   /api/topics/:id/tasks             - 创建任务（废弃）
-GET    /api/topics/:id/tasks             - 查看任务列表（废弃）
-DELETE /api/tasks/:id                    - 删除任务（废弃）
-
-POST   /api/tasks/:id/submissions        - 提交成果（废弃）
-GET    /api/tasks/:id/submissions        - 查看提交列表（废弃）
-GET    /api/submissions/me               - 查看我的提交（废弃）
-
-POST   /api/submissions/:id/review       - 评价提交（废弃）
-GET    /api/submissions/:id/review       - 查看评价（废弃）
-
-POST   /api/topics/:id/join              - 加入专题（废弃）
-DELETE /api/topics/:id/leave             - 退出专题（废弃）
-GET    /api/topics/:id/members           - 查看成员列表（废弃）
-```
-
-#### 需新增的 API 端点
-
-```
-# 页面管理（知识库型）
-POST   /api/topics/:id/pages             - 创建页面
-GET    /api/topics/:id/pages             - 获取页面列表
-GET    /api/pages/:id                    - 获取页面详情
-PUT    /api/pages/:id                    - 更新页面 Markdown
-DELETE /api/pages/:id                    - 删除页面
-PATCH  /api/topics/:id/pages/reorder     - 调整页面顺序
-
-# 网站型专题
-POST   /api/topics/:id/website/upload    - 上传网站代码
-PUT    /api/topics/:id/website/upload    - 更新网站代码
-DELETE /api/topics/:id/website           - 删除网站代码
-GET    /api/topics/:id/website/stats     - 获取访问统计
-
-# AI Agent
-POST   /api/ai/chat                      - AI 对话问答
+并行关系：
+- Phase 1 → Phase 2（前端依赖后端 API）
+- Phase 1 → Phase 3（AI 依赖模型和 API）
+- Phase 3 → Phase 4（搭建助手复用学习助手基础设施）
+- Phase 2 + Phase 4 → Phase 5（网站型依赖知识库型完成）
+- 全部 → Phase 6
 ```
 
 ---
 
-### 4. 前端差异（估算）
+## 当前状态与目标差异
 
-#### 需删除的前端页面/组件
+### 需要删除的
 
-- 资源管理页面
-- 任务管理页面
-- 提交成果页面
-- 评价反馈页面
-- 专题成员管理页面
-- 专题加入/退出功能
+| 模型/模块 | 当前 | 目标 | 涉及文件 |
+|-----------|------|------|---------|
+| TopicMember | 存在 | 删除 | Model, Controller(joinTopic), Route, 前端 |
+| Resource | 存在 | 删除 | Model, Controller, Route, Middleware(upload), 前端 |
+| Task | 存在 | 删除 | Model, Controller, Route, 前端 |
+| Submission | 存在 | 删除 | Model, Controller, Route, 前端 |
+| Review | 存在 | 删除 | Model, Controller, Route, 前端 |
 
-#### 需新建的前端页面/组件
+### 需要修改的
 
-- 知识库型专题页面：
-  - Markdown 编辑器
-  - 页面树状结构展示
-  - 页面预览和渲染
-- 网站型专题：
-  - 网站代码上传界面
-  - 网站预览界面
-- AI Agent 侧边栏：
-  - 学习助手对话框
-  - 专题搭建助手对话框
+| 模块 | 变更 |
+|------|------|
+| User.role | 枚举改为 `admin \| teacher \| student`（保留 admin，移除 guest） |
+| Topic | 移除 `deadline`，新增 `type` + `website_url` |
+| authController | 注册不允许 guest，admin 角色保留但注册时不可选 |
+| topicController | 支持 type 字段，移除 joinTopic/deadline 逻辑 |
+| 公开访问 | GET /api/topics、GET /api/topics/:id 改为无需认证 |
+
+### 需要新建的
+
+| 模块 | 说明 |
+|------|------|
+| TopicPage 模型 | Markdown 页面，支持嵌套 |
+| pageController + pageRoutes | 页面 CRUD + 排序 |
+| aiController + aiRoutes | AI 对话，Function Calling |
+| 前端：知识库编辑器 | Markdown 编辑 + 页面树 |
+| 前端：AI 侧边栏 | 学习助手 + 搭建助手对话 |
+| 前端：网站上传 | ZIP 上传 + 预览 |
 
 ---
 
-## 开发计划（分阶段）
+## Phase 1: 后端基础重构
 
-### Phase 1: 数据模型重构（后端）
+**目标：** 完成数据模型变更 + 知识库型 API + 清理旧代码
+**产出：** 后端 API 可用，支持认证、专题 CRUD、页面 CRUD、公开访问
 
-**目标：** 清理旧模型，新增必要模型，建立正确的关联关系
+### 1.1 修改 User 模型
 
-#### 1.1 删除废弃模型
+- [ ] `backend/src/models/User.ts`：role 枚举改为 `'admin' | 'teacher' | 'student'`
+- [ ] `shared/src/types/index.ts`：同步更新 User 类型定义
 
-**任务清单：**
+### 1.2 修改 Topic 模型
+
+- [ ] `backend/src/models/Topic.ts`：
+  - 移除 `deadline` 字段
+  - 新增 `type: ENUM('knowledge', 'website')`, NOT NULL, DEFAULT 'knowledge'
+  - 新增 `website_url: VARCHAR(500)`, NULLABLE
+- [ ] `shared/src/types/index.ts`：同步更新 Topic 类型定义
+
+### 1.3 新建 TopicPage 模型
+
+- [ ] 创建 `backend/src/models/TopicPage.ts`：
+  - 字段：id, topic_id (FK), title (VARCHAR 200), content (TEXT), parent_page_id (FK 自引用, NULLABLE), order (INT)
+  - `underscored: true`，与其他模型一致
+- [ ] `backend/src/models/index.ts`：
+  - 导入 TopicPage
+  - 定义 Topic.hasMany(TopicPage)
+  - 定义 TopicPage.belongsTo(Topic)
+  - 定义 TopicPage 自引用关联 (parent → children)
+- [ ] `shared/src/types/index.ts`：新增 TopicPage 接口
+
+### 1.4 删除废弃模型
+
 - [ ] 删除 `backend/src/models/TopicMember.ts`
 - [ ] 删除 `backend/src/models/Resource.ts`
 - [ ] 删除 `backend/src/models/Task.ts`
 - [ ] 删除 `backend/src/models/Submission.ts`
 - [ ] 删除 `backend/src/models/Review.ts`
-- [ ] 更新 `backend/src/models/index.ts`：移除废弃模型的导入和关联定义
+- [ ] `backend/src/models/index.ts`：移除所有废弃模型的导入和关联
+- [ ] `backend/src/models/User.ts`：移除对废弃模型的 HasMany 关联
+- [ ] `backend/src/models/Topic.ts`：移除对废弃模型的 HasMany/BelongsToMany 关联
 
-#### 1.2 修改 User 模型
+### 1.5 删除废弃 Controller + Route
 
-**任务清单：**
-- [ ] 更新 `backend/src/models/User.ts`：
-  - 移除 `admin` 和 `guest` 角色
-  - role 枚举改为 `'teacher' | 'student'`
-
-#### 1.3 修改 Topic 模型
-
-**任务清单：**
-- [ ] 更新 `backend/src/models/Topic.ts`：
-  - 移除 `deadline` 字段
-  - 新增 `type` 字段：`'knowledge' | 'website'`
-  - 新增 `website_url` 字段：VARCHAR(500), nullable
-  - 更新接口定义
-
-#### 1.4 新建 TopicPage 模型
-
-**任务清单：**
-- [ ] 创建 `backend/src/models/TopicPage.ts`：
-  - 字段：id, topic_id, title, content (TEXT), parent_page_id, order
-  - 支持自引用关联（parent_page_id → topic_pages.id）
-  - Markdown content 存储和验证
-- [ ] 更新 `backend/src/models/index.ts`：
-  - 导入 TopicPage
-  - 定义 Topic → TopicPage 一对多关联
-  - 定义 TopicPage 自引用关联
-
-#### 1.5 更新数据库迁移
-
-**任务清单：**
-- [ ] 创建数据库迁移脚本（如果使用 migrations）
-- [ ] 测试模型定义正确性
-- [ ] 运行迁移，验证数据库结构
-
----
-
-### Phase 2: Controllers 和 Routes 重构（后端）
-
-**目标：** 移除废弃功能，新增页面管理和 AI Agent 支持
-
-#### 2.1 删除废弃 Controllers 和 Routes
-
-**任务清单：**
 - [ ] 删除 `backend/src/controllers/resourceController.ts`
 - [ ] 删除 `backend/src/controllers/taskController.ts`
 - [ ] 删除 `backend/src/controllers/submissionController.ts`
@@ -294,283 +116,456 @@ POST   /api/ai/chat                      - AI 对话问答
 - [ ] 删除 `backend/src/routes/taskRoutes.ts`
 - [ ] 删除 `backend/src/routes/submissionRoutes.ts`
 - [ ] 删除 `backend/src/routes/reviewRoutes.ts`
-- [ ] 更新 `backend/src/app.ts` 或主路由文件：移除废弃路由注册
+- [ ] `backend/src/app.ts`：移除废弃路由注册
+- [ ] 删除 `backend/src/middlewares/uploadMiddleware.ts`（资源上传不再需要，网站型上传后续重建）
 
-#### 2.2 修改 authController
+### 1.6 修改 authController
 
-**任务清单：**
-- [ ] 更新 `backend/src/controllers/authController.ts`：
-  - 注册逻辑：移除 admin/guest 角色选项
-  - 登录逻辑：验证只支持 teacher/student
-  - 权限中间件：移除 admin 相关逻辑
+- [ ] `backend/src/controllers/authController.ts`：
+  - 注册逻辑：仅允许 teacher/student 注册（admin 不可通过注册创建）
+  - 移除 guest 角色相关逻辑
+- [ ] `backend/src/middlewares/authMiddleware.ts`：保持不变（JWT 验证逻辑通用）
 
-#### 2.3 修改 topicController
+### 1.7 修改 topicController + topicRoutes
 
-**任务清单：**
-- [ ] 更新 `backend/src/controllers/topicController.ts`：
-  - 创建专题：新增 type 参数，支持 knowledge/website
-  - 更新专题：移除 deadline 相关逻辑
-  - 查询专题：返回 type 和 website_url 字段
-  - 权限验证：确保只有教师可创建专题
+- [ ] `backend/src/controllers/topicController.ts`：
+  - `createTopic`：新增 type 参数（默认 knowledge），移除 deadline
+  - `updateTopic`：支持 type、website_url，移除 deadline
+  - `getTopics`：返回 type 字段，支持 `?type=knowledge` 过滤
+  - `getTopicById`：返回 type、website_url
+  - 删除 `joinTopic` 函数
+- [ ] `backend/src/routes/topicRoutes.ts`：
+  - 删除 `POST /api/topics/:id/join`
+  - `GET /api/topics` 和 `GET /api/topics/:id` 改为公开访问（移除 authMiddleware）
 
-#### 2.4 新建 pageController 和 pageRoutes
+### 1.8 新建 pageController + pageRoutes
 
-**任务清单：**
 - [ ] 创建 `backend/src/controllers/pageController.ts`：
-  - `createPage` - 创建页面（Markdown content 初始化）
-  - `getPagesByTopic` - 获取专题页面列表
-  - `getPageById` - 获取页面详情
-  - `updatePage` - 更新页面 Markdown content
-  - `deletePage` - 删除页面（包括子页面）
-  - `reorderPages` - 调整页面顺序
+  - `createPage(req, res)` — 创建页面（需认证，教师+专题创建者）
+    - 参数：topic_id (URL), title, content?, parent_page_id?
+    - 自动计算 order（同级最大 order + 1）
+    - 校验：topic 必须是 knowledge 类型
+  - `getPagesByTopic(req, res)` — 获取专题页面列表（公开访问）
+    - 返回树状结构（嵌套 children）
+  - `getPageById(req, res)` — 获取页面详情（公开访问）
+    - 返回完整 Markdown content
+  - `updatePage(req, res)` — 更新页面（需认证，专题创建者）
+    - 可更新 title, content, parent_page_id
+  - `deletePage(req, res)` — 删除页面（需认证，专题创建者）
+    - 级联删除子页面
+  - `reorderPages(req, res)` — 调整顺序（需认证，专题创建者）
+    - 参数：`{ pages: [{ id, order, parent_page_id }] }`
 - [ ] 创建 `backend/src/routes/pageRoutes.ts`：
-  - 定义所有页面相关路由
-  - 配置公开访问和认证中间件
-- [ ] 注册路由到主应用
+  ```
+  POST   /api/topics/:id/pages           — authMiddleware → createPage
+  GET    /api/topics/:id/pages           — (公开) → getPagesByTopic
+  GET    /api/pages/:id                  — (公开) → getPageById
+  PUT    /api/pages/:id                  — authMiddleware → updatePage
+  DELETE /api/pages/:id                  — authMiddleware → deletePage
+  PATCH  /api/topics/:id/pages/reorder   — authMiddleware → reorderPages
+  ```
+- [ ] `backend/src/app.ts`：注册 pageRoutes
 
-#### 2.5 新建网站型专题 Controllers
+### 1.9 更新 shared 类型
 
-**任务清单：**
-- [ ] 在 `topicController.ts` 中新增：
-  - `uploadWebsite` - 上传网站代码（ZIP）到 OSS
-  - `updateWebsite` - 更新网站代码
-  - `deleteWebsite` - 删除网站代码
-  - `getWebsiteStats` - 获取访问统计
-- [ ] 配置 OSS 集成（如阿里云 OSS、AWS S3）
-- [ ] 实现 ZIP 解压和静态文件托管
+- [ ] `shared/src/types/index.ts`：
+  - 移除 Resource, Task, Submission, Review, TopicMember 接口
+  - 更新 User 接口（role 类型）
+  - 更新 Topic 接口（新增 type, website_url，移除 deadline）
+  - 新增 TopicPage 接口
+  - 更新 API 请求/响应 DTO
 
-#### 2.6 新建 aiController 和 aiRoutes
+### 1.10 数据库同步
 
-**任务清单：**
+- [ ] `backend/src/server.ts`：
+  - 更新 `sequelize.sync()` 逻辑
+  - 如果有 `runMigration`，更新迁移脚本以适配新模型
+  - 确保旧表在 sync 时不会报错（force: false 下旧表保留但不影响新代码）
+
+### Phase 1 验收标准
+
+- [ ] `pnpm --filter backend build` 编译通过
+- [ ] 后端启动无报错
+- [ ] POST /api/auth/register 只接受 teacher/student
+- [ ] POST /api/topics 支持 type 字段
+- [ ] GET /api/topics 无需认证即可访问
+- [ ] 页面 CRUD API 全部可用
+- [ ] 旧 API（resource/task/submission/review）全部 404
+
+---
+
+## Phase 2: 前端重构（知识库型完整体验）
+
+**目标：** 前端适配新 API，实现知识库型专题的完整创建和浏览体验
+**前置：** Phase 1
+
+### 2.1 清理废弃前端代码
+
+- [ ] 删除 `StudentSubmissionsPage` 组件
+- [ ] 删除 `StudentFeedbackPage` 组件
+- [ ] `TopicDetailPage`：移除资源、任务、提交、评价相关的 UI 区块
+- [ ] `services/api.ts`：移除 resourceApi, taskApi, submissionApi, reviewApi
+- [ ] 路由配置：移除废弃页面的路由
+
+### 2.2 更新专题列表和创建
+
+- [ ] `TopicListPage`：
+  - 专题卡片显示 type 标签（知识库 / 网站）
+  - 移除 deadline 显示
+  - 移除"加入专题"按钮
+  - 未登录用户也能浏览
+- [ ] `TopicCreatePage`：
+  - 新增 type 选择器（knowledge / website）
+  - 移除 deadline 输入
+- [ ] `services/api.ts`：更新 topicApi 匹配新字段
+
+### 2.3 知识库型专题浏览页
+
+- [ ] 新建 `KnowledgeTopicPage` 组件（或重构 TopicDetailPage）：
+  - 左侧：页面树状导航（支持嵌套展开/折叠）
+  - 右侧：Markdown 渲染区域
+  - 集成 Markdown 渲染库（如 react-markdown + remark-gfm + rehype-highlight）
+  - 支持代码高亮、图片、链接等
+- [ ] 新建 `PageTreeNav` 组件：
+  - 树状结构展示
+  - 点击切换页面
+  - 当前页面高亮
+- [ ] `services/api.ts`：新增 pageApi（CRUD + reorder）
+
+### 2.4 知识库型专题编辑页（教师）
+
+- [ ] 新建 `KnowledgeEditorPage` 组件：
+  - 左侧：可编辑的页面树（新增/删除/拖拽排序）
+  - 右侧：Markdown 编辑器（如 @uiw/react-md-editor 或 CodeMirror + Markdown 扩展）
+  - 支持实时预览（编辑/预览切换或分屏）
+  - 保存按钮调用 PUT /api/pages/:id
+- [ ] 新建 `PageTreeEditor` 组件：
+  - 支持新增页面（+ 按钮）
+  - 支持删除页面（确认弹窗）
+  - 支持拖拽调整顺序和层级
+  - 调用 PATCH /api/topics/:id/pages/reorder
+
+### 2.5 更新路由和导航
+
+- [ ] 路由配置：
+  - `/topics/:id` → 知识库型浏览 / 网站型浏览（根据 type 分流）
+  - `/topics/:id/edit` → 知识库型编辑（教师专用）
+- [ ] 全局导航：更新菜单项
+- [ ] `DashboardPage`：适配新数据结构
+
+### 2.6 公开访问支持
+
+- [ ] `useAuthStore`：支持未登录状态浏览
+- [ ] 路由守卫：浏览页面不要求登录
+- [ ] API 拦截器：GET 请求不强制携带 token
+
+### Phase 2 验收标准
+
+- [ ] 未登录用户可浏览已发布专题列表和知识库页面内容
+- [ ] 教师可创建知识库型专题并编辑 Markdown 页面
+- [ ] 页面树状导航正常工作（嵌套、展开/折叠）
+- [ ] Markdown 渲染正确（代码高亮、图片、链接）
+- [ ] 前端无废弃功能的残留 UI
+
+---
+
+## Phase 3: AI Agent - 学习助手
+
+**目标：** 实现学习助手 Agent，学生和教师可以在专题内与 AI 对话
+**前置：** Phase 1
+
+### 3.1 后端 AI 基础设施
+
+- [ ] `backend/package.json`：新增 `openai` 依赖
+- [ ] `backend/src/utils/config.ts`：新增 AI 相关配置项
+  - `OPENAI_API_KEY`
+  - `OPENAI_BASE_URL`（支持兼容 API）
+  - `OPENAI_MODEL`（默认模型名）
+- [ ] 创建 `backend/src/services/aiService.ts`：
+  - OpenAI client 初始化
+  - `chat(messages, tools, metadata)` → 封装 OpenAI API 调用
+  - 处理 Function Calling 循环（tool_calls → 执行 → 返回结果 → 再次调用，直到返回 content）
+  - 设置最大循环次数防止无限调用
+
+### 3.2 学习助手工具函数实现
+
+- [ ] 创建 `backend/src/services/agentTools.ts`：
+  - `get_topic_info(topic_id)` → 查询 Topic 表，返回 title/description/type/status
+  - `list_pages(topic_id)` → 查询 TopicPage 表，返回页面树结构（title + id + order）
+  - `read_page(page_id)` → 查询 TopicPage 表，返回完整 Markdown content
+  - `grep(topic_id, keyword)` → 在该 topic 所有 TopicPage.content 中搜索关键词，返回匹配片段
+- [ ] 工具定义（OpenAI Function Calling JSON schema），与 agents.md spec 一致
+
+### 3.3 学习助手 Controller + Route
+
 - [ ] 创建 `backend/src/controllers/aiController.ts`：
-  - `chat` - AI 对话（OpenAI API 格式）
-  - 实现 Function Calling 工具执行逻辑：
-    - get_topic_info
-    - list_pages
-    - read_page
-    - grep
-    - write_file（仅搭建 Agent）
-    - new_file（仅搭建 Agent）
-  - 上下文管理（topic_id + user_id）
+  - `chat(req, res)`：
+    - 参数：`{ messages, topic_id, agent_type: 'learning' }`
+    - 验证：用户已登录，topic 存在且已发布
+    - 注入 system prompt（带 topic 上下文信息）
+    - 调用 aiService.chat，传入学习助手工具集
+    - 返回 OpenAI 格式响应
 - [ ] 创建 `backend/src/routes/aiRoutes.ts`：
-  - POST /api/ai/chat（需认证）
-- [ ] 集成 OpenAI API 或其他 AI 服务
-- [ ] 实现权限控制（学生：学习助手，教师：学习+搭建助手）
+  - `POST /api/ai/chat` — authMiddleware → chat
+- [ ] `backend/src/app.ts`：注册 aiRoutes
+
+### 3.4 上下文管理
+
+- [ ] 上下文隔离：`agentType + topic_id + user_id` 为唯一键
+- [ ] 选择存储方案：
+  - 方案 A：前端管理 messages 数组，每次请求带完整历史（简单，推荐 MVP）
+  - 方案 B：后端存储对话历史到数据库（需新建 ChatMessage 模型）
+- [ ] MVP 阶段建议选方案 A，后续按需迁移
+
+### 3.5 前端学习助手 UI
+
+- [ ] 新建 `AIChatSidebar` 组件：
+  - 可展开/收起的侧边栏
+  - 消息列表（用户消息 + AI 回复）
+  - 输入框 + 发送按钮
+  - 加载状态指示
+  - AI 回复支持 Markdown 渲染
+- [ ] 在 `KnowledgeTopicPage`（浏览页）中集成侧边栏
+- [ ] `services/api.ts`：新增 aiApi（POST /api/ai/chat）
+- [ ] 传入当前 topic_id + agent_type: 'learning'
+
+### Phase 3 验收标准
+
+- [ ] 登录用户在浏览专题时可打开学习助手
+- [ ] AI 可以回答关于专题内容的问题
+- [ ] AI 回复引用具体页面内容（Function Calling 正常工作）
+- [ ] 关键词搜索 (grep) 正常工作
+- [ ] 切换专题时对话上下文重置
+- [ ] 访客无法使用学习助手（返回 401）
 
 ---
 
-### Phase 3: 测试更新（后端）
+## Phase 4: AI Agent - 搭建助手（知识库型）
 
-**目标：** 更新测试以匹配新的数据模型和 API
+**目标：** 教师在编辑专题时可使用 AI 助手创建和编辑页面内容
+**前置：** Phase 3（复用 AI 基础设施）
 
-#### 3.1 删除废弃测试
+### 4.1 搭建助手工具函数
 
-**任务清单：**
-- [ ] 检查并删除资源、任务、提交、评价相关测试代码
-- [ ] 更新 `backend/tests/topics.test.ts`：移除 deadline、member、resource 相关测试
-- [ ] 更新 `backend/tests/auth.test.ts`：移除 admin/guest 角色相关测试
+- [ ] `backend/src/services/agentTools.ts` 新增：
+  - `write_file(page_id, content)` → 更新 TopicPage.content（Markdown 写入）
+  - `new_file(topic_id, title, parent_page_id?)` → 创建新 TopicPage 并返回 id
+  - 权限校验：确保操作者是专题创建者
 
-#### 3.2 新增测试
+### 4.2 搭建助手 Controller 逻辑
 
-**任务清单：**
-- [ ] 创建 `backend/tests/pages.test.ts`：
-  - 测试页面 CRUD 操作
-  - 测试 Markdown content 存储
-  - 测试页面嵌套关系
-  - 测试页面顺序调整
-- [ ] 创建 `backend/tests/ai.test.ts`：
-  - 测试 AI 对话 API
-  - 测试 Function Calling 工具执行
-  - 测试权限控制（学生 vs 教师）
-- [ ] 更新 `backend/tests/topics.test.ts`：
-  - 测试专题类型（knowledge/website）
-  - 测试网站代码上传（如已实现）
+- [ ] `backend/src/controllers/aiController.ts` 扩展 `chat` 函数：
+  - 当 `agent_type: 'building'` 时：
+    - 验证用户是教师且是专题创建者
+    - 注入搭建助手的 system prompt
+    - 传入搭建助手工具集（学习助手工具 + write_file + new_file）
+  - 操作审计：记录所有写入操作日志
 
-#### 3.3 运行测试验证
+### 4.3 前端搭建助手 UI
 
-**任务清单：**
-- [ ] 运行 `npm test` 确保所有测试通过
-- [ ] 修复测试失败问题
+- [ ] `AIChatSidebar` 扩展：
+  - 根据 agent_type 切换 UI 模式
+  - 搭建模式下显示操作确认提示（AI 创建/修改了页面）
+  - 显示 AI 执行的写入操作记录
+- [ ] 在 `KnowledgeEditorPage` 中集成搭建助手侧边栏
+  - agent_type: 'building'
+  - AI 修改页面后自动刷新编辑器内容
 
----
+### Phase 4 验收标准
 
-### Phase 4: 前端重构（如果前端已开发）
-
-**目标：** 前端适配新的数据模型和 API
-
-#### 4.1 删除废弃前端页面
-
-**任务清单：**
-- [ ] 删除资源管理页面组件
-- [ ] 删除任务管理页面组件
-- [ ] 删除提交成果页面组件
-- [ ] 删除评价反馈页面组件
-- [ ] 删除专题成员管理页面组件
-
-#### 4.2 修改专题列表页面
-
-**任务清单：**
-- [ ] 更新专题卡片展示：显示 type 字段（知识库/网站）
-- [ ] 移除 deadline 显示
-- [ ] 移除"加入专题"按钮（完全公开）
-
-#### 4.3 新建知识库型专题页面
-
-**任务清单：**
-- [ ] 创建页面树状结构组件（支持嵌套）
-- [ ] 集成 Markdown 编辑器（如 SimpleMDE、CodeMirror）
-- [ ] 实现 Markdown 实时预览
-- [ ] 实现页面 CRUD 操作
-- [ ] 实现页面拖拽排序
-
-#### 4.4 新建网站型专题页面
-
-**任务清单：**
-- [ ] 创建网站代码上传组件
-- [ ] 实现网站预览 iframe
-- [ ] 显示访问统计
-
-#### 4.5 新建 AI Agent 侧边栏
-
-**任务清单：**
-- [ ] 创建 AI 对话侧边栏组件
-- [ ] 实现学习助手对话界面
-- [ ] 实现专题搭建助手对话界面（教师专用）
-- [ ] 集成 OpenAI API 或其他 AI SDK
-- [ ] 显示 AI 回复和引用内容
+- [ ] 教师在编辑页面可使用搭建助手
+- [ ] AI 可以创建新页面（new_file 工作正常）
+- [ ] AI 可以编辑已有页面内容（write_file 工作正常）
+- [ ] 学生无法使用搭建助手（返回 403）
+- [ ] 非创建者教师无法使用搭建助手操作他人专题
+- [ ] 操作后编辑器内容自动刷新
 
 ---
 
-### Phase 5: 文档更新
+## Phase 5: 网站型专题
 
-**目标：** 确保文档与代码实现一致
+**目标：** 完整支持网站型专题（上传 HTML/CSS/JS 代码包、预览、AI 搭建）
+**前置：** Phase 2 + Phase 4
 
-#### 5.1 更新实现状态文档
+> 此 Phase 涉及 OSS 集成、文件上传解压、静态托管、WebContainer 集成。
 
-**任务清单：**
-- [ ] 更新 `docs/implementation-status.md`：
-  - 标记 Phase 1-4 的完成状态
-  - 记录关键实现细节
-  - 更新已知问题列表
-- [ ] 如有必要，创建新的实现状态报告
+### 5.1 OSS 集成
 
-#### 5.2 更新 API 文档
+- [ ] 选择 OSS 服务（阿里云 OSS / AWS S3 / MinIO 本地开发）
+- [ ] `backend/package.json`：新增 OSS SDK 依赖
+- [ ] `backend/src/utils/config.ts`：新增 OSS 配置项
+  - `OSS_ENDPOINT`, `OSS_BUCKET`, `OSS_ACCESS_KEY`, `OSS_SECRET_KEY`
+- [ ] 创建 `backend/src/services/ossService.ts`：
+  - `uploadFile(key, buffer)` → 上传文件到 OSS
+  - `deleteFolder(prefix)` → 删除 OSS 目录
+  - `getPublicUrl(key)` → 获取公开访问 URL
+  - 每个专题的 OSS 路径：`websites/{topic_id}/`
 
-**任务清单：**
-- [ ] 确保 API 实现与 `docs/spec/api-design.md` 一致
-- [ ] 补充实际的请求/响应示例
+### 5.2 网站上传 API
+
+- [ ] 重建 `backend/src/middlewares/uploadMiddleware.ts`：
+  - 仅支持 ZIP 文件上传
+  - 文件大小限制（如 50MB）
+- [ ] `backend/src/controllers/topicController.ts` 新增：
+  - `uploadWebsite(req, res)`：
+    - 接收 ZIP 文件
+    - 解压到临时目录
+    - 验证 index.html 存在
+    - 上传所有文件到 OSS
+    - 更新 Topic.website_url
+  - `updateWebsite(req, res)`：
+    - 删除旧文件 → 上传新文件
+  - `deleteWebsite(req, res)`：
+    - 删除 OSS 文件 → 清空 website_url
+  - `getWebsiteStats(req, res)`：
+    - 返回基础信息（文件数量、总大小、上传时间）
+- [ ] `backend/src/routes/topicRoutes.ts` 新增：
+  ```
+  POST   /api/topics/:id/website/upload  — authMiddleware, upload → uploadWebsite
+  PUT    /api/topics/:id/website/upload  — authMiddleware, upload → updateWebsite
+  DELETE /api/topics/:id/website         — authMiddleware → deleteWebsite
+  GET    /api/topics/:id/website/stats   — authMiddleware → getWebsiteStats
+  ```
+
+### 5.3 前端网站型浏览
+
+- [ ] 新建 `WebsiteTopicPage` 组件：
+  - 使用 iframe 加载 website_url
+  - 全屏/嵌入模式切换
+- [ ] `/topics/:id` 路由根据 topic.type 分流：
+  - knowledge → KnowledgeTopicPage
+  - website → WebsiteTopicPage
+
+### 5.4 前端网站型编辑（教师）
+
+- [ ] 新建 `WebsiteEditorPage` 组件：
+  - ZIP 文件上传区域（拖拽 + 点击上传）
+  - 上传进度显示
+  - 当前已上传网站的预览（iframe）
+  - 重新上传 / 删除操作
+- [ ] `/topics/:id/edit` 路由根据 type 分流
+
+### 5.5 网站型 AI 搭建助手
+
+- [ ] 前端集成 WebContainer API（@webcontainer/api）
+  - 初始化 WebContainer 实例
+  - 文件系统挂载（将 OSS 已有文件加载到 WebContainer）
+  - 终端输出流接入前端 UI
+- [ ] 搭建助手新增工具函数（`backend/src/services/agentTools.ts`）：
+  - `bash(command)` → 通过前端 WebContainer 执行 shell 命令（npm install, node 等）
+  - `write_website_file(path, content)` → 在 WebContainer 文件系统中写入文件
+  - `read_website_file(path)` → 读取 WebContainer 中的文件内容
+  - `list_website_files(path?)` → 列出 WebContainer 文件目录
+- [ ] 前端 WebContainer 通信机制：
+  - 后端 AI 返回 tool_call（bash/write_website_file 等）
+  - 前端拦截这些 tool_call，在本地 WebContainer 中执行
+  - 将执行结果返回后端继续 AI 对话循环
+- [ ] WebContainer 预览：
+  - 监听 WebContainer 的 server-ready 事件
+  - 在 iframe 中展示实时预览
+  - 支持热更新（文件变更后自动刷新）
+- [ ] 导出部署：
+  - 从 WebContainer 文件系统导出所有文件
+  - 打包为 ZIP 并调用 uploadWebsite API 部署到 OSS
+  - 提供"导出并部署"一键操作
+
+### 5.6 前端网站型编辑器完整集成
+
+- [ ] `WebsiteEditorPage` 整合：
+  - 手动模式：ZIP 上传（5.4 已实现）
+  - AI 模式：WebContainer + 搭建助手
+  - 模式切换 UI
+- [ ] `AIChatSidebar` 扩展支持网站型：
+  - agent_type: 'building'，topic type: 'website'
+  - 显示 AI 执行的 bash 命令及输出
+  - 显示文件写入操作记录
+  - WebContainer 终端输出面板
+
+### Phase 5 验收标准
+
+- [ ] 教师可创建网站型专题
+- [ ] ZIP 上传后自动解压并部署到 OSS
+- [ ] 网站可通过 iframe 正确预览
+- [ ] 重新上传覆盖旧版本
+- [ ] 删除网站清理 OSS 文件
+- [ ] WebContainer 正常初始化和运行
+- [ ] AI 搭建助手可在 WebContainer 中编写和运行代码
+- [ ] AI 编写的网站可一键导出部署到 OSS
+- [ ] 实时预览正常工作
 
 ---
 
-## 执行优先级
+## Phase 6: 测试 + 文档
 
-### 高优先级（必须完成）
+**目标：** 确保代码质量，文档与实现一致
+**前置：** Phase 1-5 全部完成
 
-1. **Phase 1: 数据模型重构** - 基础架构变更
-2. **Phase 2: Controllers 和 Routes 重构** - API 层变更
-3. **Phase 3: 测试更新** - 确保代码质量
+### 6.1 更新后端测试
 
-### 中优先级（建议完成）
+- [ ] `backend/tests/auth.test.ts`：
+  - 移除 admin/guest 注册测试
+  - 新增：注册时不允许选择 admin 角色
+- [ ] `backend/tests/topics.test.ts`：
+  - 移除 deadline、member 相关测试
+  - 新增：type 字段测试、公开访问测试
+- [ ] 删除或重写 `backend/tests/workflows.test.ts`：
+  - 移除 task/submission/review 工作流
+  - 新增：知识库页面 CRUD 工作流
+- [ ] 新建 `backend/tests/pages.test.ts`：
+  - 页面 CRUD 全流程
+  - 页面嵌套关系
+  - 页面排序
+  - 权限控制（公开读、认证写）
+- [ ] 新建 `backend/tests/ai.test.ts`：
+  - AI 对话 API 基本调用
+  - Function Calling 工具执行
+  - 学习助手 vs 搭建助手权限差异
+  - 上下文隔离
 
-4. **Phase 4: 前端重构** - UI 层变更（如果前端已开发）
+### 6.2 前端测试
 
-### 低优先级（可选）
+- [ ] 更新组件测试匹配新 UI
+- [ ] 新增 AI 侧边栏交互测试
 
-5. **Phase 5: 文档更新** - 文档维护
+### 6.3 文档更新
 
----
+- [ ] `docs/data-models.md`：与实际代码同步（如有差异）
+- [ ] `docs/spec/` 系列文档：确认所有 Spec 与实现一致
+- [ ] 更新 `README.md`：项目说明、启动方式、环境变量列表
 
-## 技术实现要点
+### Phase 6 验收标准
 
-### Markdown 存储
-
-- 使用 TEXT 类型字段存储 Markdown 内容
-- 前端使用 Markdown 编辑器和渲染器（如 marked.js、markdown-it）
-- 支持 GitHub Flavored Markdown (GFM)
-- 图片、视频、链接等资源以 URL 形式嵌入 Markdown
-
-### 网站型专题实现
-
-- 使用对象存储服务（OSS/S3）托管静态网站代码
-- ZIP 文件上传后自动解压到 OSS
-- 每个专题分配独立的访问 URL
-- 支持静态文件路由（index.html 必须存在）
-- 访问统计通过 OSS 日志或独立统计服务实现
-
-### AI Agent 实现
-
-- 使用 OpenAI API 或兼容服务
-- 采用标准的 Function Calling 格式（不自定义）
-- 后端实现工具函数执行逻辑（查询数据库、读写文件等）
-- 上下文管理：agentType + topic_id + user_id
-- 权限控制：根据用户角色限制可用工具
-
-### 公开访问实现
-
-- 所有已发布专题的浏览不需要认证
-- 只有创建、编辑、AI 使用需要认证
-- 前端公开页面无需登录检查
-- 后端公开 API 不强制认证中间件
+- [ ] `pnpm test` 全部通过
+- [ ] 文档与代码实现一致，无过时描述
 
 ---
 
-## 验收标准
+## 关键设计决策
 
-### Phase 1 完成标准
+### 保留 admin 角色
 
-- ✅ 数据库中不存在 TopicMember、Resource、Task、Submission、Review 表
-- ✅ User 表只有 teacher/student 角色
-- ✅ Topic 表有 type 和 website_url 字段
-- ✅ TopicPage 表存在，字段完整
-- ✅ 模型关联关系正确（User → Topic → TopicPage）
+虽然当前不做管理后台 UI，但 User.role 枚举保留 `admin`：
+- 成本为零（只是 ENUM 多一个值）
+- 避免未来需要管理功能时改数据库 schema
+- admin 用户不能通过注册 API 创建，需要直接操作数据库
 
-### Phase 2 完成标准
+### AI 对话上下文管理（MVP）
 
-- ✅ 所有废弃 Controllers 和 Routes 已删除
-- ✅ 页面 CRUD API 正常工作
-- ✅ AI Agent 对话 API 正常工作
-- ✅ 公开访问权限正确配置
-- ✅ 认证权限正确配置
+MVP 阶段采用前端管理方案：
+- 前端维护 messages 数组
+- 每次请求携带完整对话历史
+- 切换专题或页面刷新时清空
+- 后续可迁移到后端存储（新建 ChatMessage 模型）
 
-### Phase 3 完成标准
+### 网站型 WebContainer 架构
 
-- ✅ 所有后端测试通过
-- ✅ 测试覆盖主要功能场景
+WebContainer 运行在前端浏览器中，AI tool_call 的执行路径：
+1. 后端 AI 返回 tool_call（如 `bash("npm install")`）
+2. 前端拦截 tool_call，在本地 WebContainer 中执行
+3. 前端将执行结果作为 tool_result 发回后端
+4. 后端继续 AI 对话循环，直到返回最终 content
 
-### Phase 4 完成标准
-
-- ✅ 前端可正常创建和浏览专题
-- ✅ 知识库型专题：Markdown 编辑和渲染正常
-- ✅ 网站型专题：代码上传和预览正常
-- ✅ AI Agent 侧边栏正常工作
-
----
-
-## 风险与注意事项
-
-### 数据丢失风险
-
-- ⚠️ 删除废弃模型会丢失所有相关数据
-- ⚠️ 不考虑数据迁移，直接删除旧数据
-- ⚠️ 确保开发团队了解此变更影响
-
-### API 兼容性
-
-- ⚠️ 删除 API 端点会导致现有客户端失效
-- ⚠️ 如有外部系统依赖，需提前沟通
-- ⚠️ API 变更应记录在变更日志中
-
-### AI 服务集成
-
-- ⚠️ 需配置 OpenAI API Key 或其他 AI 服务
-- ⚠️ Function Calling 需精确的工具定义和执行逻辑
-- ⚠️ AI 服务费用和调用限制需提前评估
-
-### OSS 服务集成
-
-- ⚠️ 需配置 OSS 服务账号和权限
-- ⚠️ 网站代码存储和访问需正确配置
-- ⚠️ OSS 费用需提前评估
+这意味着 bash/write_website_file 等工具的实际执行在前端，后端只负责 AI 对话编排。
 
 ---
 
@@ -581,3 +576,4 @@ POST   /api/ai/chat                      - AI 对话问答
 - [API 设计](./spec/api-design.md)
 - [AI Agent 系统](./spec/agents.md)
 - [功能清单](./spec/features.md)
+- [技术架构](./spec/architecture.md)

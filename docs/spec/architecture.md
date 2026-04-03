@@ -141,7 +141,7 @@ sequenceDiagram
     participant 后端
     participant 数据库
 
-    学生->>前端: 点击提交成果
+    学生->>前端: 使用 AI 学习助手
     前端->>前端: 检查登录状态
     alt 未登录
         前端->>学生: 显示登录页面
@@ -153,10 +153,10 @@ sequenceDiagram
         后端-->>前端: 返回 Token
         前端->>前端: 存储 Token
     end
-    前端->>后端: POST /api/topics/:id/submissions<br/>Authorization: Bearer <token>
+    前端->>后端: POST /api/ai/chat<br/>Authorization: Bearer <token>
     后端->>后端: 验证 Token
-    后端->>数据库: 保存提交
-    后端-->>前端: 提交成功
+    后端->>数据库: 调用 AI 服务
+    后端-->>前端: 返回 AI 响应
     前端-->>学生: 显示成功消息
 ```
 

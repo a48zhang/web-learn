@@ -207,6 +207,40 @@ export const updateTopicStatus = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const deleteTopic = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, error: 'Not authorized' });
+    }
+    const topicId = parseTopicId(req.params.id);
+    if (!topicId) {
+      return res.status(400).json({ success: false, error: 'Invalid topic ID' });
+    }
+
+    const topic = await Topic.findByPk(topicId);
+    if (!topic) {
+      return res.status(404).json({ success: false, error: 'Topic not found' });
+    }
+    if (!ensureTopicOwner(topic, req)) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
+    if (topic.website_url?.startsWith('/uploads/')) {
+      const filename = topic.website_url.slice('/uploads/'.length);
+      const fullPath = path.join(config.uploadsDir, filename);
+      if (fs.existsSync(fullPath)) {
+        fs.unlinkSync(fullPath);
+      }
+    }
+
+    await Topic.destroy({ where: { id: topic.id } });
+    return res.json({ success: true, data: { id: topic.id.toString() } });
+  } catch (error) {
+    console.error('Delete topic error:', error);
+    return res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+};
+
 export const uploadWebsite = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) {

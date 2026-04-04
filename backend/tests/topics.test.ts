@@ -39,6 +39,7 @@ const mockTopicModel = {
   create: jest.fn(),
   findAll: jest.fn(),
   findByPk: jest.fn(),
+  destroy: jest.fn(),
 };
 
 const mockPageModel = {
@@ -134,6 +135,38 @@ describe('Topics API', () => {
         type: 'website',
         websiteUrl: 'https://example.com',
       });
+    });
+  });
+
+  describe('DELETE /api/topics/:id', () => {
+    it('deletes topic for owner teacher', async () => {
+      (jwt.verify as jest.Mock).mockReturnValue({ id: 10 });
+      mockUserModel.findByPk.mockResolvedValue({
+        id: 10,
+        username: 'teacher1',
+        email: 'teacher@example.com',
+        role: 'teacher',
+      });
+      mockTopicModel.findByPk.mockResolvedValue({
+        id: 7,
+        title: 'Topic',
+        description: 'Testing fundamentals',
+        type: 'website',
+        website_url: null,
+        created_by: 10,
+        status: 'draft',
+        save: jest.fn(),
+        createdAt: new Date('2026-04-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-04-01T00:00:00.000Z'),
+      });
+      mockTopicModel.destroy.mockResolvedValue(1);
+
+      const response = await request(app)
+        .delete('/api/topics/7')
+        .set('Authorization', 'Bearer teacher-token');
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
     });
   });
 });

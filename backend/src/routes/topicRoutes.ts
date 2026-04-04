@@ -5,6 +5,7 @@ import {
   getTopicById,
   updateTopic,
   updateTopicStatus,
+  deleteTopic,
   uploadWebsite,
   updateWebsite,
   deleteWebsite,
@@ -31,6 +32,7 @@ router.put('/:id', writeLimiter, authMiddleware, updateTopic);
 
 // PATCH /api/topics/:id/status - Publish/close topic
 router.patch('/:id/status', writeLimiter, authMiddleware, updateTopicStatus);
+router.delete('/:id', writeLimiter, authMiddleware, deleteTopic);
 
 // Website topic routes
 router.post('/:id/website/upload', uploadLimiter, authMiddleware, upload.single('file'), uploadWebsite);

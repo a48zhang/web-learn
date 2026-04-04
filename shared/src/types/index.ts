@@ -62,6 +62,10 @@ export interface UpdateTopicStatusDto {
   status: TopicStatusType;
 }
 
+export interface DeleteTopicResponse {
+  id: string;
+}
+
 // Topic page types
 export interface TopicPage {
   id: string;

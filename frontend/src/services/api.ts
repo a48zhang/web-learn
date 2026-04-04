@@ -9,6 +9,7 @@ import type {
   CreateTopicDto,
   UpdateTopicDto,
   UpdateTopicStatusDto,
+  DeleteTopicResponse,
   TopicPage,
   TopicPageTreeNode,
   CreateTopicPageDto,
@@ -146,6 +147,11 @@ export const topicApi = {
   getWebsiteStats: async (id: string): Promise<WebsiteStats> => {
     const response = await api.get<ApiResponse<WebsiteStats>>(`/topics/${id}/website/stats`);
     return response.data.data as WebsiteStats;
+  },
+
+  delete: async (id: string): Promise<DeleteTopicResponse> => {
+    const response = await api.delete<ApiResponse<DeleteTopicResponse>>(`/topics/${id}`);
+    return response.data.data as DeleteTopicResponse;
   },
 };
 

@@ -1,6 +1,7 @@
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { randomBytes } from 'crypto';
 import { config } from '../utils/config';
 
 const uploadsDir = config.uploadsDir;
@@ -9,34 +10,9 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 const allowedMimeTypes = new Set([
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/vnd.ms-powerpoint',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  'text/plain',
-  'text/markdown',
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'video/mp4',
-  'video/webm',
-  'audio/mpeg',
-  'audio/wav',
   'application/zip',
   'application/x-zip-compressed',
-]);
-
-const blockedExtensions = new Set([
-  '.html',
-  '.htm',
-  '.js',
-  '.mjs',
-  '.cjs',
-  '.svg',
-  '.xml',
+  'application/octet-stream',
 ]);
 
 const storage = multer.diskStorage({
@@ -44,7 +20,7 @@ const storage = multer.diskStorage({
     cb(null, uploadsDir);
   },
   filename: (_req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const uniqueSuffix = randomBytes(16).toString('hex');
     const ext = path.extname(file.originalname);
     const basename = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9-_]/g, '_');
     cb(null, `${basename || 'upload'}-${uniqueSuffix}${ext}`);
@@ -53,9 +29,10 @@ const storage = multer.diskStorage({
 
 const fileFilter = (_req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   const ext = path.extname(file.originalname).toLowerCase();
+  const isZipExt = ext === '.zip';
 
-  if (blockedExtensions.has(ext) || !allowedMimeTypes.has(file.mimetype)) {
-    cb(new Error('Unsupported file type'));
+  if (!isZipExt || !allowedMimeTypes.has(file.mimetype)) {
+    cb(new Error('Only ZIP files are supported'));
     return;
   }
 

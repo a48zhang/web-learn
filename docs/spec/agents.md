@@ -141,7 +141,7 @@
 
 根据空间不同,展示给agent的工具也不同.
 
-在网站模式下,应该使用webcontainer进行开发测试,连入浏览器等
+当前网站模式仅支持网站 ZIP 包上传、删除、预览，不包含 webcontainer/bash 工具链。
 
 设计原则：
 
@@ -194,7 +194,7 @@
     {
       “type”: “function”,
       “function”: {
-        “name”: “read_file”,
+        “name”: “read_page”,
         “description”: “读取页面 Markdown 内容”,
         “parameters”: {
           “type”: “object”,
@@ -258,31 +258,10 @@
 }
 ```
 
-**网站型工具集（额外）：**
+**网站型专题说明：**
 
-```json
-{
-  “tools”: [
-    {
-      “type”: “function”,
-      “function”: {
-        “name”: “bash”,
-        “description”: “执行 shell 命令（在 webcontainer 中）”,
-        “parameters”: {
-          “type”: “object”,
-          “properties”: {
-            “command”: {
-              “type”: “string”,
-              “description”: “Shell 命令”
-            }
-          },
-          “required”: [“command”]
-        }
-      }
-    }
-  ]
-}
-```
+- 当前不提供额外的 agent 工具（无 bash/webcontainer）。
+- 网站型专题由教师上传 ZIP 包并在前端 iframe 预览。
 
 ### 适用场景
 

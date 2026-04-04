@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { useAuthStore } from '../stores/useAuthStore';
 import { toast } from '../stores/useToastStore';
 import { UserRole } from '@web-learn/shared';
+import { getApiErrorMessage } from '../utils/errors';
 
 const registerSchema = z.object({
   username: z.string().min(2, '用户名至少需要2个字符'),
@@ -46,8 +47,8 @@ function RegisterPage() {
       await registerUser(data.username, data.email, data.password, data.role);
       toast.success('注册成功！');
       navigate('/dashboard');
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.error || '注册失败，请稍后重试';
+    } catch (err: unknown) {
+      const errorMsg = getApiErrorMessage(err, '注册失败，请稍后重试');
       setError(errorMsg);
       toast.error(errorMsg);
     }

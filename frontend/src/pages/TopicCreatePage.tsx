@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { topicApi } from '../services/api';
 import type { CreateTopicDto } from '@web-learn/shared';
+import { getApiErrorMessage } from '../utils/errors';
 
 function TopicCreatePage() {
   const navigate = useNavigate();
@@ -12,19 +13,26 @@ function TopicCreatePage() {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<CreateTopicDto>();
+  const topicType = watch('type') || 'knowledge';
 
   const onSubmit = async (data: CreateTopicDto) => {
     setLoading(true);
     setError(null);
 
     try {
-      await topicApi.create(data);
+      const payload: CreateTopicDto = {
+        title: data.title,
+        description: data.description,
+        type: data.type || 'knowledge',
+        websiteUrl: (data.type || 'knowledge') === 'website' ? data.websiteUrl : undefined,
+      };
+      await topicApi.create(payload);
       navigate('/topics');
-    } catch (err) {
-      setError('创建专题失败');
-      console.error(err);
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, '创建专题失败'));
     } finally {
       setLoading(false);
     }
@@ -86,16 +94,32 @@ function TopicCreatePage() {
               />
             </div>
 
-            {/* Deadline */}
+            {/* Topic Type */}
             <div>
-              <label htmlFor="deadline" className="block text-sm font-medium text-gray-700 mb-2">
-                截止时间
+              <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-2">
+                专题类型
+              </label>
+              <select
+                id="type"
+                {...register('type')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="knowledge">知识库</option>
+                <option value="website">网站</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="websiteUrl" className="block text-sm font-medium text-gray-700 mb-2">
+                网站 URL（仅网站型可选）
               </label>
               <input
-                type="date"
-                id="deadline"
-                {...register('deadline')}
+                type="url"
+                id="websiteUrl"
+                {...register('websiteUrl')}
+                disabled={topicType !== 'website'}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="https://example.com"
               />
             </div>
 

@@ -1,5 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { useAuthStore } from './stores/useAuthStore';
 import { useToastStore } from './stores/useToastStore';
 import { ToastContainer } from './components/Toast';
@@ -10,9 +10,11 @@ import DashboardPage from './pages/DashboardPage';
 import TopicListPage from './pages/TopicListPage';
 import TopicCreatePage from './pages/TopicCreatePage';
 import TopicDetailPage from './pages/TopicDetailPage';
-import StudentSubmissionsPage from './pages/StudentSubmissionsPage';
-import StudentFeedbackPage from './pages/StudentFeedbackPage';
+import KnowledgeEditorPage from './pages/KnowledgeEditorPage';
+import WebsiteEditorPage from './pages/WebsiteEditorPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import { topicApi } from './services/api';
+import type { Topic } from '@web-learn/shared';
 
 function App() {
   const { checkAuth, isLoading, isAuthenticated } = useAuthStore();
@@ -55,11 +57,7 @@ function App() {
           />
           <Route
             path="/topics"
-            element={
-              <ProtectedRoute>
-                <TopicListPage />
-              </ProtectedRoute>
-            }
+            element={<TopicListPage />}
           />
           <Route
             path="/topics/create"
@@ -71,25 +69,13 @@ function App() {
           />
           <Route
             path="/topics/:id"
-            element={
-              <ProtectedRoute>
-                <TopicDetailPage />
-              </ProtectedRoute>
-            }
+            element={<TopicDetailPage />}
           />
           <Route
-            path="/my-submissions"
+            path="/topics/:id/edit"
             element={
-              <ProtectedRoute allowedRoles={['student']}>
-                <StudentSubmissionsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/my-feedback"
-            element={
-              <ProtectedRoute allowedRoles={['student']}>
-                <StudentFeedbackPage />
+              <ProtectedRoute allowedRoles={['teacher']}>
+                <TopicEditorRouter />
               </ProtectedRoute>
             }
           />
@@ -126,3 +112,39 @@ function App() {
 }
 
 export default App;
+
+function TopicEditorRouter() {
+  const { id } = useParams<{ id: string }>();
+  const [topic, setTopic] = useState<Topic | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    const fetchTopic = async () => {
+      if (!id) return;
+      try {
+        const data = await topicApi.getById(id);
+        setTopic(data);
+        setFailed(false);
+      } catch {
+        setFailed(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTopic();
+  }, [id]);
+
+  if (loading) {
+    return <LoadingOverlay message="加载中..." />;
+  }
+
+  if (!topic) {
+    if (failed) {
+      return <Navigate to="/topics" replace />;
+    }
+    return <Navigate to="/topics" replace />;
+  }
+
+  return topic.type === 'website' ? <WebsiteEditorPage /> : <KnowledgeEditorPage />;
+}

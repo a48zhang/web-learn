@@ -14,6 +14,11 @@ const mockConfig = {
     user: 'root',
     password: '',
   },
+  ai: {
+    apiKey: 'test-key',
+    baseUrl: '',
+    model: 'test-model',
+  },
   uploadsDir: '/tmp/web-learn-test-uploads',
 };
 
@@ -37,22 +42,7 @@ jest.mock('../src/models', () => ({
     findAll: jest.fn(),
     findByPk: jest.fn(),
   },
-  Resource: {
-    create: jest.fn(),
-    findAll: jest.fn(),
-    findByPk: jest.fn(),
-  },
-  Task: {
-    create: jest.fn(),
-    findAll: jest.fn(),
-    findByPk: jest.fn(),
-  },
-  Submission: {
-    create: jest.fn(),
-    findAll: jest.fn(),
-    findByPk: jest.fn(),
-  },
-  Review: {
+  TopicPage: {
     create: jest.fn(),
     findAll: jest.fn(),
     findByPk: jest.fn(),
@@ -127,7 +117,7 @@ describe('Auth API', () => {
       expect(mockUserModel.findOne).not.toHaveBeenCalled();
     });
 
-    it('forces public registration to student even when a privileged role is requested', async () => {
+    it('forces public registration to student when admin role is requested', async () => {
       mockUserModel.findOne.mockResolvedValue(null);
       mockUserModel.create.mockResolvedValue({
         id: 4,
@@ -158,6 +148,37 @@ describe('Auth API', () => {
         email: 'eve@example.com',
         password: 'password123',
         role: 'student',
+      });
+    });
+
+    it('keeps teacher role when explicitly requested', async () => {
+      mockUserModel.findOne.mockResolvedValue(null);
+      mockUserModel.create.mockResolvedValue({
+        id: 6,
+        username: 'tom',
+        email: 'tom@example.com',
+        role: 'teacher',
+        createdAt: new Date('2026-04-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-04-01T00:00:00.000Z'),
+      });
+      (jwt.sign as jest.Mock).mockReturnValue('teacher-token');
+
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send({
+          username: 'tom',
+          email: 'tom@example.com',
+          password: 'password123',
+          role: 'teacher',
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.data.user.role).toBe('teacher');
+      expect(mockUserModel.create).toHaveBeenCalledWith({
+        username: 'tom',
+        email: 'tom@example.com',
+        password: 'password123',
+        role: 'teacher',
       });
     });
 

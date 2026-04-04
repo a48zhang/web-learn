@@ -10,7 +10,8 @@
 graph TD
     A[前端 React SPA] -->|HTTP/REST| B[后端 Express API]
     B -->|ORM| C[(MySQL 数据库)]
-    B -->|文件操作| D[本地文件存储]
+    B -->|文件操作| D[本地文件存储（网站ZIP）]
+    B -->|LLM API| F[OpenAI Compatible API]
     E[用户浏览器] -->|HTTPS| A
 ```
 
@@ -33,6 +34,7 @@ graph TD
 - **Sequelize 6** - ORM
 - **JWT** - 身份认证
 - **bcrypt** - 密码加密
+- **OpenAI SDK** - AI 对话与 Function Calling
 
 ### 数据库
 
@@ -154,8 +156,10 @@ sequenceDiagram
         前端->>前端: 存储 Token
     end
     前端->>后端: POST /api/ai/chat<br/>Authorization: Bearer <token>
-    后端->>后端: 验证 Token
-    后端->>数据库: 调用 AI 服务
+    后端->>后端: 验证 Token + 权限
+    后端->>数据库: 查询 Topic/TopicPage 上下文
+    后端->>后端: 执行工具调用循环
+    后端->>后端: 调用 OpenAI API
     后端-->>前端: 返回 AI 响应
     前端-->>学生: 显示成功消息
 ```

@@ -1,9 +1,12 @@
 // User types
+export type UserRoleType = 'admin' | 'teacher' | 'student';
+// Admin accounts are reserved and should be provisioned manually, not via public registration.
+
 export interface User {
   id: string;
   username: string;
   email: string;
-  role: 'teacher' | 'student';
+  role: UserRoleType;
   createdAt: string;
   updatedAt: string;
 }
@@ -25,129 +28,118 @@ export interface AuthResponse {
   user: User;
 }
 
-// Topic/Project types
+// Topic types
+export type TopicStatusType = 'draft' | 'published' | 'closed';
+export type TopicType = 'knowledge' | 'website';
+
 export interface Topic {
   id: string;
   title: string;
   description?: string;
+  type: TopicType;
+  websiteUrl?: string | null;
   createdBy: string;
-  status: 'draft' | 'published' | 'closed';
-  deadline?: string;
+  status: TopicStatusType;
   createdAt: string;
   updatedAt: string;
-}
-
-export interface TopicWithMembership extends Topic {
-  hasJoined?: boolean;
 }
 
 export interface CreateTopicDto {
   title: string;
   description?: string;
-  deadline?: string;
+  type?: TopicType;
+  websiteUrl?: string;
 }
 
 export interface UpdateTopicDto {
   title?: string;
   description?: string;
-  deadline?: string;
+  type?: TopicType;
+  websiteUrl?: string | null;
 }
 
 export interface UpdateTopicStatusDto {
-  status: 'draft' | 'published' | 'closed';
+  status: TopicStatusType;
 }
 
-// Resource types
-export interface Resource {
+export interface DeleteTopicResponse {
   id: string;
-  topicId: string;
-  ownerId: string;
-  type: 'document' | 'video' | 'link' | 'other';
-  title?: string;
-  uri: string;
-  uploadedAt: string;
 }
 
-export interface CreateResourceDto {
-  type: 'document' | 'video' | 'link' | 'other';
-  title?: string;
-  uri?: string; // For links
-}
-
-// Task types
-export interface Task {
+// Topic page types
+export interface TopicPage {
   id: string;
   topicId: string;
   title: string;
-  description?: string;
-  createdBy: string;
+  content: string;
+  parentPageId?: string | null;
+  order: number;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface CreateTaskDto {
-  title: string;
-  description?: string;
+export interface TopicPageTreeNode extends TopicPage {
+  children: TopicPageTreeNode[];
 }
 
-// Submission types
-export interface SubmissionTaskSummary {
-  id: string;
+export interface CreateTopicPageDto {
   title: string;
-  topic?: {
+  content?: string;
+  parent_page_id?: string | null;
+}
+
+export interface UpdateTopicPageDto {
+  title?: string;
+  content?: string;
+  parent_page_id?: string | null;
+}
+
+export interface ReorderTopicPagesDto {
+  pages: Array<{
     id: string;
-    title: string;
-  };
+    order: number;
+    parent_page_id?: string | null;
+  }>;
 }
 
-export interface SubmissionStudentSummary {
+// AI chat types
+export type AIChatAgentType = 'learning' | 'building';
+
+export interface AIChatMessage {
+  role: 'system' | 'user' | 'assistant' | 'tool';
+  content: string | null;
+  name?: string;
+  tool_call_id?: string;
+  tool_calls?: unknown[];
+}
+
+export interface AIChatRequestDto {
+  messages: AIChatMessage[];
+  topic_id: number;
+  agent_type: AIChatAgentType;
+}
+
+export interface AIChatResponseDto {
   id: string;
-  username: string;
-  email: string;
+  object: string;
+  model: string;
+  choices: Array<{
+    index: number;
+    message: AIChatMessage;
+    finish_reason: string | null;
+  }>;
 }
 
-export interface Submission {
-  id: string;
-  taskId: string;
-  studentId: string;
-  content?: string;
-  fileUrl?: string;
-  submittedAt: string;
-  task?: SubmissionTaskSummary;
-  student?: SubmissionStudentSummary;
+// Website topic types
+export interface WebsiteStats {
+  topicId: string;
+  fileCount: number;
+  totalSize: number;
+  uploadedAt?: string;
+  websiteUrl?: string | null;
 }
 
-export interface SubmissionWithContext extends Submission {
-  task?: SubmissionTaskSummary;
-  student?: SubmissionStudentSummary;
-}
-
-export interface CreateSubmissionDto {
-  content?: string;
-  file?: File;
-}
-
-// Review types
-export interface Review {
-  id: string;
-  submissionId: string;
-  reviewerId: string;
-  score?: number;
-  feedback?: string;
-  reviewedAt: string;
-}
-
-export interface CreateReviewDto {
-  score?: number;
-  feedback?: string;
-}
-
-export interface UpdateReviewDto {
-  score?: number;
-  feedback?: string;
-}
-
-// API Response types
+// API response types
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;
@@ -155,16 +147,8 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
-export interface PaginatedResponse<T> {
-  items: T[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-}
-
-// Status enum
 export const UserRole = {
+  ADMIN: 'admin',
   TEACHER: 'teacher',
   STUDENT: 'student',
 } as const;
@@ -175,13 +159,7 @@ export const TopicStatus = {
   CLOSED: 'closed',
 } as const;
 
-export const TaskStatus = {
-  PENDING: 'pending',
-  IN_PROGRESS: 'in_progress',
-  COMPLETED: 'completed',
-} as const;
-
-export const SubmissionStatus = {
-  SUBMITTED: 'submitted',
-  GRADED: 'graded',
+export const TopicTypeMap = {
+  KNOWLEDGE: 'knowledge',
+  WEBSITE: 'website',
 } as const;

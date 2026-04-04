@@ -4,25 +4,27 @@ import { useAuthStore } from '../stores/useAuthStore';
 import { LoadingOverlay } from '../components/Loading';
 import { EmptyState } from '../components/EmptyState';
 import { topicApi } from '../services/api';
+import type { Topic } from '@web-learn/shared';
 import { toast } from '../stores/useToastStore';
-import type { TopicWithMembership } from '@web-learn/shared';
+import { getApiErrorMessage } from '../utils/errors';
 
 function TopicListPage() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
-  const [topics, setTopics] = useState<TopicWithMembership[]>([]);
+  const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [joiningTopicId, setJoiningTopicId] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [pendingDeleteTopic, setPendingDeleteTopic] = useState<Topic | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const fetchTopics = async () => {
       try {
         const data = await topicApi.getAll();
         setTopics(data);
-      } catch (err) {
+      } catch {
         setError('获取专题列表失败');
-        console.error(err);
       } finally {
         setLoading(false);
       }
@@ -30,25 +32,6 @@ function TopicListPage() {
 
     fetchTopics();
   }, []);
-
-  const handleJoinTopic = async (topicId: string) => {
-    setJoiningTopicId(topicId);
-    try {
-      await topicApi.join(topicId);
-      toast.success('成功加入专题');
-      // Update the topic list to reflect the join
-      setTopics((prev) =>
-        prev.map((topic) =>
-          topic.id === topicId ? { ...topic, hasJoined: true } : topic
-        )
-      );
-    } catch (err: any) {
-      console.error('Join topic error:', err);
-      toast.error(err.response?.data?.error || '加入专题失败');
-    } finally {
-      setJoiningTopicId(null);
-    }
-  };
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
@@ -76,6 +59,31 @@ function TopicListPage() {
     }
   };
 
+  const getTypeText = (type: string) => {
+    return type === 'website' ? '网站型' : '知识库型';
+  };
+
+  const handleOpenDeleteDialog = (topic: Topic) => {
+    setPendingDeleteTopic(topic);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteTopic = async () => {
+    if (!pendingDeleteTopic) return;
+    setDeleting(true);
+    try {
+      await topicApi.delete(pendingDeleteTopic.id);
+      setTopics((prev) => prev.filter((topic) => topic.id !== pendingDeleteTopic.id));
+      setDeleteDialogOpen(false);
+      setPendingDeleteTopic(null);
+      toast.success('专题已删除');
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, '删除专题失败'));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading) {
     return <LoadingOverlay message="加载中..." />;
   }
@@ -89,7 +97,7 @@ function TopicListPage() {
               ← 返回控制台
             </Link>
             <h1 className="text-2xl font-bold text-gray-900">
-              {user?.role === 'teacher' ? '我的专题' : '可用专题'}
+              {user?.role === 'teacher' ? '专题列表' : '公开专题'}
             </h1>
           </div>
           {user?.role === 'teacher' && (
@@ -141,38 +149,38 @@ function TopicListPage() {
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(topic.status)}`}>
                         {getStatusText(topic.status)}
                       </span>
-                      {user?.role === 'student' && topic.hasJoined && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          已加入
-                        </span>
-                      )}
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                        {getTypeText(topic.type)}
+                      </span>
                     </div>
                     {topic.description && (
                       <p className="text-gray-600 mb-3 line-clamp-2">{topic.description}</p>
                     )}
-                    <div className="text-sm text-gray-500">
-                      {topic.deadline && (
-                        <span>截止时间: {new Date(topic.deadline).toLocaleDateString('zh-CN')}</span>
-                      )}
-                    </div>
+                    <div className="text-sm text-gray-500">创建时间: {new Date(topic.createdAt).toLocaleDateString('zh-CN')}</div>
                   </div>
                   <div className="sm:ml-4 flex-shrink-0 flex flex-col sm:flex-row gap-2">
-                    {user?.role === 'student' && !topic.hasJoined && topic.status === 'published' && (
-                      <button
-                        onClick={() => handleJoinTopic(topic.id)}
-                        disabled={joiningTopicId === topic.id}
-                        className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors disabled:opacity-50"
-                      >
-                        {joiningTopicId === topic.id ? '加入中...' : '加入专题'}
-                      </button>
-                    )}
-                    {(topic.hasJoined || user?.role !== 'student') && (
-                      <Link
-                        to={`/topics/${topic.id}`}
-                        className="w-full sm:w-auto text-blue-600 hover:text-blue-500 font-medium inline-block text-center"
-                      >
-                        查看详情 →
-                      </Link>
+                    <Link
+                      to={`/topics/${topic.id}`}
+                      className="w-full sm:w-auto text-blue-600 hover:text-blue-500 font-medium inline-block text-center"
+                    >
+                      查看详情 →
+                    </Link>
+                    {user?.role === 'teacher' && topic.createdBy === user.id && (
+                      <>
+                        <Link
+                          to={`/topics/${topic.id}/edit`}
+                          className="w-full sm:w-auto text-green-600 hover:text-green-500 font-medium inline-block text-center"
+                        >
+                          编辑专题 →
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenDeleteDialog(topic)}
+                          className="w-full sm:w-auto text-red-600 hover:text-red-500 font-medium text-center"
+                        >
+                          删除专题 →
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -181,6 +189,36 @@ function TopicListPage() {
           )}
         </div>
       </div>
+      {deleteDialogOpen && pendingDeleteTopic && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-4 space-y-3">
+            <h3 className="text-lg font-semibold text-gray-900">删除专题</h3>
+            <p className="text-sm text-gray-600">
+              确认删除“{pendingDeleteTopic.title}”？该操作会删除专题及其页面内容。
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteDialogOpen(false);
+                  setPendingDeleteTopic(null);
+                }}
+                className="px-3 py-1.5 text-sm rounded border border-gray-300"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteTopic}
+                disabled={deleting}
+                className="px-3 py-1.5 text-sm rounded bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+              >
+                {deleting ? '删除中...' : '确认删除'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

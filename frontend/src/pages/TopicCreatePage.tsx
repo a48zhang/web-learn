@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { topicApi } from '../services/api';
 import type { CreateTopicDto } from '@web-learn/shared';
+import { getApiErrorMessage } from '../utils/errors';
 
 function TopicCreatePage() {
   const navigate = useNavigate();
@@ -30,9 +31,8 @@ function TopicCreatePage() {
       };
       await topicApi.create(payload);
       navigate('/topics');
-    } catch (err) {
-      setError('创建专题失败');
-      console.error(err);
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, '创建专题失败'));
     } finally {
       setLoading(false);
     }

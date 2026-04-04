@@ -6,6 +6,7 @@ interface PageTreeEditorProps {
   onSelectPage: (pageId: string) => void;
   onCreatePage: (parentPageId?: string | null) => void;
   onDeletePage: (pageId: string) => void;
+  deletingPageId?: string | null;
 }
 
 function PageEditorNode({
@@ -14,6 +15,7 @@ function PageEditorNode({
   onSelectPage,
   onCreatePage,
   onDeletePage,
+  deletingPageId,
   depth,
 }: {
   node: TopicPageTreeNode;
@@ -21,9 +23,11 @@ function PageEditorNode({
   onSelectPage: (pageId: string) => void;
   onCreatePage: (parentPageId?: string | null) => void;
   onDeletePage: (pageId: string) => void;
+  deletingPageId?: string | null;
   depth: number;
 }) {
   const isActive = selectedPageId === node.id;
+  const isPendingDelete = deletingPageId === node.id;
   return (
     <div className="space-y-1">
       <div
@@ -51,7 +55,7 @@ function PageEditorNode({
           onClick={() => onDeletePage(node.id)}
           className="text-xs text-red-600 hover:text-red-700"
         >
-          删除
+          {isPendingDelete ? '待确认' : '删除'}
         </button>
       </div>
       {node.children
@@ -65,6 +69,7 @@ function PageEditorNode({
             onSelectPage={onSelectPage}
             onCreatePage={onCreatePage}
             onDeletePage={onDeletePage}
+            deletingPageId={deletingPageId}
             depth={depth + 1}
           />
         ))}
@@ -78,6 +83,7 @@ function PageTreeEditor({
   onSelectPage,
   onCreatePage,
   onDeletePage,
+  deletingPageId,
 }: PageTreeEditorProps) {
   return (
     <div className="space-y-2">
@@ -106,6 +112,7 @@ function PageTreeEditor({
                 onSelectPage={onSelectPage}
                 onCreatePage={onCreatePage}
                 onDeletePage={onDeletePage}
+                deletingPageId={deletingPageId}
                 depth={0}
               />
             ))

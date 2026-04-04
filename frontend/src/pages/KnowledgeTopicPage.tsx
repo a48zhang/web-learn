@@ -8,25 +8,9 @@ import { topicApi, pageApi } from '../services/api';
 import { LoadingOverlay } from '../components/Loading';
 import PageTreeNav from '../components/PageTreeNav';
 import AIChatSidebar from '../components/AIChatSidebar';
-
-function findFirstPage(nodes: TopicPageTreeNode[]): TopicPageTreeNode | null {
-  const sorted = nodes.slice().sort((a, b) => a.order - b.order);
-  if (sorted.length === 0) return null;
-  const first = sorted[0];
-  if (first.children.length > 0) {
-    return findFirstPage([first.children.slice().sort((a, b) => a.order - b.order)[0]]) || first;
-  }
-  return first;
-}
-
-function findInTree(nodes: TopicPageTreeNode[], id: string): TopicPageTreeNode | null {
-  for (const node of nodes) {
-    if (node.id === id) return node;
-    const found = findInTree(node.children, id);
-    if (found) return found;
-  }
-  return null;
-}
+import { toast } from '../stores/useToastStore';
+import { getApiErrorMessage } from '../utils/errors';
+import { findFirstPage, findNode } from '../utils/treeUtils';
 
 function KnowledgeTopicPage() {
   const { id } = useParams<{ id: string }>();
@@ -35,6 +19,7 @@ function KnowledgeTopicPage() {
   const [currentPage, setCurrentPage] = useState<TopicPage | null>(null);
   const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pageLoading, setPageLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -60,9 +45,8 @@ function KnowledgeTopicPage() {
           setCurrentPage(null);
           setSelectedPageId(null);
         }
-      } catch (err) {
-        console.error(err);
-        setError('加载专题失败');
+      } catch (err: unknown) {
+        setError(getApiErrorMessage(err, '加载专题失败'));
       } finally {
         setLoading(false);
       }
@@ -73,18 +57,20 @@ function KnowledgeTopicPage() {
 
   const pageTitle = useMemo(() => {
     if (!selectedPageId) return '';
-    const node = findInTree(pages, selectedPageId);
+    const node = findNode(pages, selectedPageId);
     return node?.title || '';
   }, [pages, selectedPageId]);
 
   const handleSelectPage = async (pageId: string) => {
     setSelectedPageId(pageId);
+    setPageLoading(true);
     try {
       const page = await pageApi.getById(pageId);
       setCurrentPage(page);
-    } catch (err) {
-      console.error(err);
-      setError('加载页面失败');
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, '加载页面失败'));
+    } finally {
+      setPageLoading(false);
     }
   };
 
@@ -118,7 +104,9 @@ function KnowledgeTopicPage() {
             <PageTreeNav pages={pages} selectedPageId={selectedPageId} onSelectPage={handleSelectPage} />
           </aside>
           <main className="lg:col-span-3 bg-white rounded-lg shadow p-6 h-[calc(100vh-180px)] overflow-y-auto">
-            {currentPage ? (
+            {pageLoading ? (
+              <p className="text-gray-500">页面加载中...</p>
+            ) : currentPage ? (
               <>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">{pageTitle || currentPage.title}</h2>
                 <div className="prose max-w-none prose-pre:bg-gray-900 prose-pre:text-gray-100">

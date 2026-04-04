@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import type { Topic } from '@web-learn/shared';
 import { topicApi } from '../services/api';
 import { LoadingOverlay } from '../components/Loading';
+import { getApiErrorMessage } from '../utils/errors';
 
 function WebsiteTopicPage() {
   const { id } = useParams<{ id: string }>();
@@ -21,9 +22,8 @@ function WebsiteTopicPage() {
           return;
         }
         setTopic(data);
-      } catch (err) {
-        console.error(err);
-        setError('加载专题失败');
+      } catch (err: unknown) {
+        setError(getApiErrorMessage(err, '加载专题失败'));
       } finally {
         setLoading(false);
       }

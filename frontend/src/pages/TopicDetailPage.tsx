@@ -18,8 +18,7 @@ function TopicDetailPage() {
       try {
         const data = await topicApi.getById(id);
         setTopic(data);
-      } catch (err) {
-        console.error(err);
+      } catch {
         setError('获取专题详情失败');
       } finally {
         setLoading(false);

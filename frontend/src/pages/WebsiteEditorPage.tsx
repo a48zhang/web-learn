@@ -5,6 +5,7 @@ import { topicApi } from '../services/api';
 import { useAuthStore } from '../stores/useAuthStore';
 import { toast } from '../stores/useToastStore';
 import { getApiErrorMessage } from '../utils/errors';
+import { LoadingOverlay } from '../components/Loading';
 
 function WebsiteEditorPage() {
   const { id } = useParams<{ id: string }>();
@@ -83,11 +84,7 @@ function WebsiteEditorPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-600">加载中...</p>
-      </div>
-    );
+    return <LoadingOverlay message="加载网站编辑器中..." />;
   }
 
   if (error || !topic) {

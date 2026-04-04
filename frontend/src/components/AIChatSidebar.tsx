@@ -27,6 +27,16 @@ function AIChatSidebar({ topicId, agentType, title }: AIChatSidebarProps) {
   const handleSend = async () => {
     const content = input.trim();
     if (!content || loading) return;
+    if (!/^\d+$/.test(topicId)) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: '请求失败：无效的专题ID',
+        },
+      ]);
+      return;
+    }
     const nextMessages: AIChatMessage[] = [...messages, { role: 'user', content }];
     setMessages(nextMessages);
     setInput('');

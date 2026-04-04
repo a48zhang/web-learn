@@ -5,6 +5,8 @@ import { LoadingOverlay } from '../components/Loading';
 import { EmptyState } from '../components/EmptyState';
 import { topicApi } from '../services/api';
 import type { Topic } from '@web-learn/shared';
+import { toast } from '../stores/useToastStore';
+import { getApiErrorMessage } from '../utils/errors';
 
 function TopicListPage() {
   const { user } = useAuthStore();
@@ -12,15 +14,17 @@ function TopicListPage() {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [pendingDeleteTopic, setPendingDeleteTopic] = useState<Topic | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const fetchTopics = async () => {
       try {
         const data = await topicApi.getAll();
         setTopics(data);
-      } catch (err) {
+      } catch {
         setError('获取专题列表失败');
-        console.error(err);
       } finally {
         setLoading(false);
       }
@@ -57,6 +61,27 @@ function TopicListPage() {
 
   const getTypeText = (type: string) => {
     return type === 'website' ? '网站型' : '知识库型';
+  };
+
+  const handleOpenDeleteDialog = (topic: Topic) => {
+    setPendingDeleteTopic(topic);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteTopic = async () => {
+    if (!pendingDeleteTopic) return;
+    setDeleting(true);
+    try {
+      await topicApi.delete(pendingDeleteTopic.id);
+      setTopics((prev) => prev.filter((topic) => topic.id !== pendingDeleteTopic.id));
+      setDeleteDialogOpen(false);
+      setPendingDeleteTopic(null);
+      toast.success('专题已删除');
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, '删除专题失败'));
+    } finally {
+      setDeleting(false);
+    }
   };
 
   if (loading) {
@@ -141,12 +166,21 @@ function TopicListPage() {
                       查看详情 →
                     </Link>
                     {user?.role === 'teacher' && topic.createdBy === user.id && (
-                      <Link
-                        to={`/topics/${topic.id}/edit`}
-                        className="w-full sm:w-auto text-green-600 hover:text-green-500 font-medium inline-block text-center"
-                      >
-                        编辑专题 →
-                      </Link>
+                      <>
+                        <Link
+                          to={`/topics/${topic.id}/edit`}
+                          className="w-full sm:w-auto text-green-600 hover:text-green-500 font-medium inline-block text-center"
+                        >
+                          编辑专题 →
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenDeleteDialog(topic)}
+                          className="w-full sm:w-auto text-red-600 hover:text-red-500 font-medium text-center"
+                        >
+                          删除专题 →
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -155,6 +189,36 @@ function TopicListPage() {
           )}
         </div>
       </div>
+      {deleteDialogOpen && pendingDeleteTopic && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-4 space-y-3">
+            <h3 className="text-lg font-semibold text-gray-900">删除专题</h3>
+            <p className="text-sm text-gray-600">
+              确认删除“{pendingDeleteTopic.title}”？该操作会删除专题及其页面内容。
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteDialogOpen(false);
+                  setPendingDeleteTopic(null);
+                }}
+                className="px-3 py-1.5 text-sm rounded border border-gray-300"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteTopic}
+                disabled={deleting}
+                className="px-3 py-1.5 text-sm rounded bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+              >
+                {deleting ? '删除中...' : '确认删除'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

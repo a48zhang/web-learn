@@ -1,26 +1,15 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
-import cors from 'cors';
 import authRoutes from './routes/authRoutes';
 import userRoutes from './routes/userRoutes';
 import topicRoutes from './routes/topicRoutes';
 import pageRoutes from './routes/pageRoutes';
 import aiRoutes from './routes/aiRoutes';
-import { config } from './utils/config';
+import { corsMiddleware } from './middlewares/corsMiddleware';
 
 const app: Application = express();
 
 // Middleware
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin || config.cors.origins.includes(origin)) {
-        callback(null, true);
-        return;
-      }
-      callback(new Error('Not allowed by CORS'));
-    },
-  })
-);
+app.use(corsMiddleware);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

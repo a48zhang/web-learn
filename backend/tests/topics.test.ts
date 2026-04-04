@@ -71,6 +71,18 @@ jest.mock('jsonwebtoken', () => ({
   JsonWebTokenError: class JsonWebTokenError extends Error {},
 }));
 
+jest.mock('../src/services/storageService', () => ({
+  getStorageService: jest.fn(() => ({
+    uploadBuffer: jest.fn().mockResolvedValue('https://cdn.example.com/test'),
+    deleteDir: jest.fn().mockResolvedValue(undefined),
+    delete: jest.fn().mockResolvedValue(undefined),
+    listFiles: jest.fn().mockResolvedValue([]),
+    getSize: jest.fn().mockResolvedValue(0),
+    getUrl: jest.fn((key: string) => `https://cdn.example.com/${key}`),
+  })),
+  initStorageService: jest.fn(),
+}));
+
 import app from '../src/app';
 
 describe('Topics API', () => {
@@ -302,8 +314,7 @@ describe('Topics API', () => {
         .set('Authorization', 'Bearer teacher-token');
 
       expect(response.status).toBe(200);
-      expect(response.body.data).toMatchObject({
-        topicId: '7',
+      expect(response.body.stats).toMatchObject({
         fileCount: 0,
         totalSize: 0,
       });

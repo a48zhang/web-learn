@@ -40,4 +40,4 @@ coverage/
 temp/
 
 # Uploads
-uploads/
+uploads//.worktrees/

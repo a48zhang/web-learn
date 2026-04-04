@@ -26,8 +26,14 @@ jest.mock('../src/utils/config', () => ({
   config: mockConfig,
 }));
 
+type MockTransaction = {
+  LOCK: {
+    UPDATE: 'UPDATE';
+  };
+};
+
 const mockSequelize = {
-  transaction: jest.fn(async (handler: (tx: any) => Promise<any>) =>
+  transaction: jest.fn(async (handler: (tx: MockTransaction) => Promise<unknown>) =>
     handler({
       LOCK: {
         UPDATE: 'UPDATE',
@@ -75,7 +81,7 @@ import app from '../src/app';
 describe('Pages API', () => {
   beforeEach(() => {
     jest.resetAllMocks();
-    mockSequelize.transaction.mockImplementation(async (handler: (tx: any) => Promise<any>) =>
+    mockSequelize.transaction.mockImplementation(async (handler: (tx: MockTransaction) => Promise<unknown>) =>
       handler({
         LOCK: {
           UPDATE: 'UPDATE',

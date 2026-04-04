@@ -4,6 +4,8 @@ import { AuthRequest } from '../middlewares/authMiddleware';
 import { Topic, TopicPage } from '../models';
 import { sequelize } from '../utils/database';
 
+const ROOT_PARENT_KEY = 'root';
+
 const normalizeId = (rawId: string) => {
   const id = parseInt(rawId, 10);
   return Number.isNaN(id) ? null : id;
@@ -283,7 +285,7 @@ export const reorderPages = async (req: AuthRequest, res: Response) => {
     const parentToOrders = new Map<string, Set<number>>();
     for (const item of pages) {
       const parentKey = item.parent_page_id === null || item.parent_page_id === undefined
-        ? 'root'
+        ? ROOT_PARENT_KEY
         : String(item.parent_page_id);
       const orders = parentToOrders.get(parentKey) ?? new Set<number>();
       if (orders.has(item.order)) {

@@ -35,7 +35,15 @@ const parseTopicId = (id: string) => {
 const ensureTopicOwner = (topic: any, req: AuthRequest) =>
   req.user && req.user.role === 'teacher' && topic.created_by === req.user.id;
 
-const ZIP_MAGIC_HEX = '504b0304';
+const ZIP_MAGIC_BYTES = Buffer.from([0x50, 0x4b, 0x03, 0x04]);
+
+const resolveUploadPath = (filename: string) => {
+  const safeName = path.basename(filename);
+  if (!safeName || safeName === '.' || safeName === '..') {
+    throw new Error('Invalid upload filename');
+  }
+  return path.join(config.uploadsDir, safeName);
+};
 
 const hasHtmlEntryInZip = (filePath: string) => {
   const fd = fs.openSync(filePath, 'r');
@@ -45,7 +53,7 @@ const hasHtmlEntryInZip = (filePath: string) => {
     while (offset < stat.size - 30) {
       const header = Buffer.alloc(4);
       fs.readSync(fd, header, 0, 4, offset);
-      if (header.toString('hex') !== ZIP_MAGIC_HEX) {
+      if (!header.equals(ZIP_MAGIC_BYTES)) {
         offset += 1;
         continue;
       }
@@ -79,17 +87,18 @@ const validateUploadedZip = async (file?: Express.Multer.File | null) => {
   if (!file.originalname.toLowerCase().endsWith('.zip')) {
     return { ok: false, error: 'Only ZIP files are supported' } as const;
   }
-  const fd = fs.openSync(file.path, 'r');
+  const uploadedPath = resolveUploadPath(file.filename);
+  const fd = fs.openSync(uploadedPath, 'r');
   try {
     const header = Buffer.alloc(4);
     fs.readSync(fd, header, 0, 4, 0);
-    if (header.toString('hex') !== ZIP_MAGIC_HEX) {
+    if (!header.equals(ZIP_MAGIC_BYTES)) {
       return { ok: false, error: 'Invalid ZIP file format' } as const;
     }
   } finally {
     fs.closeSync(fd);
   }
-  if (!hasHtmlEntryInZip(file.path)) {
+  if (!hasHtmlEntryInZip(uploadedPath)) {
     return { ok: false, error: 'ZIP must contain at least one HTML file' } as const;
   }
   return { ok: true } as const;
@@ -293,7 +302,7 @@ export const deleteTopic = async (req: AuthRequest, res: Response) => {
 
     if (topic.website_url?.startsWith('/uploads/')) {
       const filename = topic.website_url.slice('/uploads/'.length);
-      const fullPath = path.join(config.uploadsDir, filename);
+      const fullPath = resolveUploadPath(filename);
       if (fs.existsSync(fullPath)) {
         fs.unlinkSync(fullPath);
       }
@@ -328,8 +337,11 @@ export const uploadWebsite = async (req: AuthRequest, res: Response) => {
     }
     const validateResult = await validateUploadedZip(req.file);
     if (!validateResult.ok) {
-      if (req.file?.path && fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path);
+      if (req.file) {
+        const uploadPath = resolveUploadPath(req.file.filename);
+        if (fs.existsSync(uploadPath)) {
+          fs.unlinkSync(uploadPath);
+        }
       }
       return res.status(400).json({ success: false, error: validateResult.error });
     }
@@ -341,15 +353,19 @@ export const uploadWebsite = async (req: AuthRequest, res: Response) => {
     });
 
     if (previousWebsiteUrl?.startsWith('/uploads/')) {
-      const previousPath = path.join(config.uploadsDir, previousWebsiteUrl.slice('/uploads/'.length));
-      if (fs.existsSync(previousPath) && previousPath !== req.file!.path) {
+      const previousPath = resolveUploadPath(previousWebsiteUrl.slice('/uploads/'.length));
+      const currentPath = resolveUploadPath(req.file!.filename);
+      if (fs.existsSync(previousPath) && previousPath !== currentPath) {
         fs.unlinkSync(previousPath);
       }
     }
     return res.json({ success: true, data: formatTopic(topic) });
   } catch (error) {
-    if (req.file?.path && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
+    if (req.file) {
+      const uploadPath = resolveUploadPath(req.file.filename);
+      if (fs.existsSync(uploadPath)) {
+        fs.unlinkSync(uploadPath);
+      }
     }
     console.error('Upload website error:', error);
     return res.status(500).json({ success: false, error: 'Internal server error' });
@@ -383,7 +399,7 @@ export const deleteWebsite = async (req: AuthRequest, res: Response) => {
 
     if (currentWebsiteUrl?.startsWith('/uploads/')) {
       const filename = currentWebsiteUrl.slice('/uploads/'.length);
-      const fullPath = path.join(config.uploadsDir, filename);
+      const fullPath = resolveUploadPath(filename);
       if (fs.existsSync(fullPath)) {
         fs.unlinkSync(fullPath);
       }
@@ -416,7 +432,7 @@ export const getWebsiteStats = async (req: AuthRequest, res: Response) => {
     let fileCount = 0;
     if (topic.website_url?.startsWith('/uploads/')) {
       const filename = topic.website_url.slice('/uploads/'.length);
-      const fullPath = path.join(config.uploadsDir, filename);
+      const fullPath = resolveUploadPath(filename);
       if (fs.existsSync(fullPath)) {
         const stat = fs.statSync(fullPath);
         totalSize = stat.size;

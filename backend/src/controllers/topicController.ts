@@ -1,13 +1,9 @@
 import { Op } from 'sequelize';
 import { Response } from 'express';
-import fs from 'fs';
-import path from 'path';
 import type { Express } from 'express';
 import { AuthRequest } from '../middlewares/authMiddleware';
 import { Topic, User } from '../models';
-import { config } from '../utils/config';
 import { sequelize } from '../utils/database';
-
 const formatTopic = (topic: any) => ({
   id: topic.id.toString(),
   title: topic.title,
@@ -37,45 +33,28 @@ const ensureTopicOwner = (topic: any, req: AuthRequest) =>
 
 const ZIP_MAGIC_BYTES = Buffer.from([0x50, 0x4b, 0x03, 0x04]);
 
-const resolveUploadPath = (filename: string) => {
-  const safeName = path.basename(filename);
-  if (!safeName || safeName === '.' || safeName === '..') {
-    throw new Error('Invalid upload filename');
-  }
-  return path.join(config.uploadsDir, safeName);
-};
-
-const hasHtmlEntryInZip = (filePath: string) => {
-  const fd = fs.openSync(filePath, 'r');
-  try {
-    const stat = fs.fstatSync(fd);
-    let offset = 0;
-    while (offset < stat.size - 30) {
-      const header = Buffer.alloc(4);
-      fs.readSync(fd, header, 0, 4, offset);
-      if (!header.equals(ZIP_MAGIC_BYTES)) {
-        offset += 1;
-        continue;
-      }
-      const localHeader = Buffer.alloc(30);
-      fs.readSync(fd, localHeader, 0, 30, offset);
-      const fileNameLength = localHeader.readUInt16LE(26);
-      const extraLength = localHeader.readUInt16LE(28);
-      if (fileNameLength <= 0) {
-        offset += 4;
-        continue;
-      }
-      const fileNameBuffer = Buffer.alloc(fileNameLength);
-      fs.readSync(fd, fileNameBuffer, 0, fileNameLength, offset + 30);
-      const filename = fileNameBuffer.toString('utf8').toLowerCase();
-      if (filename.endsWith('.html') || filename.endsWith('.htm')) {
-        return true;
-      }
-      const compressedSize = localHeader.readUInt32LE(18);
-      offset += 30 + fileNameLength + extraLength + compressedSize;
+const hasHtmlEntryInZipBuffer = (buffer: Buffer) => {
+  let offset = 0;
+  while (offset < buffer.length - 30) {
+    const header = buffer.subarray(offset, offset + 4);
+    if (!header.equals(ZIP_MAGIC_BYTES)) {
+      offset += 1;
+      continue;
     }
-  } finally {
-    fs.closeSync(fd);
+    const localHeader = buffer.subarray(offset + 4, offset + 30);
+    const fileNameLength = localHeader.readUInt16LE(26);
+    const extraLength = localHeader.readUInt16LE(28);
+    const compressedSize = localHeader.readUInt32LE(18);
+    if (fileNameLength <= 0) {
+      offset += 1;
+      continue;
+    }
+    const fileNameBuffer = buffer.subarray(offset + 30, offset + 30 + fileNameLength);
+    const filename = fileNameBuffer.toString('utf8').toLowerCase();
+    if (filename.endsWith('.html') || filename.endsWith('.htm')) {
+      return true;
+    }
+    offset += 30 + fileNameLength + extraLength + compressedSize;
   }
   return false;
 };
@@ -87,18 +66,14 @@ const validateUploadedZip = async (file?: Express.Multer.File | null) => {
   if (!file.originalname.toLowerCase().endsWith('.zip')) {
     return { ok: false, error: 'Only ZIP files are supported' } as const;
   }
-  const uploadedPath = resolveUploadPath(file.filename);
-  const fd = fs.openSync(uploadedPath, 'r');
-  try {
-    const header = Buffer.alloc(4);
-    fs.readSync(fd, header, 0, 4, 0);
-    if (!header.equals(ZIP_MAGIC_BYTES)) {
-      return { ok: false, error: 'Invalid ZIP file format' } as const;
-    }
-  } finally {
-    fs.closeSync(fd);
+  if (!file.buffer || file.buffer.length < 4) {
+    return { ok: false, error: 'Invalid ZIP file format' } as const;
   }
-  if (!hasHtmlEntryInZip(uploadedPath)) {
+  const header = file.buffer.subarray(0, 4);
+  if (!header.equals(ZIP_MAGIC_BYTES)) {
+    return { ok: false, error: 'Invalid ZIP file format' } as const;
+  }
+  if (!hasHtmlEntryInZipBuffer(file.buffer)) {
     return { ok: false, error: 'ZIP must contain at least one HTML file' } as const;
   }
   return { ok: true } as const;
@@ -300,13 +275,7 @@ export const deleteTopic = async (req: AuthRequest, res: Response) => {
       await Topic.destroy({ where: { id: topic.id }, transaction });
     });
 
-    if (topic.website_url?.startsWith('/uploads/')) {
-      const filename = topic.website_url.slice('/uploads/'.length);
-      const fullPath = resolveUploadPath(filename);
-      if (fs.existsSync(fullPath)) {
-        fs.unlinkSync(fullPath);
-      }
-    }
+    // TODO (Phase 2): Delete website files from OSS when topic has a website_url
     return res.json({ success: true, data: { id: topic.id.toString() } });
   } catch (error) {
     console.error('Delete topic error:', error);
@@ -337,36 +306,16 @@ export const uploadWebsite = async (req: AuthRequest, res: Response) => {
     }
     const validateResult = await validateUploadedZip(req.file);
     if (!validateResult.ok) {
-      if (req.file) {
-        const uploadPath = resolveUploadPath(req.file.filename);
-        if (fs.existsSync(uploadPath)) {
-          fs.unlinkSync(uploadPath);
-        }
-      }
       return res.status(400).json({ success: false, error: validateResult.error });
     }
 
-    const previousWebsiteUrl = topic.website_url;
-    topic.website_url = `/uploads/${req.file!.filename}`;
+    topic.website_url = `/uploads/${req.file!.originalname}`;
     await sequelize.transaction(async (transaction) => {
       await topic.save({ transaction });
     });
 
-    if (previousWebsiteUrl?.startsWith('/uploads/')) {
-      const previousPath = resolveUploadPath(previousWebsiteUrl.slice('/uploads/'.length));
-      const currentPath = resolveUploadPath(req.file!.filename);
-      if (fs.existsSync(previousPath) && previousPath !== currentPath) {
-        fs.unlinkSync(previousPath);
-      }
-    }
     return res.json({ success: true, data: formatTopic(topic) });
   } catch (error) {
-    if (req.file) {
-      const uploadPath = resolveUploadPath(req.file.filename);
-      if (fs.existsSync(uploadPath)) {
-        fs.unlinkSync(uploadPath);
-      }
-    }
     console.error('Upload website error:', error);
     return res.status(500).json({ success: false, error: 'Internal server error' });
   }
@@ -397,13 +346,7 @@ export const deleteWebsite = async (req: AuthRequest, res: Response) => {
       await topic.save({ transaction });
     });
 
-    if (currentWebsiteUrl?.startsWith('/uploads/')) {
-      const filename = currentWebsiteUrl.slice('/uploads/'.length);
-      const fullPath = resolveUploadPath(filename);
-      if (fs.existsSync(fullPath)) {
-        fs.unlinkSync(fullPath);
-      }
-    }
+    // TODO (Phase 2): Delete website files from OSS when website_url is set
     return res.json({ success: true, data: formatTopic(topic) });
   } catch (error) {
     console.error('Delete website error:', error);
@@ -428,17 +371,9 @@ export const getWebsiteStats = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
 
+    // TODO (Phase 2): Get stats from OSS when website files are stored there
     let totalSize = 0;
     let fileCount = 0;
-    if (topic.website_url?.startsWith('/uploads/')) {
-      const filename = topic.website_url.slice('/uploads/'.length);
-      const fullPath = resolveUploadPath(filename);
-      if (fs.existsSync(fullPath)) {
-        const stat = fs.statSync(fullPath);
-        totalSize = stat.size;
-        fileCount = 1;
-      }
-    }
 
     return res.json({
       success: true,

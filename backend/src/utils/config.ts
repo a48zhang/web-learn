@@ -48,5 +48,12 @@ export const config = {
     baseUrl: process.env.OPENAI_BASE_URL || '',
     model: process.env.OPENAI_MODEL || 'gpt-4.1-mini',
   },
-  uploadsDir: process.env.UPLOADS_DIR || `${process.cwd()}/uploads`,
+  storage: {
+    provider: (process.env.STORAGE_PROVIDER as 'oss' | 'local') || 'local',
+    bucket: process.env.OSS_BUCKET || '',
+    region: process.env.OSS_REGION || '',
+    accessKeyId: process.env.OSS_ACCESS_KEY_ID || '',
+    accessKeySecret: process.env.OSS_ACCESS_KEY_SECRET || '',
+    cdnBase: process.env.OSS_CDN_BASE || '',
+  },
 };

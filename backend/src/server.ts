@@ -1,11 +1,13 @@
 import app from './app';
 import { config } from './utils/config';
 import { testDatabaseConnection, syncDatabase } from './utils/database';
+import { initStorage } from './index';
 
 const PORT = config.port;
 
 async function startServer() {
   try {
+    await initStorage();
     await testDatabaseConnection();
     await syncDatabase();
 

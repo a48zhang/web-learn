@@ -1,13 +1,6 @@
 import multer from 'multer';
 import path from 'path';
-import fs from 'fs';
-import { randomBytes } from 'crypto';
-import { config } from '../utils/config';
-
-const uploadsDir = config.uploadsDir;
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+import { getStorageService } from '../services/storageService';
 
 const allowedMimeTypes = new Set([
   'application/zip',
@@ -15,17 +8,7 @@ const allowedMimeTypes = new Set([
   'application/octet-stream',
 ]);
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = randomBytes(16).toString('hex');
-    const ext = path.extname(file.originalname);
-    const basename = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9-_]/g, '_');
-    cb(null, `${basename || 'upload'}-${uniqueSuffix}${ext}`);
-  },
-});
+const storage = multer.memoryStorage();
 
 const fileFilter = (_req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   const ext = path.extname(file.originalname).toLowerCase();
@@ -46,3 +29,17 @@ export const upload = multer({
     fileSize: 50 * 1024 * 1024,
   },
 });
+
+/**
+ * Upload a file buffer to storage service.
+ * Returns the public URL of the uploaded file.
+ */
+export async function uploadToStorageService(
+  buffer: Buffer,
+  filename: string,
+  ossKey: string
+): Promise<string> {
+  const service = getStorageService();
+  return service.uploadBuffer(buffer, ossKey);
+}
+

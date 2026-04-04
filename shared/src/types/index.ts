@@ -48,14 +48,12 @@ export interface CreateTopicDto {
   title: string;
   description?: string;
   type?: TopicType;
-  websiteUrl?: string;
 }
 
 export interface UpdateTopicDto {
   title?: string;
   description?: string;
   type?: TopicType;
-  websiteUrl?: string | null;
 }
 
 export interface UpdateTopicStatusDto {

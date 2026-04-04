@@ -13,10 +13,8 @@ function TopicCreatePage() {
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors },
   } = useForm<CreateTopicDto>();
-  const topicType = watch('type') || 'knowledge';
 
   const onSubmit = async (data: CreateTopicDto) => {
     setLoading(true);
@@ -27,7 +25,6 @@ function TopicCreatePage() {
         title: data.title,
         description: data.description,
         type: data.type || 'knowledge',
-        websiteUrl: (data.type || 'knowledge') === 'website' ? data.websiteUrl : undefined,
       };
       await topicApi.create(payload);
       navigate('/topics');
@@ -107,20 +104,6 @@ function TopicCreatePage() {
                 <option value="knowledge">知识库</option>
                 <option value="website">网站</option>
               </select>
-            </div>
-
-            <div>
-              <label htmlFor="websiteUrl" className="block text-sm font-medium text-gray-700 mb-2">
-                网站 URL（仅网站型可选）
-              </label>
-              <input
-                type="url"
-                id="websiteUrl"
-                {...register('websiteUrl')}
-                disabled={topicType !== 'website'}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="https://example.com"
-              />
             </div>
 
             {/* Form Actions */}

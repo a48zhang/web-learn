@@ -119,7 +119,7 @@ describe('Topics API', () => {
         title: 'Website Topic',
         description: 'Testing fundamentals',
         type: 'website',
-        website_url: 'https://example.com',
+        website_url: null,
         created_by: 10,
         status: 'draft',
         createdAt: new Date('2026-04-01T00:00:00.000Z'),
@@ -133,7 +133,6 @@ describe('Topics API', () => {
           title: 'Website Topic',
           description: 'Testing fundamentals',
           type: 'website',
-          website_url: 'https://example.com',
         });
 
       expect(response.status).toBe(201);
@@ -141,12 +140,42 @@ describe('Topics API', () => {
       expect(response.body.data).toMatchObject({
         id: '7',
         type: 'website',
-        websiteUrl: 'https://example.com',
+        websiteUrl: null,
       });
     });
   });
 
   describe('PUT /api/topics/:id', () => {
+    it('rejects type switch from website to knowledge when website_url is set', async () => {
+      (jwt.verify as jest.Mock).mockReturnValue({ id: 10 });
+      mockUserModel.findByPk.mockResolvedValue({
+        id: 10,
+        username: 'teacher1',
+        email: 'teacher@example.com',
+        role: 'teacher',
+      });
+      mockTopicModel.findByPk.mockResolvedValue({
+        id: 8,
+        title: 'Website Topic',
+        description: 'desc',
+        type: 'website',
+        website_url: '/test.zip',
+        created_by: 10,
+        status: 'draft',
+        createdAt: new Date('2026-04-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-04-01T00:00:00.000Z'),
+      });
+
+      const response = await request(app)
+        .put('/api/topics/8')
+        .set('Authorization', 'Bearer teacher-token')
+        .send({ type: 'knowledge' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.error).toBe('已有网站内容的专题不能切换为其他类型');
+    });
+
     it('updates topic for owner teacher', async () => {
       (jwt.verify as jest.Mock).mockReturnValue({ id: 10 });
       mockUserModel.findByPk.mockResolvedValue({

@@ -89,24 +89,18 @@ export const createTopic = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ success: false, error: 'Only teachers can create topics' });
     }
 
-    const { title, description, type = 'knowledge', website_url, websiteUrl } = req.body;
+    const { title, description, type = 'knowledge' } = req.body;
     if (!title) {
       return res.status(400).json({ success: false, error: 'Title is required' });
     }
 
     const normalizedType = type === 'website' ? 'website' : 'knowledge';
-    const normalizedWebsiteUrl = website_url ?? websiteUrl ?? null;
-    if (normalizedType === 'knowledge' && normalizedWebsiteUrl) {
-      return res
-        .status(400)
-        .json({ success: false, error: 'Knowledge topics cannot set website_url' });
-    }
 
     const topic = await Topic.create({
       title,
       description,
       type: normalizedType,
-      website_url: normalizedType === 'website' ? normalizedWebsiteUrl : null,
+      website_url: null,
       created_by: req.user.id,
       status: 'draft',
     });
@@ -202,13 +196,18 @@ export const updateTopic = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
 
-    const { title, description, type, website_url, websiteUrl } = req.body;
+    const { title, description, type } = req.body;
+
+    // Type-switching protection: if topic already has website content, forbid switching away from website type
+    if (type !== undefined && topic.website_url && type !== 'website') {
+      return res
+        .status(400)
+        .json({ success: false, error: '已有网站内容的专题不能切换为其他类型' });
+    }
+
     if (title !== undefined) topic.title = title;
     if (description !== undefined) topic.description = description;
     if (type !== undefined) topic.type = type === 'website' ? 'website' : 'knowledge';
-    if (website_url !== undefined || websiteUrl !== undefined) {
-      topic.website_url = website_url ?? websiteUrl ?? null;
-    }
     if (topic.type === 'knowledge') {
       topic.website_url = null;
     }

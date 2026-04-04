@@ -85,11 +85,7 @@ export const authApi = {
 // Topic API
 export const topicApi = {
   create: async (data: CreateTopicDto): Promise<Topic> => {
-    const payload = {
-      ...data,
-      website_url: data.websiteUrl,
-    };
-    const response = await api.post<ApiResponse<Topic>>('/topics', payload);
+    const response = await api.post<ApiResponse<Topic>>('/topics', data);
     return response.data.data as Topic;
   },
 
@@ -104,11 +100,7 @@ export const topicApi = {
   },
 
   update: async (id: string, data: UpdateTopicDto): Promise<Topic> => {
-    const payload = {
-      ...data,
-      website_url: data.websiteUrl,
-    };
-    const response = await api.put<ApiResponse<Topic>>(`/topics/${id}`, payload);
+    const response = await api.put<ApiResponse<Topic>>(`/topics/${id}`, data);
     return response.data.data as Topic;
   },
 

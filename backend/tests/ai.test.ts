@@ -232,4 +232,88 @@ describe('AI API', () => {
 
     expect(response.status).toBe(400);
   });
+
+  it('rejects learning chat on unpublished topic', async () => {
+    (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
+    mockUserModel.findByPk.mockResolvedValue({
+      id: 9,
+      username: 'student',
+      email: 'student@example.com',
+      role: 'student',
+    });
+    mockTopicModel.findByPk.mockResolvedValue({
+      id: 1,
+      title: 'Topic',
+      type: 'knowledge',
+      status: 'draft',
+      created_by: 5,
+    });
+
+    const response = await request(app)
+      .post('/api/ai/chat')
+      .set('Authorization', 'Bearer token')
+      .send({
+        messages: [{ role: 'user', content: 'hello' }],
+        topic_id: 1,
+        agent_type: 'learning',
+      });
+
+    expect(response.status).toBe(403);
+  });
+
+  it('rejects building chat for non-owner teacher', async () => {
+    (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
+    mockUserModel.findByPk.mockResolvedValue({
+      id: 9,
+      username: 'teacher',
+      email: 'teacher@example.com',
+      role: 'teacher',
+    });
+    mockTopicModel.findByPk.mockResolvedValue({
+      id: 1,
+      title: 'Topic',
+      type: 'knowledge',
+      status: 'published',
+      created_by: 5,
+    });
+
+    const response = await request(app)
+      .post('/api/ai/chat')
+      .set('Authorization', 'Bearer token')
+      .send({
+        messages: [{ role: 'user', content: 'hello' }],
+        topic_id: 1,
+        agent_type: 'building',
+      });
+
+    expect(response.status).toBe(403);
+  });
+
+  it('rejects building chat for website topic', async () => {
+    (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
+    mockUserModel.findByPk.mockResolvedValue({
+      id: 9,
+      username: 'teacher',
+      email: 'teacher@example.com',
+      role: 'teacher',
+    });
+    mockTopicModel.findByPk.mockResolvedValue({
+      id: 1,
+      title: 'Topic',
+      type: 'website',
+      status: 'published',
+      created_by: 9,
+    });
+
+    const response = await request(app)
+      .post('/api/ai/chat')
+      .set('Authorization', 'Bearer token')
+      .send({
+        messages: [{ role: 'user', content: 'hello' }],
+        topic_id: 1,
+        agent_type: 'building',
+      });
+
+    expect(response.status).toBe(400);
+  });
 });

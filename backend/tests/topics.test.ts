@@ -146,6 +146,141 @@ describe('Topics API', () => {
     });
   });
 
+  describe('PUT /api/topics/:id', () => {
+    it('updates topic for owner teacher', async () => {
+      (jwt.verify as jest.Mock).mockReturnValue({ id: 10 });
+      mockUserModel.findByPk.mockResolvedValue({
+        id: 10,
+        username: 'teacher1',
+        email: 'teacher@example.com',
+        role: 'teacher',
+      });
+      const save = jest.fn();
+      mockTopicModel.findByPk.mockResolvedValue({
+        id: 7,
+        title: 'Old',
+        description: 'old',
+        type: 'knowledge',
+        website_url: null,
+        created_by: 10,
+        status: 'draft',
+        save,
+        createdAt: new Date('2026-04-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-04-01T00:00:00.000Z'),
+      });
+
+      const response = await request(app)
+        .put('/api/topics/7')
+        .set('Authorization', 'Bearer teacher-token')
+        .send({
+          title: 'New',
+          description: 'new-desc',
+        });
+
+      expect(response.status).toBe(200);
+      expect(save).toHaveBeenCalled();
+      expect(response.body.data.title).toBe('New');
+    });
+  });
+
+  describe('PATCH /api/topics/:id/status', () => {
+    it('updates topic status for owner teacher', async () => {
+      (jwt.verify as jest.Mock).mockReturnValue({ id: 10 });
+      mockUserModel.findByPk.mockResolvedValue({
+        id: 10,
+        username: 'teacher1',
+        email: 'teacher@example.com',
+        role: 'teacher',
+      });
+      const save = jest.fn();
+      mockTopicModel.findByPk.mockResolvedValue({
+        id: 7,
+        title: 'Topic',
+        description: 'desc',
+        type: 'knowledge',
+        website_url: null,
+        created_by: 10,
+        status: 'draft',
+        save,
+        createdAt: new Date('2026-04-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-04-01T00:00:00.000Z'),
+      });
+
+      const response = await request(app)
+        .patch('/api/topics/7/status')
+        .set('Authorization', 'Bearer teacher-token')
+        .send({ status: 'published' });
+
+      expect(response.status).toBe(200);
+      expect(save).toHaveBeenCalled();
+      expect(response.body.data.status).toBe('published');
+    });
+  });
+
+  describe('Website endpoints', () => {
+    it('rejects upload for non-website topic', async () => {
+      (jwt.verify as jest.Mock).mockReturnValue({ id: 10 });
+      mockUserModel.findByPk.mockResolvedValue({
+        id: 10,
+        username: 'teacher1',
+        email: 'teacher@example.com',
+        role: 'teacher',
+      });
+      mockTopicModel.findByPk.mockResolvedValue({
+        id: 7,
+        title: 'Topic',
+        description: 'desc',
+        type: 'knowledge',
+        website_url: null,
+        created_by: 10,
+        status: 'draft',
+        save: jest.fn(),
+        createdAt: new Date('2026-04-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-04-01T00:00:00.000Z'),
+      });
+
+      const response = await request(app)
+        .post('/api/topics/7/website/upload')
+        .set('Authorization', 'Bearer teacher-token')
+        .send({});
+
+      expect(response.status).toBe(400);
+    });
+
+    it('returns website stats for owner teacher', async () => {
+      (jwt.verify as jest.Mock).mockReturnValue({ id: 10 });
+      mockUserModel.findByPk.mockResolvedValue({
+        id: 10,
+        username: 'teacher1',
+        email: 'teacher@example.com',
+        role: 'teacher',
+      });
+      mockTopicModel.findByPk.mockResolvedValue({
+        id: 7,
+        title: 'Topic',
+        description: 'desc',
+        type: 'website',
+        website_url: null,
+        created_by: 10,
+        status: 'draft',
+        save: jest.fn(),
+        createdAt: new Date('2026-04-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-04-01T00:00:00.000Z'),
+      });
+
+      const response = await request(app)
+        .get('/api/topics/7/website/stats')
+        .set('Authorization', 'Bearer teacher-token');
+
+      expect(response.status).toBe(200);
+      expect(response.body.data).toMatchObject({
+        topicId: '7',
+        fileCount: 0,
+        totalSize: 0,
+      });
+    });
+  });
+
   describe('DELETE /api/topics/:id', () => {
     it('deletes topic for owner teacher', async () => {
       (jwt.verify as jest.Mock).mockReturnValue({ id: 10 });

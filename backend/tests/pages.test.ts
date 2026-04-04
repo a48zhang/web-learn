@@ -74,7 +74,14 @@ import app from '../src/app';
 
 describe('Pages API', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
+    mockSequelize.transaction.mockImplementation(async (handler: (tx: any) => Promise<any>) =>
+      handler({
+        LOCK: {
+          UPDATE: 'UPDATE',
+        },
+      })
+    );
   });
 
   it('allows public read of topic pages', async () => {
@@ -143,6 +150,103 @@ describe('Pages API', () => {
       id: '100',
       title: 'Page 1',
     });
+  });
+
+  it('returns single page by id for published topic', async () => {
+    mockPageModel.findByPk.mockResolvedValue({
+      id: 11,
+      topic_id: 1,
+      title: 'Root',
+      content: '# Root',
+      parent_page_id: null,
+      order: 0,
+      createdAt: new Date('2026-04-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-04-01T00:00:00.000Z'),
+    });
+    mockTopicModel.findByPk.mockResolvedValue({
+      id: 1,
+      type: 'knowledge',
+      status: 'published',
+      created_by: 5,
+    });
+
+    const response = await request(app).get('/api/pages/11');
+    expect(response.status).toBe(200);
+    expect(response.body.data.id).toBe('11');
+  });
+
+  it('updates page for owner teacher', async () => {
+    (jwt.verify as jest.Mock).mockReturnValue({ id: 5 });
+    mockUserModel.findByPk.mockResolvedValue({
+      id: 5,
+      username: 'teacher',
+      email: 'teacher@example.com',
+      role: 'teacher',
+    });
+    const save = jest.fn();
+    mockPageModel.findByPk
+      .mockResolvedValueOnce({
+        id: 100,
+        topic_id: 1,
+        title: 'Old',
+        content: '',
+        parent_page_id: null,
+        order: 0,
+        save,
+        createdAt: new Date('2026-04-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-04-01T00:00:00.000Z'),
+      })
+      .mockResolvedValueOnce(null);
+    mockTopicModel.findByPk.mockResolvedValue({
+      id: 1,
+      type: 'knowledge',
+      created_by: 5,
+    });
+
+    const response = await request(app)
+      .put('/api/pages/100')
+      .set('Authorization', 'Bearer teacher-token')
+      .send({ title: 'Updated', content: 'Body' });
+
+    expect(response.status).toBe(200);
+    expect(save).toHaveBeenCalled();
+    expect(response.body.data.title).toBe('Updated');
+  });
+
+  it('deletes page subtree for owner teacher', async () => {
+    (jwt.verify as jest.Mock).mockReturnValue({ id: 5 });
+    mockUserModel.findByPk.mockResolvedValue({
+      id: 5,
+      username: 'teacher',
+      email: 'teacher@example.com',
+      role: 'teacher',
+    });
+    mockPageModel.findByPk.mockResolvedValue({
+      id: 100,
+      topic_id: 1,
+      title: 'Root',
+      content: '',
+      parent_page_id: null,
+      order: 0,
+      createdAt: new Date('2026-04-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-04-01T00:00:00.000Z'),
+    });
+    mockTopicModel.findByPk.mockResolvedValue({
+      id: 1,
+      type: 'knowledge',
+      created_by: 5,
+    });
+    mockPageModel.findAll
+      .mockResolvedValueOnce([{ id: 101 }])
+      .mockResolvedValueOnce([]);
+    mockPageModel.destroy.mockResolvedValue(2);
+
+    const response = await request(app)
+      .delete('/api/pages/100')
+      .set('Authorization', 'Bearer teacher-token');
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.deleted).toEqual(expect.arrayContaining(['100', '101']));
   });
 
   it('rejects duplicate reorder ids within same request', async () => {

@@ -26,6 +26,20 @@ jest.mock('../src/utils/config', () => ({
   config: mockConfig,
 }));
 
+const mockSequelize = {
+  transaction: jest.fn(async (handler: (tx: any) => Promise<any>) =>
+    handler({
+      LOCK: {
+        UPDATE: 'UPDATE',
+      },
+    })
+  ),
+};
+
+jest.mock('../src/utils/database', () => ({
+  sequelize: mockSequelize,
+}));
+
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 
@@ -129,5 +143,33 @@ describe('Pages API', () => {
       id: '100',
       title: 'Page 1',
     });
+  });
+
+  it('rejects duplicate reorder ids within same request', async () => {
+    (jwt.verify as jest.Mock).mockReturnValue({ id: 5 });
+    mockUserModel.findByPk.mockResolvedValue({
+      id: 5,
+      username: 'teacher',
+      email: 'teacher@example.com',
+      role: 'teacher',
+    });
+    mockTopicModel.findByPk.mockResolvedValue({
+      id: 1,
+      type: 'knowledge',
+      created_by: 5,
+    });
+
+    const response = await request(app)
+      .patch('/api/topics/1/pages/reorder')
+      .set('Authorization', 'Bearer teacher-token')
+      .send({
+        pages: [
+          { id: 100, order: 0, parent_page_id: null },
+          { id: 100, order: 1, parent_page_id: null },
+        ],
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toContain('Duplicate page ids');
   });
 });

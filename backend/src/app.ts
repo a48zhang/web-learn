@@ -5,11 +5,22 @@ import userRoutes from './routes/userRoutes';
 import topicRoutes from './routes/topicRoutes';
 import pageRoutes from './routes/pageRoutes';
 import aiRoutes from './routes/aiRoutes';
+import { config } from './utils/config';
 
 const app: Application = express();
 
 // Middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || config.cors.origins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error('Not allowed by CORS'));
+    },
+  })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

@@ -22,6 +22,7 @@ export const optionalAuthMiddleware = async (req: AuthRequest, _res: Response, n
       attributes: ['id', 'username', 'email', 'role'],
     });
     if (!user) {
+      console.warn('Optional auth user not found for token', { userId: decoded.id });
       return next();
     }
 
@@ -32,7 +33,14 @@ export const optionalAuthMiddleware = async (req: AuthRequest, _res: Response, n
       role: user.role,
     };
     return next();
-  } catch {
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      console.warn('Optional auth token expired');
+    } else if (error instanceof jwt.JsonWebTokenError) {
+      console.warn('Optional auth token invalid');
+    } else {
+      console.warn('Optional auth unexpected error');
+    }
     return next();
   }
 };

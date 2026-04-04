@@ -2,6 +2,7 @@ import { Op } from 'sequelize';
 import { Request, Response } from 'express';
 import { AuthRequest } from '../middlewares/authMiddleware';
 import { Topic, TopicPage } from '../models';
+import { sequelize } from '../utils/database';
 
 const normalizeId = (rawId: string) => {
   const id = parseInt(rawId, 10);
@@ -205,18 +206,30 @@ export const deletePage = async (req: AuthRequest, res: Response) => {
     const auth = await assertTopicWritableByUser(page.topic_id, req);
     if (!auth.ok) return res.status(auth.status).json({ success: false, error: auth.error });
 
-    const queue: number[] = [page.id];
-    const toDelete = new Set<number>();
-    while (queue.length > 0) {
-      const current = queue.shift()!;
-      if (toDelete.has(current)) continue;
-      toDelete.add(current);
-      const children = await TopicPage.findAll({ where: { parent_page_id: current }, attributes: ['id'] });
-      for (const child of children) queue.push(child.id);
-    }
+    const deletedIds = await sequelize.transaction(async (transaction) => {
+      const queue: number[] = [page.id];
+      const toDelete = new Set<number>();
+      while (queue.length > 0) {
+        const current = queue.shift()!;
+        if (toDelete.has(current)) continue;
+        toDelete.add(current);
+        const children = await TopicPage.findAll({
+          where: { parent_page_id: current },
+          attributes: ['id'],
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        });
+        for (const child of children) queue.push(child.id);
+      }
+      const ids = Array.from(toDelete);
+      await TopicPage.destroy({
+        where: { id: { [Op.in]: ids } },
+        transaction,
+      });
+      return ids;
+    });
 
-    await TopicPage.destroy({ where: { id: { [Op.in]: Array.from(toDelete) } } });
-    return res.json({ success: true, data: { deleted: Array.from(toDelete).map((id) => id.toString()) } });
+    return res.json({ success: true, data: { deleted: deletedIds.map((id) => id.toString()) } });
   } catch (error) {
     console.error('Delete page error:', error);
     return res.status(500).json({ success: false, error: 'Internal server error' });
@@ -239,23 +252,68 @@ export const reorderPages = async (req: AuthRequest, res: Response) => {
     }
 
     const ids = pages.map((p) => Number(p.id)).filter((id) => !Number.isNaN(id));
+    if (ids.length !== pages.length || ids.length === 0) {
+      return res.status(400).json({ success: false, error: 'One or more pages are invalid' });
+    }
+    if (new Set(ids).size !== ids.length) {
+      return res.status(400).json({ success: false, error: 'Duplicate page ids are not allowed' });
+    }
+
     const existing = await TopicPage.findAll({ where: { id: { [Op.in]: ids }, topic_id: topicId } });
     if (existing.length !== ids.length) {
       return res.status(400).json({ success: false, error: 'One or more pages are invalid' });
     }
 
+    const existingMap = new Map(existing.map((page) => [page.id, page]));
     for (const item of pages) {
-      const page = existing.find((p) => p.id === Number(item.id));
-      if (!page) continue;
-      page.order = item.order;
-      page.parent_page_id =
-        item.parent_page_id === undefined
-          ? page.parent_page_id
-          : item.parent_page_id === null
-            ? null
-            : Number(item.parent_page_id);
-      await page.save();
+      if (!Number.isInteger(item.order) || item.order < 0) {
+        return res.status(400).json({ success: false, error: 'order must be a non-negative integer' });
+      }
+      if (item.parent_page_id !== undefined && item.parent_page_id !== null) {
+        const parentId = Number(item.parent_page_id);
+        if (!Number.isInteger(parentId) || !existingMap.has(parentId)) {
+          return res.status(400).json({ success: false, error: 'One or more parent_page_id are invalid' });
+        }
+        if (parentId === Number(item.id)) {
+          return res.status(400).json({ success: false, error: 'parent_page_id cannot equal page id' });
+        }
+      }
     }
+
+    const parentToOrders = new Map<string, Set<number>>();
+    for (const item of pages) {
+      const parentKey = item.parent_page_id === null || item.parent_page_id === undefined
+        ? 'root'
+        : String(item.parent_page_id);
+      const orders = parentToOrders.get(parentKey) ?? new Set<number>();
+      if (orders.has(item.order)) {
+        return res.status(400).json({ success: false, error: 'Duplicate order within same parent is not allowed' });
+      }
+      orders.add(item.order);
+      parentToOrders.set(parentKey, orders);
+    }
+
+    await sequelize.transaction(async (transaction) => {
+      const lockedPages = await TopicPage.findAll({
+        where: { id: { [Op.in]: ids }, topic_id: topicId },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      const lockedMap = new Map(lockedPages.map((page) => [page.id, page]));
+
+      for (const item of pages) {
+        const page = lockedMap.get(Number(item.id));
+        if (!page) continue;
+        page.order = item.order;
+        page.parent_page_id =
+          item.parent_page_id === undefined
+            ? page.parent_page_id
+            : item.parent_page_id === null
+              ? null
+              : Number(item.parent_page_id);
+        await page.save({ transaction });
+      }
+    });
 
     const updated = await TopicPage.findAll({
       where: { topic_id: topicId },

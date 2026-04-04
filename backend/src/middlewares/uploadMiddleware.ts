@@ -1,6 +1,7 @@
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { randomBytes } from 'crypto';
 import { config } from '../utils/config';
 
 const uploadsDir = config.uploadsDir;
@@ -19,7 +20,7 @@ const storage = multer.diskStorage({
     cb(null, uploadsDir);
   },
   filename: (_req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const uniqueSuffix = randomBytes(16).toString('hex');
     const ext = path.extname(file.originalname);
     const basename = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9-_]/g, '_');
     cb(null, `${basename || 'upload'}-${uniqueSuffix}${ext}`);

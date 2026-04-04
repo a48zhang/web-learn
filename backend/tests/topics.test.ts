@@ -26,6 +26,14 @@ jest.mock('../src/utils/config', () => ({
   config: mockConfig,
 }));
 
+const mockSequelize = {
+  transaction: jest.fn(async (handler: (tx: unknown) => Promise<unknown>) => handler({})),
+};
+
+jest.mock('../src/utils/database', () => ({
+  sequelize: mockSequelize,
+}));
+
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 

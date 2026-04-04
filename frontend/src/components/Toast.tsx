@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-export type ToastType = 'success' | 'error' | 'warning' | 'info';
+export type ToastType = 'success' | 'error' | 'warning' | 'info' | 'loading';
 
 export interface Toast {
   id: string;
@@ -16,18 +16,20 @@ interface ToastProps {
 
 function ToastItem({ toast, onDismiss }: ToastProps) {
   useEffect(() => {
+    if (toast.type === 'loading') return;
     const timer = setTimeout(() => {
       onDismiss(toast.id);
     }, toast.duration || 5000);
 
     return () => clearTimeout(timer);
-  }, [toast.id, toast.duration, onDismiss]);
+  }, [toast.id, toast.duration, toast.type, onDismiss]);
 
   const typeClasses = {
     success: 'bg-green-50 border-green-200 text-green-800',
     error: 'bg-red-50 border-red-200 text-red-800',
     warning: 'bg-yellow-50 border-yellow-200 text-yellow-800',
     info: 'bg-blue-50 border-blue-200 text-blue-800',
+    loading: 'bg-gray-50 border-gray-200 text-gray-800',
   };
 
   const iconPaths = {
@@ -35,6 +37,7 @@ function ToastItem({ toast, onDismiss }: ToastProps) {
     error: 'M6 18L18 6M6 6l12 12',
     warning: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
     info: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+    loading: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z',
   };
 
   return (
@@ -43,7 +46,7 @@ function ToastItem({ toast, onDismiss }: ToastProps) {
       role="alert"
     >
       <svg
-        className="w-5 h-5 flex-shrink-0"
+        className={`w-5 h-5 flex-shrink-0 ${toast.type === 'loading' ? 'animate-spin' : ''}`}
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"

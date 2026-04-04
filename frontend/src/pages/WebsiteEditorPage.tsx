@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { Topic, WebsiteStats } from '@web-learn/shared';
 import { topicApi } from '../services/api';
 import { useAuthStore } from '../stores/useAuthStore';
-import { toast } from '../stores/useToastStore';
+import { toast, useToastStore } from '../stores/useToastStore';
 import { getApiErrorMessage } from '../utils/errors';
 import { LoadingOverlay } from '../components/Loading';
 
@@ -15,6 +15,8 @@ function WebsiteEditorPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const confirmActionRef = useRef<(() => void) | null>(null);
 
   const canEdit = user?.role === 'teacher' && topic?.createdBy === user.id;
 
@@ -53,34 +55,39 @@ function WebsiteEditorPage() {
       return;
     }
     setSubmitting(true);
+    const loadingId = toast.loading('上传中...');
     try {
       const updated = topic?.websiteUrl
         ? await topicApi.updateWebsite(id, file)
         : await topicApi.uploadWebsite(id, file);
       setTopic(updated);
       await refresh(id);
+      useToastStore.getState().removeToast(loadingId);
       toast.success('上传成功');
     } catch (err: unknown) {
-      toast.error(getApiErrorMessage(err, '上传失败'));
+      useToastStore.getState().removeToast(loadingId);
+      toast.error('上传失败: ' + getApiErrorMessage(err, '上传失败'));
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDelete = async () => {
-    if (!id || !canEdit) return;
-    if (!window.confirm('确定删除已上传网站？')) return;
-    setSubmitting(true);
-    try {
-      const updated = await topicApi.deleteWebsite(id);
-      setTopic(updated);
-      await refresh(id);
-      toast.success('删除成功');
-    } catch (err: unknown) {
-      toast.error(getApiErrorMessage(err, '删除失败'));
-    } finally {
-      setSubmitting(false);
-    }
+  const handleDeleteRequest = () => {
+    confirmActionRef.current = async () => {
+      if (!id || !canEdit) return;
+      setSubmitting(true);
+      try {
+        const updated = await topicApi.deleteWebsite(id);
+        setTopic(updated);
+        await refresh(id);
+        toast.success('删除成功');
+      } catch (err: unknown) {
+        toast.error(getApiErrorMessage(err, '删除失败'));
+      } finally {
+        setSubmitting(false);
+      }
+    };
+    setConfirmOpen(true);
   };
 
   if (loading) {
@@ -146,7 +153,7 @@ function WebsiteEditorPage() {
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={handleDelete}
+              onClick={handleDeleteRequest}
               disabled={submitting || !topic.websiteUrl}
               className="bg-red-600 hover:bg-red-700 text-white rounded px-3 py-2 text-sm disabled:opacity-50"
             >
@@ -163,6 +170,33 @@ function WebsiteEditorPage() {
           )}
         </div>
       </div>
+      {confirmOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-4 space-y-3">
+            <h3 className="text-lg font-semibold text-gray-900">确认删除</h3>
+            <p className="text-sm text-gray-600">确定删除已上传的网站？此操作不可恢复。</p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmOpen(false)}
+                className="px-3 py-1.5 text-sm rounded border border-gray-300 hover:bg-gray-50"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmOpen(false);
+                  confirmActionRef.current?.();
+                }}
+                className="px-3 py-1.5 text-sm rounded bg-red-600 hover:bg-red-700 text-white"
+              >
+                确认删除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

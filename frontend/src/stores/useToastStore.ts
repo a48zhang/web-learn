@@ -9,11 +9,12 @@ interface ToastStore {
 }
 
 let toastId = 0;
+const generateId = () => `toast-${++toastId}`;
 
 export const useToastStore = create<ToastStore>((set) => ({
   toasts: [],
   addToast: (type, message, duration = 5000) => {
-    const id = `toast-${++toastId}`;
+    const id = generateId();
     const toast: Toast = { id, type, message, duration };
     set((state) => ({ toasts: [...state.toasts, toast] }));
   },
@@ -40,5 +41,11 @@ export const toast = {
   },
   info: (message: string, duration?: number) => {
     useToastStore.getState().addToast('info', message, duration);
+  },
+  loading: (message: string): string => {
+    const id = generateId();
+    const t: Toast = { id, type: 'loading', message, duration: 0 };
+    useToastStore.setState((state) => ({ toasts: [...state.toasts, t] }));
+    return id;
   },
 };

@@ -73,7 +73,7 @@ function WebsiteTopicPage() {
             />
           ) : (
             <div className="h-[50vh] flex items-center justify-center text-gray-500">
-              暂未上传网站内容
+              请先上传网站代码
             </div>
           )}
         </div>

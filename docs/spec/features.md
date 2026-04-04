@@ -62,6 +62,10 @@
 - 必须包含 index.html 入口文件
 - 支持相对路径引用
 
+**website_url 生成说明：**
+- 教师上传 ZIP → 系统解压到 OSS → website_url = OSS 上的访问入口 URL
+- website_url 由系统自动生成，教师不可手动修改
+
 ---
 
 ### 2. AI 学习助手

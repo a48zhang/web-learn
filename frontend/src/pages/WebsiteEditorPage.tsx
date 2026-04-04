@@ -57,9 +57,7 @@ function WebsiteEditorPage() {
     setSubmitting(true);
     const loadingId = toast.loading('上传中...');
     try {
-      const updated = topic?.websiteUrl
-        ? await topicApi.updateWebsite(id, file)
-        : await topicApi.uploadWebsite(id, file);
+      const updated = await topicApi.uploadWebsite(id, file);
       setTopic(updated);
       await refresh(id);
       useToastStore.getState().removeToast(loadingId);

@@ -350,8 +350,6 @@ export const uploadWebsite = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const updateWebsite = uploadWebsite;
-
 export const deleteWebsite = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) {

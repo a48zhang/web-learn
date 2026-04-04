@@ -411,10 +411,8 @@ Phase 6: 测试 + 文档
     - 接收 ZIP 文件
     - 解压到临时目录
     - 验证 index.html 存在
-    - 上传所有文件到 OSS
+    - 上传所有文件到 OSS（同一 topic 多次上传直接覆盖）
     - 更新 Topic.website_url
-  - `updateWebsite(req, res)`：
-    - 删除旧文件 → 上传新文件
   - `deleteWebsite(req, res)`：
     - 删除 OSS 文件 → 清空 website_url
   - `getWebsiteStats(req, res)`：
@@ -422,7 +420,7 @@ Phase 6: 测试 + 文档
 - [ ] `backend/src/routes/topicRoutes.ts` 新增：
   ```
   POST   /api/topics/:id/website/upload  — authMiddleware, upload → uploadWebsite
-  PUT    /api/topics/:id/website/upload  — authMiddleware, upload → updateWebsite
+  PUT    /api/topics/:id/website/upload  — authMiddleware, upload → uploadWebsite
   DELETE /api/topics/:id/website         — authMiddleware → deleteWebsite
   GET    /api/topics/:id/website/stats   — authMiddleware → getWebsiteStats
   ```

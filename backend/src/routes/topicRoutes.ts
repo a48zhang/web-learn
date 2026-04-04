@@ -7,7 +7,6 @@ import {
   updateTopicStatus,
   deleteTopic,
   uploadWebsite,
-  updateWebsite,
   deleteWebsite,
   getWebsiteStats,
 } from '../controllers/topicController';
@@ -36,7 +35,7 @@ router.delete('/:id', writeLimiter, authMiddleware, deleteTopic);
 
 // Website topic routes
 router.post('/:id/website/upload', uploadLimiter, authMiddleware, upload.single('file'), uploadWebsite);
-router.put('/:id/website/upload', uploadLimiter, authMiddleware, upload.single('file'), updateWebsite);
+router.put('/:id/website/upload', uploadLimiter, authMiddleware, upload.single('file'), uploadWebsite);
 router.delete('/:id/website', writeLimiter, authMiddleware, deleteWebsite);
 router.get('/:id/website/stats', readLimiter, authMiddleware, getWebsiteStats);
 

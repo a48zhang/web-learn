@@ -48,7 +48,7 @@
 | title | VARCHAR(200) | NOT NULL | 专题标题 |
 | description | TEXT | NULLABLE | 专题描述 |
 | type | ENUM | NOT NULL, DEFAULT 'knowledge' | 类型：knowledge（知识库）, website（网站） |
-| website_url | VARCHAR(500) | NULLABLE | 网站访问URL（仅网站型） |
+| website_url | VARCHAR(500) | NULLABLE | 网站访问URL（仅网站型），由系统自动生成（ZIP上传后解压到OSS所得），教师不可手动编辑 |
 | created_by | INTEGER | FK → users.id | 创建者（教师） |
 | status | ENUM | NOT NULL | 状态：draft, published, closed |
 | created_at | TIMESTAMP | AUTO | 创建时间 |
@@ -60,7 +60,7 @@
 
 **类型说明：**
 - `knowledge`：知识库型，Markdown 页面，内容存数据库（TopicPage 表）
-- `website`：网站型，上传网站代码，存 OSS
+- `website`：网站型，上传 ZIP 网站代码，存 OSS；website_url 由系统自动生成，教师不可手动修改
 
 **业务规则：**
 - 只有教师可以创建专题

@@ -21,6 +21,36 @@ const getSystemPrompt = (agentType: 'learning' | 'building', topic: Topic) => {
   ].join('\n');
 };
 
+const ALLOWED_MESSAGE_ROLES = new Set(['system', 'user', 'assistant', 'tool']);
+const MAX_MESSAGES = 50;
+const MAX_MESSAGE_CONTENT_LENGTH = 10000;
+
+const validateMessages = (messages: unknown) => {
+  if (!Array.isArray(messages)) {
+    return 'messages must be an array';
+  }
+  if (messages.length === 0 || messages.length > MAX_MESSAGES) {
+    return `messages length must be between 1 and ${MAX_MESSAGES}`;
+  }
+  for (const message of messages) {
+    if (!message || typeof message !== 'object') {
+      return 'each message must be an object';
+    }
+    const role = (message as { role?: unknown }).role;
+    const content = (message as { content?: unknown }).content;
+    if (typeof role !== 'string' || !ALLOWED_MESSAGE_ROLES.has(role)) {
+      return 'message role is invalid';
+    }
+    if (typeof content !== 'string' || !content.trim()) {
+      return 'message content must be a non-empty string';
+    }
+    if (content.length > MAX_MESSAGE_CONTENT_LENGTH) {
+      return `message content too long, max ${MAX_MESSAGE_CONTENT_LENGTH}`;
+    }
+  }
+  return null;
+};
+
 export const chat = async (req: AuthRequest | Request, res: Response) => {
   try {
     const authReq = req as AuthRequest;
@@ -33,8 +63,12 @@ export const chat = async (req: AuthRequest | Request, res: Response) => {
       topic_id: number;
       agent_type: 'learning' | 'building';
     };
-    if (!Array.isArray(messages) || !topic_id || !agent_type) {
+    if (!topic_id || !agent_type) {
       return res.status(400).json({ success: false, error: 'messages, topic_id, agent_type are required' });
+    }
+    const messagesError = validateMessages(messages);
+    if (messagesError) {
+      return res.status(400).json({ success: false, error: messagesError });
     }
     if (!['learning', 'building'].includes(agent_type)) {
       return res.status(400).json({ success: false, error: 'Invalid agent_type' });

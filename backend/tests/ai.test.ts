@@ -148,4 +148,88 @@ describe('AI API', () => {
 
     expect(response.status).toBe(403);
   });
+
+  it('rejects invalid messages payload', async () => {
+    (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
+    mockUserModel.findByPk.mockResolvedValue({
+      id: 9,
+      username: 'student',
+      email: 'student@example.com',
+      role: 'student',
+    });
+
+    const response = await request(app)
+      .post('/api/ai/chat')
+      .set('Authorization', 'Bearer token')
+      .send({
+        messages: 'not-array',
+        topic_id: 1,
+        agent_type: 'learning',
+      });
+
+    expect(response.status).toBe(400);
+  });
+
+  it('rejects oversized message list', async () => {
+    (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
+    mockUserModel.findByPk.mockResolvedValue({
+      id: 9,
+      username: 'student',
+      email: 'student@example.com',
+      role: 'student',
+    });
+
+    const response = await request(app)
+      .post('/api/ai/chat')
+      .set('Authorization', 'Bearer token')
+      .send({
+        messages: Array.from({ length: 51 }).map((_, i) => ({ role: 'user', content: `m-${i}` })),
+        topic_id: 1,
+        agent_type: 'learning',
+      });
+
+    expect(response.status).toBe(400);
+  });
+
+  it('rejects invalid message role', async () => {
+    (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
+    mockUserModel.findByPk.mockResolvedValue({
+      id: 9,
+      username: 'student',
+      email: 'student@example.com',
+      role: 'student',
+    });
+
+    const response = await request(app)
+      .post('/api/ai/chat')
+      .set('Authorization', 'Bearer token')
+      .send({
+        messages: [{ role: 'hacker', content: 'hello' }],
+        topic_id: 1,
+        agent_type: 'learning',
+      });
+
+    expect(response.status).toBe(400);
+  });
+
+  it('rejects too long message content', async () => {
+    (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
+    mockUserModel.findByPk.mockResolvedValue({
+      id: 9,
+      username: 'student',
+      email: 'student@example.com',
+      role: 'student',
+    });
+
+    const response = await request(app)
+      .post('/api/ai/chat')
+      .set('Authorization', 'Bearer token')
+      .send({
+        messages: [{ role: 'user', content: 'x'.repeat(10001) }],
+        topic_id: 1,
+        agent_type: 'learning',
+      });
+
+    expect(response.status).toBe(400);
+  });
 });

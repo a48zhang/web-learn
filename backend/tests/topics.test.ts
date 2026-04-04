@@ -314,7 +314,7 @@ describe('Topics API', () => {
         .set('Authorization', 'Bearer teacher-token');
 
       expect(response.status).toBe(200);
-      expect(response.body.stats).toMatchObject({
+      expect(response.body.data).toMatchObject({
         fileCount: 0,
         totalSize: 0,
       });

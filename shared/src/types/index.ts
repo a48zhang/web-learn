@@ -130,11 +130,8 @@ export interface AIChatResponseDto {
 
 // Website topic types
 export interface WebsiteStats {
-  topicId: string;
   fileCount: number;
   totalSize: number;
-  uploadedAt?: string;
-  websiteUrl?: string | null;
 }
 
 // API response types

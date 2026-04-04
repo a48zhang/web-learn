@@ -24,12 +24,12 @@ export class AliOSSStorage implements StorageService {
   }
 
   async uploadFile(localPath: string, ossKey: string): Promise<string> {
-    await this.client.put(ossKey, localPath);
+    await this.client.put(ossKey, localPath, { headers: { 'x-oss-object-acl': 'public-read' } });
     return this.getUrl(ossKey);
   }
 
   async uploadBuffer(buffer: Buffer, ossKey: string): Promise<string> {
-    await this.client.put(ossKey, buffer);
+    await this.client.put(ossKey, buffer, { headers: { 'x-oss-object-acl': 'public-read' } });
     return this.getUrl(ossKey);
   }
 

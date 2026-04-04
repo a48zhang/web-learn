@@ -272,6 +272,16 @@ export const deleteTopic = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
 
+    // C3: clean up OSS content before deleting the DB record
+    const storageService = getStorageService();
+    const ossPrefix = `topics/${topic.id}/`;
+    try {
+      await storageService.deleteDir(ossPrefix);
+    } catch (err) {
+      console.warn(`[deleteTopic] Failed to delete OSS files for topic ${topic.id}:`, err);
+      // continue with DB deletion regardless of OSS failure
+    }
+
     await sequelize.transaction(async (transaction) => {
       await Topic.destroy({ where: { id: topic.id }, transaction });
     });
@@ -329,7 +339,7 @@ export const uploadWebsite = async (req: AuthRequest, res: Response) => {
     // Step 4: Update database
     await topic.update({ website_url: websiteUrl });
 
-    return res.json({ success: true, websiteUrl });
+    return res.json({ success: true, data: websiteUrl });
   } catch (err) {
     console.error('uploadWebsite error:', err);
 
@@ -379,7 +389,7 @@ export const deleteWebsite = async (req: AuthRequest, res: Response) => {
       console.warn(`[deleteWebsite] OSS cleanup failed for topics/${topicId}/:`, ossErr);
     }
 
-    return res.json({ success: true });
+    return res.json({ success: true, data: formatTopic(topic) });
   } catch (error) {
     console.error('Delete website error:', error);
     return res.status(500).json({ success: false, error: '删除失败，请重试' });
@@ -416,7 +426,7 @@ export const getWebsiteStats = async (req: AuthRequest, res: Response) => {
 
     return res.json({
       success: true,
-      stats: {
+      data: {
         fileCount: files.length,
         totalSize,
       },
@@ -426,7 +436,6 @@ export const getWebsiteStats = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({
       success: false,
       error: '获取网站统计信息失败',
-      stats: null,
     });
   }
 };

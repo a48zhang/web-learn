@@ -109,15 +109,15 @@ export const topicApi = {
     return response.data.data as Topic;
   },
 
-  uploadWebsite: async (id: string, file: File): Promise<Topic> => {
+  uploadWebsite: async (id: string, file: File): Promise<string> => {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await api.post<ApiResponse<Topic>>(`/topics/${id}/website/upload`, formData, {
+    const response = await api.post<ApiResponse<string>>(`/topics/${id}/website/upload`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
-    return response.data.data as Topic;
+    return response.data.data as string;
   },
 
   deleteWebsite: async (id: string): Promise<Topic> => {

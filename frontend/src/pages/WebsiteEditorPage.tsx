@@ -57,8 +57,7 @@ function WebsiteEditorPage() {
     setSubmitting(true);
     const loadingId = toast.loading('上传中...');
     try {
-      const updated = await topicApi.uploadWebsite(id, file);
-      setTopic(updated);
+      await topicApi.uploadWebsite(id, file);
       await refresh(id);
       useToastStore.getState().removeToast(loadingId);
       toast.success('上传成功');
@@ -146,7 +145,6 @@ function WebsiteEditorPage() {
           <div className="text-sm text-gray-600">
             <p>文件数量：{stats?.fileCount ?? 0}</p>
             <p>总大小：{stats?.totalSize ?? 0} bytes</p>
-            {stats?.uploadedAt && <p>上传时间：{new Date(stats.uploadedAt).toLocaleString('zh-CN')}</p>}
           </div>
           <div className="flex gap-2">
             <button

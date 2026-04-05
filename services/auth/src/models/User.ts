@@ -45,7 +45,7 @@ User.init(
   },
   {
     sequelize,
-    tableName: 'users',
+    tableName: 'auth_users',
     underscored: true,
     hooks: {
       beforeCreate: async (user: User) => {

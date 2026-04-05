@@ -153,11 +153,13 @@ const learningTools: AgentTool[] = [
       const keyword = String(args.keyword || '').trim();
       if (!keyword) return [];
       await ensureTopicAccess(topicId);
+      // Escape LIKE special characters: %, _ and \
+      const escapedKeyword = keyword.replace(/[%_\\]/g, '\\$&');
       const pages = await TopicPage.findAll({
         where: {
           topic_id: topicId,
           content: {
-            [Op.like]: `%${keyword}%`,
+            [Op.like]: `%${escapedKeyword}%`,
           },
         },
         order: [['id', 'ASC']],

@@ -15,7 +15,7 @@ User.init(
     email: { type: DataTypes.STRING(100), allowNull: false },
     role: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'student' },
   },
-  { sequelize, tableName: 'users', underscored: true }
+  { sequelize, tableName: 'topic_users', underscored: true }
 );
 
 export default User;

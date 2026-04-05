@@ -38,7 +38,7 @@ Topic.init(
       allowNull: false, defaultValue: 'draft',
     },
   },
-  { sequelize, tableName: 'topics', underscored: true }
+  { sequelize, tableName: 'topic_topics', underscored: true }
 );
 
 export default Topic;

@@ -23,3 +23,6 @@ export function getStorageService(): StorageService {
   }
   return storageService;
 }
+
+export { NullStorageService } from './nullStorageService';
+export { createNullStorageService } from './nullStorageService';

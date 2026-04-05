@@ -1,0 +1,40 @@
+import dotenv from 'dotenv';
+import path from 'path';
+
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+
+export interface DatabaseConfig {
+  host: string;
+  port: number;
+  name: string;
+  user: string;
+  password: string;
+}
+
+export interface JwtConfig {
+  secret: string;
+  expiresIn: string;
+}
+
+export const createDatabaseConfig = (): DatabaseConfig => ({
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT || '3306', 10),
+  name: process.env.DB_NAME || 'web_learn',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+});
+
+export const createJwtConfig = (): JwtConfig => {
+  const secret = process.env.JWT_SECRET?.trim();
+  if (!secret) throw new Error('JWT_SECRET is required');
+  return {
+    secret,
+    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+  };
+};
+
+export const parseCorsOrigins = (): string[] => {
+  const configured = process.env.CORS_ORIGINS?.split(',').map((o) => o.trim()).filter(Boolean);
+  if (configured && configured.length > 0) return configured;
+  return ['http://localhost:5173', 'http://127.0.0.1:5173'];
+};

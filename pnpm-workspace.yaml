@@ -2,3 +2,5 @@ packages:
   - 'frontend'
   - 'backend'
   - 'shared'
+  - 'packages/*'
+  - 'services/*'

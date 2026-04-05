@@ -35,30 +35,24 @@ const ensureTopicOwner = (topic: any, req: AuthRequest) =>
 
 const ZIP_MAGIC_BYTES = Buffer.from([0x50, 0x4b, 0x03, 0x04]);
 
-const hasHtmlEntryInZipBuffer = (buffer: Buffer) => {
-  let offset = 0;
-  while (offset < buffer.length - 30) {
-    const header = buffer.subarray(offset, offset + 4);
-    if (!header.equals(ZIP_MAGIC_BYTES)) {
-      offset += 1;
-      continue;
-    }
-    const localHeader = buffer.subarray(offset + 4, offset + 30);
-    const fileNameLength = localHeader.readUInt16LE(26);
-    const extraLength = localHeader.readUInt16LE(28);
-    const compressedSize = localHeader.readUInt32LE(18);
-    if (fileNameLength <= 0) {
-      offset += 1;
-      continue;
-    }
-    const fileNameBuffer = buffer.subarray(offset + 30, offset + 30 + fileNameLength);
-    const filename = fileNameBuffer.toString('utf8').toLowerCase();
-    if (filename.endsWith('.html') || filename.endsWith('.htm')) {
-      return true;
-    }
-    offset += 30 + fileNameLength + extraLength + compressedSize;
-  }
-  return false;
+const hasHtmlEntryInZipBuffer = async (buffer: Buffer): Promise<boolean> => {
+  const { fromBuffer } = await import('yauzl');
+  return new Promise((resolve) => {
+    fromBuffer(buffer, { lazyEntries: true }, (err, zipfile) => {
+      if (err || !zipfile) { resolve(false); return; }
+      zipfile.readEntry();
+      zipfile.on('entry', (entry: { fileName: string }) => {
+        const name = entry.fileName.toLowerCase();
+        if (name.endsWith('.html') || name.endsWith('.htm')) {
+          zipfile.close();
+          resolve(true);
+        } else {
+          zipfile.readEntry();
+        }
+      });
+      zipfile.on('end', () => resolve(false));
+    });
+  });
 };
 
 const validateUploadedZip = async (file?: Express.Multer.File | null) => {
@@ -75,7 +69,7 @@ const validateUploadedZip = async (file?: Express.Multer.File | null) => {
   if (!header.equals(ZIP_MAGIC_BYTES)) {
     return { ok: false, error: 'Invalid ZIP file format' } as const;
   }
-  if (!hasHtmlEntryInZipBuffer(file.buffer)) {
+  if (!(await hasHtmlEntryInZipBuffer(file.buffer))) {
     return { ok: false, error: 'ZIP must contain at least one HTML file' } as const;
   }
   return { ok: true } as const;

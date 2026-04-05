@@ -11,6 +11,9 @@ importers:
       '@types/jest':
         specifier: ^30.0.0
         version: 30.0.0
+      '@types/node':
+        specifier: ^20.19.37
+        version: 20.19.37
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2

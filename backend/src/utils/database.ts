@@ -28,6 +28,14 @@ export async function testDatabaseConnection() {
 
 export async function syncDatabase() {
   try {
+    const isProduction = process.env.NODE_ENV === 'production';
+    if (isProduction) {
+      console.log(
+        'Production environment: skip automatic schema sync intentionally. Use controlled migrations (umzug/sequelize-cli).'
+      );
+      return;
+    }
+
     await sequelize.sync({ alter: true });
     console.log('Database synced successfully.');
   } catch (error) {

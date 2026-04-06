@@ -1,7 +1,11 @@
 import dotenv from 'dotenv';
-import path from 'path';
 
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+// Support explicit env file path; otherwise load from current working directory (default .env behavior)
+if (process.env.DOTENV_CONFIG_PATH) {
+  dotenv.config({ path: process.env.DOTENV_CONFIG_PATH });
+} else {
+  dotenv.config();
+}
 
 export interface DatabaseConfig {
   host: string;

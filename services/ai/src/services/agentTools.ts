@@ -1,4 +1,4 @@
-import { Op } from 'sequelize';
+import { Op, literal } from 'sequelize';
 import { Topic, TopicPage } from '../models';
 
 type ToolContext = {
@@ -66,6 +66,15 @@ const ensureBuildingAccess = async (topicId: number, context: ToolContext) => {
   }
   return topic;
 };
+
+const grepDefaults = {
+  defaultLimit: 50,
+  hardLimit: 200,
+};
+
+const buildLikeWhere = (escapedKeyword: string) => ({
+  [Op.like]: `%${escapedKeyword}%`,
+});
 
 const learningTools: AgentTool[] = [
   {
@@ -145,6 +154,8 @@ const learningTools: AgentTool[] = [
       properties: {
         topic_id: { type: 'integer', description: '专题ID' },
         keyword: { type: 'string', description: '搜索关键词' },
+        limit: { type: 'integer', description: '返回最大条数（默认50，最大200）' },
+        offset: { type: 'integer', description: '跳过条数（默认0）' },
       },
       required: ['topic_id', 'keyword'],
     },
@@ -152,20 +163,29 @@ const learningTools: AgentTool[] = [
       const topicId = Number(args.topic_id || context.topicId);
       const keyword = String(args.keyword || '').trim();
       if (!keyword) return [];
+
       await ensureTopicAccess(topicId);
-      // Escape LIKE special characters: %, _ and \
-      const escapedKeyword = keyword.replace(/[%_\\]/g, '\\$&');
+
+      const rawLimit = Number(args.limit || grepDefaults.defaultLimit);
+      const rawOffset = Number(args.offset || 0);
+      const safeLimit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(Math.max(Math.floor(rawLimit), 1), grepDefaults.hardLimit) : grepDefaults.defaultLimit;
+      const safeOffset = Number.isFinite(rawOffset) && rawOffset > 0 ? Math.floor(rawOffset) : 0;
+
+      // Escape LIKE special characters: %, _ and \\n      const escapedKeyword = keyword.replace(/[%_\\]/g, '\\$&');
+
       const pages = await TopicPage.findAll({
         where: {
           topic_id: topicId,
-          content: {
-            [Op.like]: `%${escapedKeyword}%`,
-          },
+          content: buildLikeWhere(escapedKeyword),
         },
         order: [['id', 'ASC']],
+        limit: safeLimit,
+        offset: safeOffset,
       });
+
       return pages.map((page) => {
-        const idx = page.content.toLowerCase().indexOf(keyword.toLowerCase());
+        const lowerContent = page.content.toLowerCase();
+        const idx = lowerContent.indexOf(keyword.toLowerCase());
         const start = Math.max(0, idx - 80);
         const end = idx === -1 ? 160 : Math.min(page.content.length, idx + keyword.length + 80);
         return {

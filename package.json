@@ -4,8 +4,13 @@
   "private": true,
   "description": "专题学习平台",
   "scripts": {
-    "dev": "concurrently \"pnpm --filter backend dev\" \"pnpm --filter frontend dev\"",
-    "build": "pnpm --filter shared build && pnpm --filter backend build && pnpm --filter frontend build",
+    "dev": "concurrently \"pnpm --filter @web-learn/frontend dev\" \"pnpm --filter @web-learn/backend dev\"",
+    "dev:services": "concurrently \"pnpm --filter @web-learn/gateway dev\" \"pnpm --filter @web-learn/auth-service dev\" \"pnpm --filter @web-learn/topic-space-service dev\" \"pnpm --filter @web-learn/ai-service dev\"",
+    "dev:all": "concurrently \"pnpm dev\" \"pnpm dev:services\"",
+    "build": "pnpm -r build",
+    "build:services": "pnpm --filter @web-learn/gateway build && pnpm --filter @web-learn/auth-service build && pnpm --filter @web-learn/topic-space-service build && pnpm --filter @web-learn/ai-service build",
+    "build:frontend": "pnpm --filter @web-learn/shared build && pnpm --filter @web-learn/frontend build",
+    "build:backend": "pnpm --filter @web-learn/backend build",
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""

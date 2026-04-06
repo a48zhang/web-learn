@@ -445,7 +445,14 @@ importers:
         version: 5.9.3
 
   shared:
+    dependencies:
+      express:
+        specifier: ^4.22.1
+        version: 4.22.1
     devDependencies:
+      '@types/express':
+        specifier: ^4.17.25
+        version: 4.17.25
       '@types/node':
         specifier: ^20.11.0
         version: 20.19.37

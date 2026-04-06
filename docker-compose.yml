@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   mysql:
-    image: mysql:latest
+    image: mysql:8.0
     container_name: web-learn-mysql
     restart: unless-stopped
     environment:
@@ -28,6 +28,7 @@ services:
     container_name: web-learn-auth
     restart: unless-stopped
     environment:
+      NODE_ENV: production
       AUTH_PORT: 3001
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
@@ -39,6 +40,12 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
     ports:
       - "3001:3001"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     depends_on:
       mysql:
         condition: service_healthy
@@ -50,6 +57,7 @@ services:
     container_name: web-learn-topic-space
     restart: unless-stopped
     environment:
+      NODE_ENV: production
       TOPIC_SPACE_PORT: 3002
       JWT_SECRET: ${JWT_SECRET}
       DB_HOST: mysql
@@ -66,6 +74,12 @@ services:
       STORAGE_CDN_BASE: ${STORAGE_CDN_BASE:-}
     ports:
       - "3002:3002"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     depends_on:
       mysql:
         condition: service_healthy
@@ -77,6 +91,7 @@ services:
     container_name: web-learn-ai
     restart: unless-stopped
     environment:
+      NODE_ENV: production
       AI_PORT: 3003
       JWT_SECRET: ${JWT_SECRET}
       DB_HOST: mysql
@@ -90,6 +105,12 @@ services:
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
     ports:
       - "3003:3003"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     depends_on:
       mysql:
         condition: service_healthy
@@ -101,6 +122,7 @@ services:
     container_name: web-learn-gateway
     restart: unless-stopped
     environment:
+      NODE_ENV: production
       GATEWAY_PORT: 3000
       AUTH_SERVICE_URL: http://auth:3001
       TOPIC_SPACE_SERVICE_URL: http://topic-space:3002
@@ -108,10 +130,19 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
     ports:
       - "3000:3000"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     depends_on:
-      - auth
-      - topic-space
-      - ai
+      auth:
+        condition: service_healthy
+      topic-space:
+        condition: service_healthy
+      ai:
+        condition: service_healthy
 
 volumes:
   mysql_data:

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { AuthRequest } from '../middlewares/authMiddleware';
+import { AuthenticatedRequest as AuthRequest } from '@web-learn/shared';
 import { Topic } from '../models';
 import { chatWithTools } from '../services/aiService';
 import { getBuildingTools, getLearningTools } from '../services/agentTools';

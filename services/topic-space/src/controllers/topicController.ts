@@ -1,8 +1,8 @@
 import { Op } from 'sequelize';
 import { Response } from 'express';
 import type { Express } from 'express';
-import { AuthRequest } from '../middlewares/authMiddleware';
-import { Topic, User } from '../models';
+import { AuthenticatedRequest as AuthRequest } from '@web-learn/shared';
+import { Topic } from '../models';
 import { sequelize } from '../utils/database';
 import { getStorageService } from '../services/storageService';
 import { extractZipToTempDir, uploadDirToOSS, cleanupTempDir } from '../utils/zipUtils';
@@ -130,7 +130,6 @@ export const getTopics = async (req: AuthRequest | any, res: Response) => {
 
     const topics = await Topic.findAll({
       where,
-      include: [{ model: User, as: 'creator', attributes: ['id', 'username', 'email'] }],
       order: [['created_at', 'DESC']],
     });
 
@@ -152,9 +151,7 @@ export const getTopicById = async (req: AuthRequest | any, res: Response) => {
       return res.status(400).json({ success: false, error: 'Invalid topic ID' });
     }
 
-    const topic = await Topic.findByPk(topicId, {
-      include: [{ model: User, as: 'creator', attributes: ['id', 'username', 'email'] }],
-    });
+    const topic = await Topic.findByPk(topicId);
     if (!topic) {
       return res.status(404).json({ success: false, error: 'Topic not found' });
     }

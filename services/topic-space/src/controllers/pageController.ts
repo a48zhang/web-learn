@@ -1,6 +1,6 @@
 import { Op } from 'sequelize';
 import { Request, Response } from 'express';
-import { AuthRequest } from '../middlewares/authMiddleware';
+import { AuthenticatedRequest as AuthRequest } from '@web-learn/shared';
 import { Topic, TopicPage } from '../models';
 import { sequelize } from '../utils/database';
 

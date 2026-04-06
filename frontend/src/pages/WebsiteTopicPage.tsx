@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import type { Topic } from '@web-learn/shared';
 import { topicApi } from '../services/api';
 import { LoadingOverlay } from '../components/Loading';
 import { getApiErrorMessage } from '../utils/errors';
+import { useLayoutMeta } from '../components/layout/LayoutMetaContext';
+import type { BreadcrumbSegment } from '../components/layout/LayoutMetaContext';
 
 function WebsiteTopicPage() {
   const { id } = useParams<{ id: string }>();
+  const { setMeta } = useLayoutMeta();
   const [topic, setTopic] = useState<Topic | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -37,6 +40,20 @@ function WebsiteTopicPage() {
   };
 
   useEffect(() => {
+    const segments: BreadcrumbSegment[] = [
+      { label: '首页', to: '/dashboard' },
+      { label: '专题列表', to: '/topics' },
+      { label: '网站专题' },
+      ...(topic ? [{ label: topic.title }] : [{ label: '专题详情...' }]),
+    ];
+    setMeta({
+      pageTitle: topic ? topic.title : '网站专题',
+      breadcrumbSegments: segments,
+      sideNavSlot: null,
+    });
+  }, [topic, setMeta]);
+
+  useEffect(() => {
     const fetchTopic = async () => {
       if (!id) return;
       try {
@@ -59,27 +76,19 @@ function WebsiteTopicPage() {
 
   if (error || !topic) {
     return (
-      <div className="min-h-screen bg-gray-50 px-4 py-6">
+      <div className="px-4 py-6">
         <div className="max-w-6xl mx-auto">
-          <Link to="/topics" className="text-blue-600 hover:text-blue-500">
-            ← 返回专题列表
-          </Link>
-          <div className="bg-white rounded-lg shadow p-6 mt-4 text-gray-700">{error || '专题不存在'}</div>
+          <div className="bg-white rounded-lg shadow p-6 text-gray-700">{error || '专题不存在'}</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-6">
+    <div className="px-4 py-6">
       <div className={`${fullScreen ? 'max-w-none' : 'max-w-6xl'} mx-auto space-y-4`}>
         <div className="flex items-center justify-between">
-          <div>
-            <Link to="/topics" className="text-blue-600 hover:text-blue-500">
-              ← 返回专题列表
-            </Link>
-            <h1 className="text-2xl font-bold text-gray-900 mt-2">{topic.title}</h1>
-          </div>
+          <h1 className="text-2xl font-bold text-gray-900">{topic.title}</h1>
           <button
             type="button"
             onClick={() => setFullScreen((v) => !v)}

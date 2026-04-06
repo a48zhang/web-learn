@@ -11,7 +11,6 @@
   },
   "dependencies": {
     "@azure/storage-blob": "^12.31.0",
-    "@web-learn/shared": "workspace:*",
     "ali-oss": "^6.23.0",
     "@aws-sdk/client-s3": "^3.1024.0",
     "bcryptjs": "^2.4.3",

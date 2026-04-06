@@ -142,7 +142,7 @@ docker-compose.yml
 - 创建 `services/` + `packages/` 目录
 - 创建 pnpm-workspace.yaml
 - 实现 Gateway 的路由转发（HTTP proxy）
-- 保留现有 `backend/` 作为可运行的 monolith
+- 移除 `backend/` 单体应用（功能已完全迁移到微服务）
 
 ### Phase 2: Auth Service 独立 ✅
 - 创建 `services/auth` 包
@@ -165,7 +165,7 @@ docker-compose.yml
 ### Phase 5: Docker Compose ✅
 - 每个服务 Dockerfile（包含 packages/）
 - docker-compose.yml 编排（健康检查、版本固定）
-- `backend/` 目录保留用于本地开发
+- 移除 `backend/` 目录（单体应用已完全被微服务替代）
 
 ## 验证方式
 

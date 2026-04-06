@@ -216,8 +216,8 @@ web-learn/
 │   └── shared/            # 共享类型（预留）
 │       └── package.json
 │
-├── backend/                # 原单体应用（保留用于本地开发）
-│   └── ...
+├── backend/                # 已移除（原单体应用，已迁移到微服务）
+│   # 所有功能已迁移到 services/ 微服务
 │
 ├── docs/                   # 文档
 │   ├── spec/              # 产品规格文档

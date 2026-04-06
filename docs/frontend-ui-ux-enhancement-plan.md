@@ -10,7 +10,7 @@
 
 ### 微服务架构重构状态
 微服务架构重构已完成（详见 `docs/microservices-architecture-design.md`），当前项目结构：
-- `backend/` — 传统 monolith（已弃用）
+- `backend/` — 已移除（传统 monolith 已被微服务替代）
 - `services/` — 微服务模块（gateway, auth, topic-space, ai）
 - `frontend/` — React 前端应用（本次优化重点）
 

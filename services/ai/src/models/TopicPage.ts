@@ -32,7 +32,7 @@ TopicPage.init(
     parent_page_id: { type: DataTypes.INTEGER, allowNull: true },
     order: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
   },
-  { sequelize, tableName: 'topic_pages', underscored: true }
+  { sequelize, tableName: 'topic_topic_pages', underscored: true }
 );
 
 export default TopicPage;

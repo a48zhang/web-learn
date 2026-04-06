@@ -14,7 +14,9 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
     if (!token) {
       return res.status(401).json({ success: false, error: 'No token, authorization denied' });
     }
-    const decoded = jwt.verify(token, config.jwt.secret) as {
+    const decoded = jwt.verify(token, config.jwt.secret, {
+      algorithms: ['HS256'],
+    }) as {
       id: number; username: string; email: string; role: string;
     };
     const user = await User.findByPk(decoded.id, {

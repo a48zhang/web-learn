@@ -1,4 +1,4 @@
-import { Op, literal } from 'sequelize';
+import { Op } from 'sequelize';
 import { Topic, TopicPage } from '../models';
 
 type ToolContext = {

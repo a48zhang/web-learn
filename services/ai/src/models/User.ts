@@ -33,7 +33,7 @@ User.init(
       defaultValue: 'student',
     },
   },
-  { sequelize, tableName: 'users', underscored: true }
+  { sequelize, tableName: 'auth_users', underscored: true }
 );
 
 export default User;

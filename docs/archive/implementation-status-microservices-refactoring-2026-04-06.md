@@ -1,12 +1,15 @@
-# 实现状况报告 — 微服务架构重构 PR Review（已修复版）
+# 实现状况报告 — 微服务架构重构 PR Review（已完成）
 
 本文档记录 `copilot/refactor-microservices-architecture-docs` 分支 PR 的问题修复状态。
+
+**状态：已完成 ✅**
+**转入archive日期：2026-04-06**
 
 ---
 
 ## 修复摘要
 
-所有文档中列出的问题均已修复。最近一次修复提交：f8748a7（2026-04-06 第二轮修复）
+所有文档中列出的问题均已修复并通过审查。最近一次修复提交：2647c1d（2026-04-06 Docker生产就绪改进）。
 
 ---
 
@@ -197,6 +200,131 @@
 
 ---
 
+## Docker 生产就绪修复（2026-04-06）
+
+在完成实现状况报告中的问题修复后，通过 comprehensive review 发现 Docker 配置存在生产就绪问题：
+
+### 13. Docker 服务缺少 NODE_ENV=production ✅
+
+**状态:** 已修复
+
+**修复内容:**
+- 为 auth、topic-space、ai、gateway 四个服务添加 `NODE_ENV: production` 环境变量
+- 确保数据库 sync bypass 在生产环境正常工作
+
+**文件:**
+- `docker-compose.yml`
+
+### 14. 缺少 .dockerignore 文件 ✅
+
+**状态:** 已修复
+
+**修复内容:**
+- 创建 `.dockerignore` 文件
+- 排除 `node_modules`、`.env`、`.git`、IDE配置、构建产物等
+- 减小Docker构建体积，防止敏感信息泄露
+
+**文件:**
+- `.dockerignore`（新建）
+
+### 15. MySQL 版本未固定 ✅
+
+**状态:** 已修复
+
+**修复内容:**
+- 将 `mysql:latest` 改为 `mysql:8.0`
+- 确保生产环境可重现性
+
+**文件:**
+- `docker-compose.yml`
+
+### 16. 服务缺少健康检查 ✅
+
+**状态:** 已修复
+
+**修复内容:**
+- 为所有服务（auth、topic-space、ai、gateway）添加 healthcheck 配置
+- 使用现有 `/health` 端点进行健康检查
+- gateway 的 `depends_on` 更新为等待 `service_healthy` 条件
+
+**文件:**
+- `docker-compose.yml`
+
+---
+
+## 安全增强修复（2026-04-06）
+
+通过 comprehensive security review 发现的安全问题：
+
+### 17. JWT verify 缺少 algorithms 选项 ✅
+
+**状态:** 已修复
+
+**修复内容:**
+- 为所有服务的 `jwt.verify()` 添加 `algorithms: ['HS256']` 选项
+- 防止算法混淆攻击
+
+**文件:**
+- `services/auth/src/middlewares/authMiddleware.ts`
+- `services/topic-space/src/middlewares/authMiddleware.ts`
+- `services/ai/src/middlewares/authMiddleware.ts`
+
+### 18. Auth 端点缺少 rate limiting ✅
+
+**状态:** 已修复
+
+**修复内容:**
+- 为 `/login` 端点添加 rate limiting（15分钟/15次）
+- 为 `/register` 端点添加 rate limiting（1小时/5次）
+- 防止暴力破解和滥用
+
+**文件:**
+- `services/auth/src/routes/auth.ts`
+
+### 19. AI 服务模型表名不匹配 ✅
+
+**状态:** 已修复（Critical bug）
+
+**修复内容:**
+- 修正 AI 服务模型的表名以匹配实际数据库表
+- Topic: `'topics'` → `'topic_topics'`
+- TopicPage: `'topic_pages'` → `'topic_topic_pages'`
+- User: `'users'` → `'auth_users'`
+- 此问题会导致 AI 服务在运行时查询失败
+
+**文件:**
+- `services/ai/src/models/Topic.ts`
+- `services/ai/src/models/TopicPage.ts`
+- `services/ai/src/models/User.ts`
+
+---
+
+## 最终状态汇总
+
+| # | 严重度 | 问题 | 状态 |
+|---|---|---|---|
+| 1 | Critical | StorageService 从未初始化，上传必崩 | ✅ 已修复 |
+| 2 | Critical | `syncDatabase` 生产环境仍用 `alter: true` | ✅ 已修复 |
+| 3 | Important | 两服务共用 `users` 表，`alter` 相互破坏 | ✅ 已修复 |
+| 4 | Important | Docker 镜像不含 `packages/`，未来引入共享包会崩 | ✅ 已修复 |
+| 5 | Important | `sync({ alter: true })` 无 NODE_ENV 守卫 | ✅ 已修复 |
+| 6 | Important | `config.ts` 硬编码 `.env` 路径 | ✅ 已修复 |
+| 7 | Important | AI grep 无结果数量限制 | ✅ 已修复 |
+| 8 | Minor | `(user as any)` 不安全 cast | ✅ 已修复 |
+| 9 | Minor | LIKE 通配符未转义 | ✅ 已修复 |
+| 10 | Minor | Gateway 无 proxy timeout | ✅ 已修复 |
+| 11 | Minor | package.json 依赖声明不完整 | ✅ 已修复 |
+| 12 | ~~CORS changeOrigin~~ | ~~网关破坏 CORS~~ | ✅ 驳回 |
+| 13 | Important | Docker 服务缺少 NODE_ENV | ✅ 已修复 |
+| 14 | Important | 缺少 .dockerignore | ✅ 已修复 |
+| 15 | Important | MySQL 版本未固定 | ✅ 已修复 |
+| 16 | Important | 服务缺少健康检查 | ✅ 已修复 |
+| 17 | Critical | JWT verify 缺少 algorithms | ✅ 已修复 |
+| 18 | Important | Auth 端点缺少 rate limiting | ✅ 已修复 |
+| 19 | Critical | AI 服务模型表名不匹配 | ✅ 已修复 |
+
+---
+
 ## 代码审查结果
 
 所有修复已通过 superpowers:code-reviewer 审查，结论：**建议可以合并此代码**。
@@ -204,8 +332,27 @@
 审查要点：
 - ✅ 使用 Null Object 模式处理可选依赖
 - ✅ 通过表名前缀实现数据隔离
-- ✅ 生产环境安全防护
+- ✅ 生产环境安全防护（NODE_ENV guards、健康检查）
 - ✅ 类型安全改进
 - ✅ 适当的错误处理
 - ✅ grep 查询添加 limit/offset 防止性能问题
 - ✅ config 支持 DOTENV_CONFIG_PATH 环境变量
+- ✅ 安全增强（JWT算法强制、认证限流）
+- ✅ Docker生产就绪（.dockerignore、健康检查、版本固定）
+
+---
+
+## 完成的提交历史
+
+1. abae595 - fix: upgrade multer to 2.1.1 in services/topic-space to patch DoS vulnerabilities
+2. 92f2941 - fix: resolve all issues from implementation-status.md
+3. 76372cc - docs: update implementation-status.md to reflect fixes
+4. 87aff42 - fix: address implementation-status issues (syncDatabase, config path, grep limit, dependency declarations)
+5. f21fce3 - fix: correct mangled comment/line in agentTools.ts grep escape
+6. f8748a7 - fix: remove unused @web-learn/shared dependency from backend package.json
+7. 84f0b02 - docs: update implementation-status.md with second round fixes
+8. f481181 - fix: enforce JWT algorithm, add rate limiting, correct AI service table names
+9. 2647c1d - fix: Docker production readiness improvements
+
+**总提交数：9个commits**
+**修复问题数：19个问题（12个原问题 + 7个审查发现问题）**

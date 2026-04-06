@@ -1,6 +1,6 @@
 # 数据模型
 
-> 最后更新：2026-04-03
+> 最后更新：2026-04-06
 
 ## 概述
 
@@ -20,10 +20,13 @@
 > - **无需提交评价：** 聚焦于专题内容的创建和浏览，无复杂的任务、提交、评价流程
 > - **AI 辅助：** 学习助手帮助理解，搭建助手帮助创建
 > - **Markdown 内容：** 简单直接的 Markdown 编辑和渲染
+> - **微服务数据隔离：** 通过表名前缀实现服务间数据隔离
 
 ## 核心实体
 
 ### 1. User（用户）
+
+**数据库表名：** `auth_users`（Auth Service 管理）
 
 | 字段 | 类型 | 约束 | 说明 |
 |------|------|------|------|
@@ -40,7 +43,14 @@
 - `teacher` - 教师（可创建和管理专题）
 - `student` - 学生（可浏览专题、使用学习助手）
 
+**服务归属：**
+- Auth Service：用户注册、登录、JWT 颁发
+- Topic Space Service：只读访问（通过 HTTP 或共享数据库）
+- AI Service：只读访问（通过 HTTP 或共享数据库）
+
 ### 2. Topic（专题学习空间）
+
+**数据库表名：** `topic_topics`（Topic Space Service 管理）
 
 | 字段 | 类型 | 约束 | 说明 |
 |------|------|------|------|
@@ -49,7 +59,7 @@
 | description | TEXT | NULLABLE | 专题描述 |
 | type | ENUM | NOT NULL, DEFAULT 'knowledge' | 类型：knowledge（知识库）, website（网站） |
 | website_url | VARCHAR(500) | NULLABLE | 网站访问URL（仅网站型），由系统自动生成（ZIP上传后解压到OSS所得），教师不可手动编辑 |
-| created_by | INTEGER | FK → users.id | 创建者（教师） |
+| created_by | INTEGER | FK → auth_users.id | 创建者（教师） |
 | status | ENUM | NOT NULL | 状态：draft, published, closed |
 | created_at | TIMESTAMP | AUTO | 创建时间 |
 | updated_at | TIMESTAMP | AUTO | 更新时间 |
@@ -67,22 +77,32 @@
 - **发布后所有人可见（完全公开，包括访客）**
 - 关闭后标记为已关闭（仍可见）
 
+**服务归属：**
+- Topic Space Service：专题 CRUD、状态管理、网站上传
+- AI Service：只读访问（通过 HTTP 或共享数据库）
+
 ---
 
 ### 3. TopicPage（专题页面） - 仅知识库型
 
 > **说明：** 知识库型专题的页面内容，采用 Markdown 格式存储
 
+**数据库表名：** `topic_topic_pages`（Topic Space Service 管理）
+
 | 字段 | 类型 | 约束 | 说明 |
 |------|------|------|------|
 | id | INTEGER | PRIMARY KEY | 页面ID |
-| topic_id | INTEGER | FK → topics.id | 所属专题 |
+| topic_id | INTEGER | FK → topic_topics.id | 所属专题 |
 | title | VARCHAR(200) | NOT NULL | 页面标题 |
 | content | TEXT | NOT NULL | 页面内容（Markdown 格式） |
-| parent_page_id | INTEGER | FK → topic_pages.id, NULLABLE | 父页面ID（支持嵌套） |
+| parent_page_id | INTEGER | FK → topic_topic_pages.id, NULLABLE | 父页面ID（支持嵌套） |
 | order | INTEGER | NOT NULL | 页面顺序 |
 | created_at | TIMESTAMP | AUTO | 创建时间 |
 | updated_at | TIMESTAMP | AUTO | 更新时间 |
+
+**服务归属：**
+- Topic Space Service：页面 CRUD、顺序管理、嵌套结构
+- AI Service：只读访问（通过 HTTP 或共享数据库，用于 AI 工具查询）
 
 **Markdown 内容示例：**
 
@@ -148,8 +168,9 @@ erDiagram
     Topic ||--o{ TopicPage : "包含页面（知识库型）"
     TopicPage ||--o| TopicPage : "嵌套子页面"
 
-    Note over Topic: type: knowledge/website
-    Note over TopicPage: 仅知识库型<br/>Markdown content
+    Note over User: 表名: auth_users<br/>Auth Service 管理
+    Note over Topic: 表名: topic_topics<br/>Topic Space Service 管理<br/>type: knowledge/website
+    Note over TopicPage: 表名: topic_topic_pages<br/>Topic Space Service 管理<br/>仅知识库型<br/>Markdown content
 ```
 
 ## 模型关系
@@ -169,12 +190,34 @@ erDiagram
 - **Topic.type = 'knowledge'**：使用 TopicPage 表，Markdown 内容
 - **Topic.type = 'website'**：使用 website_url 字段，内容存储在 OSS
 
+### 微服务数据隔离
+
+**表名前缀策略：**
+- `auth_*` → Auth Service 专属表（用户认证）
+- `topic_*` → Topic Space Service 专属表（专题管理）
+- AI Service 通过 HTTP 调用或共享数据库访问数据，不创建独立表
+
+**跨服务访问：**
+- Topic Space Service 和 AI Service 可访问 `auth_users` 表（只读）
+- AI Service 可访问 `topic_topics` 和 `topic_topic_pages` 表（只读）
+
 ### 公开访问设计
 
 - **已发布的专题对所有人公开可见**（包括未登录访客）
 - 访客可自由浏览专题内容（知识库型：查看所有页面的 Markdown 渲染内容；网站型：访问网站）
 - 无提交、评价等复杂流程
 - 只有创建和管理需要登录（教师身份）
+
+### 生产环境数据库管理
+
+**生产环境（NODE_ENV=production）：**
+- 使用 `sequelize-cli` 或 `umzug` 进行受控迁移
+- 禁止 `sync({ alter: true })` 自动修改表结构
+- 数据库 schema 变更需通过显式迁移脚本
+
+**开发环境：**
+- 自动 `sync({ alter: true })` 同步表结构
+- 方便开发迭代
 
 ## 与旧设计的差异
 

@@ -1,8 +1,10 @@
 # 产品规格文档索引
 
-> 最后更新：2026-04-03
+> 最后更新：2026-04-06
 
 本目录包含专题学习平台的完整产品规格文档，按模块组织便于查找和维护。
+
+**系统架构：** 微服务架构（Gateway + Auth + Topic Space + AI）
 
 ## 文档导航
 
@@ -44,8 +46,9 @@
    - 实现架构
 
 7. **[技术架构](./architecture.md)** - 系统架构设计
-   - 技术栈选型
-   - 部署架构
+   - 微服务架构（Gateway、Auth、Topic Space、AI）
+   - pnpm workspace monorepo 结构
+   - Docker Compose 部署
    - 核心流程
 
 8. **[前端架构](./frontend-architecture.md)** - 前端页面与组件架构
@@ -81,6 +84,7 @@
 **技术实现：**
 - [数据模型](./data-models.md#核心实体)
 - [API 端点](./api-design.md#api-端点)
+- [微服务架构](./architecture.md#微服务架构)
 - [技术栈](./architecture.md#技术栈)
 - [部署架构](./architecture.md#部署架构)
 
@@ -121,14 +125,15 @@
 
 ## 相关文档
 
-- [数据模型详细文档](../data-models.md) - 完整的数据模型文档
-- [实现状况报告](../implementation-status.md) - 开发进度跟踪
+- [微服务架构设计](../microservices-architecture-design.md) - 微服务重构完整设计文档
+- [实现状况报告（已归档）](../archive/implementation-status-microservices-refactoring-2026-04-06.md) - 微服务重构完成状态
 - [开发规范](../README.md) - 代码规范和提交规范
 
 ## 文档历史
 
 | 日期 | 版本 | 说明 |
 |------|------|------|
+| 2026-04-06 | v3.0 | 微服务架构重构完成：更新所有文档反映微服务架构 |
 | 2026-04-03 | v2.0 | 重大修改：明确"专题学习"概念，改为完全公开访问 |
 | 2026-04-02 | v1.0 | 初始版本 |
 

@@ -1,6 +1,6 @@
 ﻿# AI Agent 系统
 
-> 最后更新：2026-04-03（修订版）
+> 最后更新：2026-04-06
 
 ## 概述
 
@@ -8,6 +8,11 @@
 - 专题搭建 Agent：服务教师，聚焦专题创建、内容组织和发布前检查
 
 **实现方式：** 采用 OpenAI API 兼容的 function calling 格式，不自定义格式。
+
+**微服务架构：**
+- AI Service（端口 3003）独立运行 Agent 服务
+- 通过 Gateway（端口 3000）统一入口：`POST /api/ai/chat`
+- AI Service 可访问 `auth_users`、`topic_topics`、`topic_topic_pages` 表（只读）
 
 ---
 
@@ -96,6 +101,14 @@
             “keyword”: {
               “type”: “string”,
               “description”: “搜索关键词”
+            },
+            “limit”: {
+              “type”: “integer”,
+              “description”: “返回最大条数（默认50，最大200）”
+            },
+            “offset”: {
+              “type”: “integer”,
+              “description”: “跳过条数（默认0）”
             }
           },
           “required”: [“topic_id”, “keyword”]
@@ -105,6 +118,10 @@
   ]
 }
 ```
+
+**安全特性：**
+- LIKE 查询特殊字符（`%`, `_`, `\`）自动转义，防止意外匹配
+- grep 工具强制 limit/offset，防止大量结果集导致性能问题
 
 ### 适用场景
 
@@ -278,20 +295,24 @@
 ```mermaid
 sequenceDiagram
     participant User as 用户
-    participant Backend as 后端 API
+    participant Gateway as API Gateway
+    participant AISvc as AI Service
     participant AI as AI 模型
     participant DB as 数据库
 
-    User->>Backend: POST /api/ai/chat<br/>{topic_id, message}
-    Backend->>AI: 发送消息 + tools 定义
+    User->>Gateway: POST /api/ai/chat<br/>{topic_id, message}
+    Gateway->>Gateway: JWT验证 + 用户信息注入
+    Gateway->>AISvc: 转发请求
+    AISvc->>AI: 发送消息 + tools 定义
     AI->>AI: 分析是否需要调用工具
-    AI->>Backend: 返回 tool_calls<br/>[{name: “read_page”, arguments: {page_id: 1}}]
-    Backend->>DB: 执行函数：读取页面内容
-    DB-->>Backend: 返回结果
-    Backend->>AI: 发送 tool_call 结果
+    AI->>AISvc: 返回 tool_calls<br/>[{name: “read_page”, arguments: {page_id: 1}}]
+    AISvc->>DB: 执行函数：读取页面内容
+    DB-->>AISvc: 返回结果
+    AISvc->>AI: 发送 tool_call 结果
     AI->>AI: 整合上下文生成回复
-    AI-->>Backend: 返回最终回复
-    Backend-->>User: 返回 AI 响应
+    AI-->>AISvc: 返回最终回复
+    AISvc-->>Gateway: 返回响应
+    Gateway-->>User: 返回 AI 响应
 ```
 
 ### OpenAI API 格式示例
@@ -403,6 +424,23 @@ sequenceDiagram
 - 用户在哪个专题空间打开 Agent，就只加载该 `topic_id` 的上下文。
 - 切换到新专题时，必须切换上下文命名空间，禁止复用上一专题的上下文。
 - 会话历史可按上述主键落库，避免跨专题串话。
+
+## 5. 微服务实现
+
+**AI Service (`services/ai`)：**
+- `src/services/agentService.ts` - Agent 编排逻辑
+- `src/services/agentTools.ts` - 工具定义与实现
+- `src/models/` - User、Topic、TopicPage 模型（只读访问）
+
+**数据库访问：**
+- AI Service 通过 Sequelize ORM 访问共享数据库
+- 表名映射：`auth_users`、`topic_topics`、`topic_topic_pages`
+- 所有操作只读（学习助手）或写入库（搭建助手）
+
+**认证与权限：**
+- Gateway authMiddleware 验证 JWT 并注入用户信息
+- AI Service authMiddleware 再次验证用户身份和角色
+- 权限检查：学习助手（学生/教师）、搭建助手（教师且为创建者）
 
 ---
 

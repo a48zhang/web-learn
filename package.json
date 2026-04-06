@@ -4,9 +4,9 @@
   "private": true,
   "description": "专题学习平台",
   "scripts": {
-    "dev": "concurrently \"pnpm --filter @web-learn/frontend dev\" \"pnpm --filter @web-learn/gateway dev\" \"pnpm --filter @web-learn/auth-service dev\" \"pnpm --filter @web-learn/topic-space-service dev\" \"pnpm --filter @web-learn/ai-service dev\"",
+    "dev": "concurrently \"pnpm --filter @web-learn/frontend dev\" \"cross-env DOTENV_CONFIG_PATH=../../.env pnpm --filter @web-learn/gateway dev\" \"cross-env DOTENV_CONFIG_PATH=../../.env pnpm --filter @web-learn/auth-service dev\" \"cross-env DOTENV_CONFIG_PATH=../../.env pnpm --filter @web-learn/topic-space-service dev\" \"cross-env DOTENV_CONFIG_PATH=../../.env pnpm --filter @web-learn/ai-service dev\"",
     "dev:frontend": "pnpm --filter @web-learn/frontend dev",
-    "dev:services": "concurrently \"pnpm --filter @web-learn/gateway dev\" \"pnpm --filter @web-learn/auth-service dev\" \"pnpm --filter @web-learn/topic-space-service dev\" \"pnpm --filter @web-learn/ai-service dev\"",
+    "dev:services": "concurrently \"cross-env DOTENV_CONFIG_PATH=../../.env pnpm --filter @web-learn/gateway dev\" \"cross-env DOTENV_CONFIG_PATH=../../.env pnpm --filter @web-learn/auth-service dev\" \"cross-env DOTENV_CONFIG_PATH=../../.env pnpm --filter @web-learn/topic-space-service dev\" \"cross-env DOTENV_CONFIG_PATH=../../.env pnpm --filter @web-learn/ai-service dev\"",
     "build": "pnpm -r build",
     "build:services": "pnpm --filter @web-learn/gateway build && pnpm --filter @web-learn/auth-service build && pnpm --filter @web-learn/topic-space-service build && pnpm --filter @web-learn/ai-service build",
     "build:frontend": "pnpm --filter @web-learn/shared build && pnpm --filter @web-learn/frontend build",
@@ -18,6 +18,7 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^20.19.37",
     "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
     "prettier": "^3.2.5"
   },
   "engines": {

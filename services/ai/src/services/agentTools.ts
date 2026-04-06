@@ -171,7 +171,8 @@ const learningTools: AgentTool[] = [
       const safeLimit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(Math.max(Math.floor(rawLimit), 1), grepDefaults.hardLimit) : grepDefaults.defaultLimit;
       const safeOffset = Number.isFinite(rawOffset) && rawOffset > 0 ? Math.floor(rawOffset) : 0;
 
-      // Escape LIKE special characters: %, _ and \\n      const escapedKeyword = keyword.replace(/[%_\\]/g, '\\$&');
+      // Escape LIKE special characters: %, _ and \
+      const escapedKeyword = keyword.replace(/[%_\\]/g, '\\$&');
 
       const pages = await TopicPage.findAll({
         where: {

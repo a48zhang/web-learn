@@ -10,7 +10,7 @@ import {
   deleteWebsite,
   getWebsiteStats,
 } from '../controllers/topicController';
-import { authMiddleware } from '../middlewares/authMiddleware';
+import { internalAuthMiddleware } from '@web-learn/shared';
 import { optionalAuthMiddleware } from '../middlewares/optionalAuthMiddleware';
 import { upload } from '../middlewares/uploadMiddleware';
 import rateLimit from 'express-rate-limit';
@@ -21,15 +21,15 @@ const readLimiter = rateLimit({ windowMs: 60000, max: 300 });
 const writeLimiter = rateLimit({ windowMs: 60000, max: 100 });
 const uploadLimiter = rateLimit({ windowMs: 60000, max: 20 });
 
-router.post('/', writeLimiter, authMiddleware, createTopic);
+router.post('/', writeLimiter, internalAuthMiddleware, createTopic);
 router.get('/', readLimiter, optionalAuthMiddleware, getTopics);
 router.get('/:id', readLimiter, optionalAuthMiddleware, getTopicById);
-router.put('/:id', writeLimiter, authMiddleware, updateTopic);
-router.patch('/:id/status', writeLimiter, authMiddleware, updateTopicStatus);
-router.delete('/:id', writeLimiter, authMiddleware, deleteTopic);
-router.post('/:id/website/upload', uploadLimiter, authMiddleware, upload.single('file'), uploadWebsite);
-router.put('/:id/website/upload', uploadLimiter, authMiddleware, upload.single('file'), uploadWebsite);
-router.delete('/:id/website', writeLimiter, authMiddleware, deleteWebsite);
-router.get('/:id/website/stats', readLimiter, authMiddleware, getWebsiteStats);
+router.put('/:id', writeLimiter, internalAuthMiddleware, updateTopic);
+router.patch('/:id/status', writeLimiter, internalAuthMiddleware, updateTopicStatus);
+router.delete('/:id', writeLimiter, internalAuthMiddleware, deleteTopic);
+router.post('/:id/website/upload', uploadLimiter, internalAuthMiddleware, upload.single('file'), uploadWebsite);
+router.put('/:id/website/upload', uploadLimiter, internalAuthMiddleware, upload.single('file'), uploadWebsite);
+router.delete('/:id/website', writeLimiter, internalAuthMiddleware, deleteWebsite);
+router.get('/:id/website/stats', readLimiter, internalAuthMiddleware, getWebsiteStats);
 
 export default router;

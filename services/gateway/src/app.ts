@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { createProxies } from './proxy';
+import { authVerificationMiddleware } from './authVerificationMiddleware';
 
 const isLocalOrigin = (origin: string) => {
   try {
@@ -49,9 +50,15 @@ const createApp = () => {
   });
 
   const proxies = createProxies();
+
+  // Auth verification middleware - runs before all proxy routes
+  app.use(authVerificationMiddleware);
+
+  // Mount proxies - the proxy will handle the full path including the mount point
   app.use('/api/auth', proxies.auth);
   app.use('/api/users', proxies.auth);
   app.use('/api/topics', proxies.topicSpace);
+  app.use('/api/pages', proxies.topicSpace);
   app.use('/api/ai', proxies.ai);
 
   return app;

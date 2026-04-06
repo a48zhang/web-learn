@@ -86,15 +86,16 @@
 **开发环境：**
 ```
 前端：http://localhost:5173
-Gateway：http://localhost:3000
+Gateway：http://localhost:3000（前端通过 proxy 访问）
 ```
 
 **API 代理配置（vite.config.ts）：**
 ```typescript
 server: {
+  port: 5173,  // 前端开发服务器端口
   proxy: {
     '/api': {
-      target: 'http://localhost:3000',
+      target: 'http://localhost:3000',  // Gateway 端口
       changeOrigin: true,
     }
   }
@@ -104,4 +105,4 @@ server: {
 **生产环境：**
 - 前端静态文件托管（Nginx/CDN）
 - API 请求发往生产 Gateway URL
-- 环境变量配置：`VITE_API_BASE_URL`
+- 环境变量配置：`VITE_API_URL`

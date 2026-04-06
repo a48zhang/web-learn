@@ -97,7 +97,7 @@ services:
 
 ```
 前端：http://localhost:5173
-Gateway：http://localhost:3000
+Gateway：http://localhost:3000（前端通过 proxy 访问）
 Auth Service：http://localhost:3001（内部）
 Topic Space Service：http://localhost:3002（内部）
 AI Service：http://localhost:3003（内部）
@@ -107,6 +107,7 @@ AI Service：http://localhost:3003（内部）
 **本地开发：**
 - 可单独启动服务：`pnpm --filter @web-learn/<service> dev`
 - Docker Compose 全流程测试：`docker-compose up`
+- 前端通过 Vite proxy 将 `/api` 请求转发到 Gateway（3000）
 
 ### 生产环境建议
 

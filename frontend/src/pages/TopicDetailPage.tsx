@@ -31,7 +31,7 @@ function TopicDetailPage() {
 
   if (error || !topic) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex items-center justify-center p-12">
         <div className="bg-white rounded-lg shadow p-6 text-gray-700">{error || '专题不存在'}</div>
       </div>
     );

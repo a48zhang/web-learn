@@ -7,16 +7,30 @@ import { topicApi } from '../services/api';
 import type { Topic } from '@web-learn/shared';
 import { toast } from '../stores/useToastStore';
 import { getApiErrorMessage } from '../utils/errors';
+import { useLayoutMeta } from '../components/layout/LayoutMetaContext';
 
 function TopicListPage() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
+  const { setMeta } = useLayoutMeta();
+
+  useEffect(() => {
+    setMeta({
+      pageTitle: '专题列表',
+      breadcrumbSegments: [
+        { label: '首页', to: '/dashboard' },
+        { label: '专题列表' },
+      ],
+      sideNavSlot: null,
+    });
+  }, [setMeta]);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [pendingDeleteTopic, setPendingDeleteTopic] = useState<Topic | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [openMenuTopicId, setOpenMenuTopicId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchTopics = async () => {
@@ -32,6 +46,13 @@ function TopicListPage() {
 
     fetchTopics();
   }, []);
+
+  useEffect(() => {
+    if (!openMenuTopicId) return;
+    const handleClickOutside = () => setOpenMenuTopicId(null);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [openMenuTopicId]);
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
@@ -63,6 +84,19 @@ function TopicListPage() {
     return type === 'website' ? '网站型' : '知识库型';
   };
 
+  const handleStatusChange = async (topicId: string, newStatus: 'draft' | 'published' | 'closed') => {
+    const prevTopics = topics;
+    setTopics(prev => prev.map(t => t.id === topicId ? { ...t, status: newStatus } : t));
+    setOpenMenuTopicId(null);
+    try {
+      await topicApi.updateStatus(topicId, { status: newStatus });
+      toast.success('状态已更新');
+    } catch (err: unknown) {
+      setTopics(prevTopics);
+      toast.error(getApiErrorMessage(err, '更新状态失败'));
+    }
+  };
+
   const handleOpenDeleteDialog = (topic: Topic) => {
     setPendingDeleteTopic(topic);
     setDeleteDialogOpen(true);
@@ -89,13 +123,10 @@ function TopicListPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
       <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <div>
-            <Link to="/dashboard" className="text-blue-600 hover:text-blue-500 mb-2 inline-block">
-              ← 返回控制台
-            </Link>
             <h1 className="text-2xl font-bold text-gray-900">
               {user?.role === 'teacher' ? '专题列表' : '公开专题'}
             </h1>
@@ -158,7 +189,7 @@ function TopicListPage() {
                     )}
                     <div className="text-sm text-gray-500">创建时间: {new Date(topic.createdAt).toLocaleDateString('zh-CN')}</div>
                   </div>
-                  <div className="sm:ml-4 flex-shrink-0 flex flex-col sm:flex-row gap-2">
+                  <div className="sm:ml-4 flex-shrink-0 flex flex-col sm:flex-row gap-2 items-start sm:items-center">
                     <Link
                       to={`/topics/${topic.id}`}
                       className="w-full sm:w-auto text-blue-600 hover:text-blue-500 font-medium inline-block text-center"
@@ -180,6 +211,69 @@ function TopicListPage() {
                         >
                           删除专题 →
                         </button>
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenMenuTopicId(openMenuTopicId === topic.id ? null : topic.id);
+                            }}
+                            className="p-1 text-gray-500 hover:text-gray-700 rounded"
+                            aria-label="更多操作"
+                          >
+                            ⋯
+                          </button>
+                          {openMenuTopicId === topic.id && (
+                            <div
+                              className="absolute right-0 top-8 bg-white shadow-lg rounded-md border border-gray-200 z-10 min-w-[120px]"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {topic.status === 'draft' && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleStatusChange(topic.id, 'published')}
+                                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                >
+                                  发布
+                                </button>
+                              )}
+                              {topic.status === 'published' && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleStatusChange(topic.id, 'closed')}
+                                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                >
+                                  关闭
+                                </button>
+                              )}
+                              {topic.status === 'closed' && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleStatusChange(topic.id, 'published')}
+                                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                >
+                                  重新发布
+                                </button>
+                              )}
+                              {(topic.status === 'published' || topic.status === 'closed') && (
+                                <button
+                                  type="button"
+                                  onClick={() => { setOpenMenuTopicId(null); navigate(`/topics/${topic.id}/edit`); }}
+                                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                >
+                                  编辑
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => { setOpenMenuTopicId(null); handleOpenDeleteDialog(topic); }}
+                                className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                              >
+                                删除
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </>
                     )}
                   </div>
@@ -219,7 +313,7 @@ function TopicListPage() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 

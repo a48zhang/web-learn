@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import MDEditor from '@uiw/react-md-editor';
 import type { Topic, TopicPage, TopicPageTreeNode } from '@web-learn/shared';
 import { topicApi, pageApi } from '../services/api';
@@ -10,6 +10,8 @@ import AIChatSidebar from '../components/AIChatSidebar';
 import { getApiErrorMessage } from '../utils/errors';
 import { LoadingOverlay } from '../components/Loading';
 import { flattenPages, findNode } from '../utils/treeUtils';
+import { useLayoutMeta } from '../components/layout/LayoutMetaContext';
+import type { BreadcrumbSegment } from '../components/layout/LayoutMetaContext';
 
 function KnowledgeEditorPage() {
   const { id } = useParams<{ id: string }>();
@@ -33,6 +35,11 @@ function KnowledgeEditorPage() {
   const autoSaveTimerRef = useRef<number | null>(null);
   const latestContentRef = useRef(content);
   const [lastSavedContent, setLastSavedContent] = useState('');
+
+  type PreviewMode = 'edit' | 'live' | 'preview';
+  const [previewMode, setPreviewMode] = useState<PreviewMode>('edit');
+
+  const { setMeta } = useLayoutMeta();
 
   const canEdit = user?.role === 'teacher' && topic?.createdBy === user.id;
 
@@ -86,7 +93,7 @@ function KnowledgeEditorPage() {
     return findNode(pages, selectedPageId)?.title || '';
   }, [pages, selectedPageId]);
 
-  const handleSelectPage = async (pageId: string) => {
+  const handleSelectPage = useCallback(async (pageId: string) => {
     setSelectedPageId(pageId);
     setSwitchingPage(true);
     try {
@@ -100,13 +107,13 @@ function KnowledgeEditorPage() {
     } finally {
       setSwitchingPage(false);
     }
-  };
+  }, []);
 
-  const openCreateDialog = (parentPageId?: string | null) => {
+  const openCreateDialog = useCallback((parentPageId?: string | null) => {
     setCreateParentPageId(parentPageId || null);
     setCreateTitle('');
     setCreateDialogOpen(true);
-  };
+  }, []);
 
   const handleCreatePage = async () => {
     if (!id || !canEdit || !createTitle.trim()) return;
@@ -130,10 +137,10 @@ function KnowledgeEditorPage() {
     }
   };
 
-  const openDeleteDialog = (pageId: string) => {
+  const openDeleteDialog = useCallback((pageId: string) => {
     setPendingDeletePageId(pageId);
     setDeleteDialogOpen(true);
-  };
+  }, []);
 
   const handleDeletePage = async () => {
     if (!id || !canEdit) return;
@@ -149,7 +156,7 @@ function KnowledgeEditorPage() {
     }
   };
 
-  const handleReorder = async () => {
+  const handleReorder = useCallback(async () => {
     if (!id || !canEdit) return;
     try {
       const flattened = flattenPages(pages);
@@ -165,9 +172,9 @@ function KnowledgeEditorPage() {
     } catch (err: unknown) {
       toast.error(getApiErrorMessage(err, '更新顺序失败'));
     }
-  };
+  }, [id, canEdit, pages, selectedPageId, refreshPages]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!currentPage || !canEdit) return;
     setSaving(true);
     try {
@@ -183,7 +190,7 @@ function KnowledgeEditorPage() {
     } finally {
       setSaving(false);
     }
-  };
+  }, [currentPage, canEdit, content]);
 
   useEffect(() => {
     latestContentRef.current = content;
@@ -221,94 +228,130 @@ function KnowledgeEditorPage() {
     };
   }, [canEdit, content, currentPage, lastSavedContent]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        if (currentPage && canEdit && !saving && !autoSaving && content !== lastSavedContent) {
+          handleSave();
+        }
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+        e.preventDefault();
+        setPreviewMode(prev => prev === 'edit' ? 'preview' : 'edit');
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [currentPage, canEdit, saving, autoSaving, content, lastSavedContent, handleSave]);
+
+  useEffect(() => {
+    const segments: BreadcrumbSegment[] = [
+      { label: '首页', to: '/dashboard' },
+      { label: '专题列表', to: '/topics' },
+      ...(topic ? [{ label: topic.title, to: `/topics/${topic.id}` }] : [{ label: '编辑中...' }]),
+      { label: '编辑' },
+    ];
+    setMeta({
+      pageTitle: topic ? `编辑：${topic.title}` : '编辑中...',
+      breadcrumbSegments: segments,
+    });
+  }, [topic, setMeta]);
+
+  useEffect(() => {
+    if (!topic) return;
+    setMeta({
+      sideNavSlot: (
+        <div className="h-full overflow-y-auto p-3 flex flex-col">
+          <PageTreeEditor
+            pages={pages}
+            selectedPageId={selectedPageId}
+            onSelectPage={handleSelectPage}
+            onCreatePage={openCreateDialog}
+            onDeletePage={openDeleteDialog}
+            deletingPageId={pendingDeletePageId}
+          />
+          <button
+            type="button"
+            onClick={handleReorder}
+            className="mt-3 w-full bg-gray-700 hover:bg-gray-800 text-white rounded px-3 py-1.5 text-sm"
+          >
+            同步当前顺序
+          </button>
+        </div>
+      ),
+    });
+  }, [topic, pages, selectedPageId, pendingDeletePageId, setMeta, handleSelectPage, openCreateDialog, openDeleteDialog, handleReorder]);
+
+  useEffect(() => {
+    return () => {
+      setMeta({ sideNavSlot: null });
+    };
+  }, [setMeta]);
+
   if (loading) {
     return <LoadingOverlay message="加载编辑器中..." />;
   }
 
   if (error || !topic) {
     return (
-      <div className="min-h-screen bg-gray-50 px-4 py-6">
-        <div className="max-w-6xl mx-auto">
-          <Link to="/topics" className="text-blue-600 hover:text-blue-500">
-            ← 返回专题列表
-          </Link>
-          <div className="bg-white rounded-lg shadow p-6 mt-4 text-gray-700">{error || '专题不存在'}</div>
-        </div>
+      <div className="px-4 py-6">
+        <div className="bg-white rounded-lg shadow p-6 text-gray-700">{error || '专题不存在'}</div>
       </div>
     );
   }
 
   if (!canEdit) {
     return (
-      <div className="min-h-screen bg-gray-50 px-4 py-6">
-        <div className="max-w-6xl mx-auto">
-          <Link to={`/topics/${topic.id}`} className="text-blue-600 hover:text-blue-500">
-            ← 返回专题
-          </Link>
-          <div className="bg-white rounded-lg shadow p-6 mt-4 text-gray-700">你没有编辑该专题的权限</div>
-        </div>
+      <div className="px-4 py-6">
+        <div className="bg-white rounded-lg shadow p-6 text-gray-700">你没有编辑该专题的权限</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50" data-color-mode="light">
-      <div className="max-w-7xl mx-auto px-4 py-6 space-y-4">
-        <div className="flex flex-col gap-2">
-          <Link to={`/topics/${topic.id}`} className="text-blue-600 hover:text-blue-500">
-            ← 返回专题
-          </Link>
-          <h1 className="text-2xl font-bold text-gray-900">编辑专题：{topic.title}</h1>
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          <aside className="lg:col-span-1 bg-white rounded-lg shadow p-3 h-[calc(100vh-180px)] overflow-y-auto">
-            <PageTreeEditor
-              pages={pages}
-              selectedPageId={selectedPageId}
-              onSelectPage={handleSelectPage}
-              onCreatePage={openCreateDialog}
-              onDeletePage={openDeleteDialog}
-              deletingPageId={pendingDeletePageId}
-            />
+    <div className="px-4 py-6 h-full" data-color-mode="light">
+      <main className="bg-white rounded-lg shadow p-4 h-[calc(100vh-200px)] overflow-y-auto space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold text-gray-900">{selectedPageTitle || '未选择页面'}</h2>
+          <div className="flex items-center gap-2">
+            {switchingPage && <span className="text-xs text-gray-500">页面切换中...</span>}
+            {autoSaving && <span className="text-xs text-gray-500">自动保存中...</span>}
+            {!autoSaving && autosaveNotice && <span className="text-xs text-gray-500">{autosaveNotice}</span>}
+            <div className="flex rounded-md border border-gray-200 overflow-hidden text-xs">
+              {(['edit', 'live', 'preview'] as PreviewMode[]).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setPreviewMode(mode)}
+                  className={`px-2 py-1 ${previewMode === mode ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                >
+                  {mode === 'edit' ? '编辑' : mode === 'live' ? '分栏' : '预览'}
+                </button>
+              ))}
+            </div>
             <button
               type="button"
-              onClick={handleReorder}
-              className="mt-3 w-full bg-gray-700 hover:bg-gray-800 text-white rounded px-3 py-1.5 text-sm"
+              onClick={handleSave}
+              disabled={!currentPage || saving || autoSaving}
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded px-3 py-1.5 text-sm disabled:opacity-50"
             >
-              同步当前顺序
+              {saving ? '保存中...' : autoSaving ? '自动保存中...' : content === lastSavedContent && lastSavedContent !== '' ? '已保存 ✓' : '保存'}
             </button>
-          </aside>
-          <main className="lg:col-span-3 bg-white rounded-lg shadow p-4 h-[calc(100vh-180px)] overflow-y-auto space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="font-semibold text-gray-900">{selectedPageTitle || '未选择页面'}</h2>
-              <div className="flex items-center gap-2">
-                {switchingPage && <span className="text-xs text-gray-500">页面切换中...</span>}
-                {autoSaving && <span className="text-xs text-gray-500">自动保存中...</span>}
-                {!autoSaving && autosaveNotice && <span className="text-xs text-gray-500">{autosaveNotice}</span>}
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={!currentPage || saving || autoSaving}
-                  className="bg-blue-600 hover:bg-blue-700 text-white rounded px-3 py-1.5 text-sm disabled:opacity-50"
-                >
-                  {saving ? '保存中...' : '保存'}
-                </button>
-              </div>
-            </div>
-            {currentPage ? (
-              <MDEditor
-                value={content}
-                onChange={(next) => setContent(next || '')}
-                height={520}
-                preview="edit"
-                visiableDragbar={false}
-              />
-            ) : (
-              <p className="text-sm text-gray-500">请先创建页面</p>
-            )}
-          </main>
+          </div>
         </div>
-      </div>
+        {currentPage ? (
+          <MDEditor
+            value={content}
+            onChange={(next) => setContent(next || '')}
+            height={520}
+            preview={previewMode}
+            visiableDragbar={false}
+          />
+        ) : (
+          <p className="text-sm text-gray-500">请先创建页面</p>
+        )}
+      </main>
       {id && <AIChatSidebar topicId={id} agentType="building" />}
       {createDialogOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4">

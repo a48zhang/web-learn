@@ -25,6 +25,20 @@ export function findNode(nodes: TopicPageTreeNode[], id: string): TopicPageTreeN
   return null;
 }
 
+/**
+ * Returns the path from root to the node with the given id (inclusive),
+ * or null if not found.
+ * Example: findNodePath(tree, 'c') -> [root, parent, nodeC]
+ */
+export function findNodePath(nodes: TopicPageTreeNode[], id: string): TopicPageTreeNode[] | null {
+  for (const node of nodes) {
+    if (node.id === id) return [node];
+    const childPath = findNodePath(node.children, id);
+    if (childPath) return [node, ...childPath];
+  }
+  return null;
+}
+
 export function findFirstPage(nodes: TopicPageTreeNode[]): TopicPageTreeNode | null {
   const sorted = nodes.slice().sort((a, b) => a.order - b.order);
   if (sorted.length === 0) return null;

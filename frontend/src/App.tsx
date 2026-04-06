@@ -13,6 +13,8 @@ import TopicDetailPage from './pages/TopicDetailPage';
 import KnowledgeEditorPage from './pages/KnowledgeEditorPage';
 import WebsiteEditorPage from './pages/WebsiteEditorPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import AppShell from './components/layout/AppShell';
+import { LayoutMetaProvider } from './components/layout/LayoutMetaContext';
 import { topicApi } from './services/api';
 import type { Topic } from '@web-learn/shared';
 
@@ -30,7 +32,7 @@ function App() {
 
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-gray-50">
+      <LayoutMetaProvider>
         <Routes>
           {/* Public routes */}
           <Route
@@ -46,37 +48,51 @@ function App() {
             }
           />
 
-          {/* Protected routes */}
+          {/* Protected routes wrapped with AppShell */}
           <Route
             path="/dashboard"
             element={
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
+              <AppShell>
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              </AppShell>
             }
           />
           <Route
             path="/topics"
-            element={<TopicListPage />}
+            element={
+              <AppShell>
+                <TopicListPage />
+              </AppShell>
+            }
           />
           <Route
             path="/topics/create"
             element={
-              <ProtectedRoute allowedRoles={['teacher']}>
-                <TopicCreatePage />
-              </ProtectedRoute>
+              <AppShell>
+                <ProtectedRoute allowedRoles={['teacher']}>
+                  <TopicCreatePage />
+                </ProtectedRoute>
+              </AppShell>
             }
           />
           <Route
             path="/topics/:id"
-            element={<TopicDetailPage />}
+            element={
+              <AppShell>
+                <TopicDetailPage />
+              </AppShell>
+            }
           />
           <Route
             path="/topics/:id/edit"
             element={
-              <ProtectedRoute allowedRoles={['teacher']}>
-                <TopicEditorRouter />
-              </ProtectedRoute>
+              <AppShell>
+                <ProtectedRoute allowedRoles={['teacher']}>
+                  <TopicEditorRouter />
+                </ProtectedRoute>
+              </AppShell>
             }
           />
 
@@ -90,23 +106,22 @@ function App() {
           <Route
             path="*"
             element={
-              <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="text-center">
-                  <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
-                  <p className="text-gray-600 mb-4">页面未找到</p>
-                  <a
-                    href="/dashboard"
-                    className="text-blue-600 hover:text-blue-500 font-medium"
-                  >
-                    返回首页
-                  </a>
+              <AppShell>
+                <div className="flex items-center justify-center p-12">
+                  <div className="text-center">
+                    <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
+                    <p className="text-gray-600 mb-4">页面未找到</p>
+                    <a href="/dashboard" className="text-blue-600 hover:text-blue-500 font-medium">
+                      返回首页
+                    </a>
+                  </div>
                 </div>
-              </div>
+              </AppShell>
             }
           />
         </Routes>
         <ToastContainer toasts={toasts} onDismiss={removeToast} />
-      </div>
+      </LayoutMetaProvider>
     </BrowserRouter>
   );
 }

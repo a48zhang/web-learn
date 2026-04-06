@@ -19,6 +19,10 @@ vi.mock('../services/api', () => ({
   },
 }));
 
+vi.mock('../components/layout/LayoutMetaContext', () => ({
+  useLayoutMeta: () => ({ setMeta: vi.fn() }),
+}));
+
 describe('TopicListPage', () => {
   beforeEach(() => {
     getAllMock.mockReset();

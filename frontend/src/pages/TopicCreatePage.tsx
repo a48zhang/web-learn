@@ -1,20 +1,53 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { topicApi } from '../services/api';
 import type { CreateTopicDto } from '@web-learn/shared';
 import { getApiErrorMessage } from '../utils/errors';
+import { useLayoutMeta } from '../components/layout/LayoutMetaContext';
+
+const DRAFT_KEY = 'draft:topic-create';
 
 function TopicCreatePage() {
   const navigate = useNavigate();
+  const { setMeta } = useLayoutMeta();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMeta({
+      pageTitle: '新建专题',
+      breadcrumbSegments: [
+        { label: '首页', to: '/dashboard' },
+        { label: '专题列表', to: '/topics' },
+        { label: '新建专题' },
+      ],
+      sideNavSlot: null,
+    });
+  }, [setMeta]);
+
+  const savedDraft = (() => {
+    try {
+      const raw = sessionStorage.getItem(DRAFT_KEY);
+      return raw ? JSON.parse(raw) : undefined;
+    } catch {
+      return undefined;
+    }
+  })();
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
-  } = useForm<CreateTopicDto>();
+  } = useForm<CreateTopicDto>({
+    defaultValues: savedDraft,
+  });
+
+  const formValues = watch();
+  useEffect(() => {
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(formValues));
+  }, [formValues]);
 
   const onSubmit = async (data: CreateTopicDto) => {
     setLoading(true);
@@ -27,6 +60,7 @@ function TopicCreatePage() {
         type: data.type || 'knowledge',
       };
       await topicApi.create(payload);
+      sessionStorage.removeItem(DRAFT_KEY);
       navigate('/topics');
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, '创建专题失败'));
@@ -35,17 +69,20 @@ function TopicCreatePage() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-3xl mx-auto py-6 px-4">
-        {/* Header */}
-        <div className="mb-6">
-          <Link to="/topics" className="text-blue-600 hover:text-blue-500 mb-2 inline-block">
-            ← 返回专题列表
-          </Link>
-          <h1 className="text-2xl font-bold text-gray-900">创建新专题</h1>
-        </div>
+  const handleCancel = () => {
+    const values = formValues;
+    const hasContent = values.title || values.description;
+    if (hasContent) {
+      const keepDraft = confirm('表单中有内容，是否保留草稿？');
+      if (!keepDraft) {
+        sessionStorage.removeItem(DRAFT_KEY);
+      }
+    }
+    navigate('/topics');
+  };
 
+  return (
+    <div className="max-w-3xl mx-auto py-6 px-4">
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
             <p className="text-red-600">{error}</p>
@@ -108,12 +145,13 @@ function TopicCreatePage() {
 
             {/* Form Actions */}
             <div className="flex justify-end gap-4 pt-4 border-t border-gray-200">
-              <Link
-                to="/topics"
+              <button
+                type="button"
+                onClick={handleCancel}
                 className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
               >
                 取消
-              </Link>
+              </button>
               <button
                 type="submit"
                 disabled={loading}
@@ -124,7 +162,6 @@ function TopicCreatePage() {
             </div>
           </form>
         </div>
-      </div>
     </div>
   );
 }

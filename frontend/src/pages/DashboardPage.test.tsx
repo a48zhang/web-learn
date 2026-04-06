@@ -3,10 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DashboardPage from './DashboardPage';
 
 const navigateMock = vi.hoisted(() => vi.fn());
-const logoutMock = vi.hoisted(() => vi.fn());
+const setMetaMock = vi.hoisted(() => vi.fn());
 const authState = vi.hoisted(() => ({
   user: { username: 'alice', role: 'student' as const },
-  logout: logoutMock,
 }));
 
 vi.mock('../stores/useAuthStore', () => ({
@@ -21,10 +20,14 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
+vi.mock('../components/layout/LayoutMetaContext', () => ({
+  useLayoutMeta: () => ({ meta: {}, setMeta: setMetaMock }),
+}));
+
 describe('DashboardPage', () => {
   beforeEach(() => {
     navigateMock.mockReset();
-    logoutMock.mockReset();
+    setMetaMock.mockReset();
     authState.user = { username: 'alice', role: 'student' };
   });
 

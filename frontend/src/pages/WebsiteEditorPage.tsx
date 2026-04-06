@@ -17,8 +17,32 @@ function WebsiteEditorPage() {
   const [error, setError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const confirmActionRef = useRef<(() => void) | null>(null);
+  const [iframeLoading, setIframeLoading] = useState(false);
+  const [iframeError, setIframeError] = useState(false);
+  const [iframeKey, setIframeKey] = useState(0);
+  const iframeTimeoutRef = useRef<number | null>(null);
 
   const canEdit = user?.role === 'teacher' && topic?.createdBy === user.id;
+
+  useEffect(() => {
+    if (!topic?.websiteUrl) return;
+    setIframeLoading(true);
+    setIframeError(false);
+    if (iframeTimeoutRef.current) window.clearTimeout(iframeTimeoutRef.current);
+    iframeTimeoutRef.current = window.setTimeout(() => {
+      setIframeLoading(false);
+      setIframeError(true);
+    }, 15000);
+    return () => {
+      if (iframeTimeoutRef.current) window.clearTimeout(iframeTimeoutRef.current);
+    };
+  }, [topic?.websiteUrl, iframeKey]);
+
+  const handleReloadIframe = () => {
+    setIframeLoading(true);
+    setIframeError(false);
+    setIframeKey((k) => k + 1);
+  };
 
   const refresh = async (topicId: string) => {
     const topicData = await topicApi.getById(topicId);
@@ -160,7 +184,43 @@ function WebsiteEditorPage() {
 
         <div className="bg-white rounded-lg shadow overflow-hidden">
           {topic.websiteUrl ? (
-            <iframe title={topic.title} src={topic.websiteUrl} className="w-full h-[70vh] border-0" />
+            <div className="relative">
+              {iframeLoading && !iframeError && (
+                <div className="absolute top-0 left-0 right-0 h-1 bg-blue-200 overflow-hidden z-10">
+                  <div className="h-full bg-blue-500 animate-pulse w-1/2" />
+                </div>
+              )}
+              {iframeError ? (
+                <div className="h-[50vh] flex flex-col items-center justify-center gap-4 text-gray-500">
+                  <p className="text-lg">网站加载失败</p>
+                  <p className="text-sm text-gray-400">请检查网站地址或稍后再试</p>
+                  <button
+                    type="button"
+                    onClick={handleReloadIframe}
+                    className="bg-blue-600 hover:bg-blue-700 text-white rounded-md px-4 py-2 text-sm transition-colors"
+                  >
+                    重新加载
+                  </button>
+                </div>
+              ) : (
+                <iframe
+                  key={iframeKey}
+                  title={topic.title}
+                  src={topic.websiteUrl}
+                  className="w-full h-[70vh] border-0"
+                  onLoad={() => {
+                    setIframeLoading(false);
+                    setIframeError(false);
+                    if (iframeTimeoutRef.current) window.clearTimeout(iframeTimeoutRef.current);
+                  }}
+                  onError={() => {
+                    setIframeLoading(false);
+                    setIframeError(true);
+                    if (iframeTimeoutRef.current) window.clearTimeout(iframeTimeoutRef.current);
+                  }}
+                />
+              )}
+            </div>
           ) : (
             <div className="h-[40vh] flex items-center justify-center text-gray-500">暂无预览内容</div>
           )}

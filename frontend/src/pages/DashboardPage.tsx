@@ -1,29 +1,34 @@
+import { useEffect } from 'react';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useNavigate } from 'react-router-dom';
+import { useLayoutMeta } from '../components/layout/LayoutMetaContext';
 
 function DashboardPage() {
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
   const navigate = useNavigate();
+  const { setMeta } = useLayoutMeta();
+
+  useEffect(() => {
+    setMeta({
+      pageTitle: '控制台',
+      breadcrumbSegments: [
+        { label: '首页', to: '/dashboard' },
+        { label: '控制台' },
+      ],
+      sideNavSlot: null,
+    });
+  }, [setMeta]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto py-6 px-4">
-        <div className="bg-white shadow rounded-lg p-6 mb-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">控制台</h1>
-              <p className="text-gray-600 mt-1">
-                欢迎，{user?.username}（{user?.role === 'teacher' ? '教师' : '学生'}）
-              </p>
-            </div>
-            <button
-              onClick={logout}
-              className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
-            >
-              退出登录
-            </button>
-          </div>
+    <div className="max-w-7xl mx-auto py-6 px-4">
+      <div className="bg-white shadow rounded-lg p-6 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">控制台</h1>
+          <p className="text-gray-600 mt-1">
+            欢迎，{user?.username}（{user?.role === 'teacher' ? '教师' : '学生'}）
+          </p>
         </div>
+      </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {user?.role === 'teacher' && (
@@ -81,7 +86,6 @@ function DashboardPage() {
             暂无活动记录
           </div>
         </div>
-      </div>
     </div>
   );
 }

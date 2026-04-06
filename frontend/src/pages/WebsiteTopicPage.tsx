@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { Topic } from '@web-learn/shared';
 import { topicApi } from '../services/api';
@@ -11,6 +11,30 @@ function WebsiteTopicPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [fullScreen, setFullScreen] = useState(false);
+  const [iframeLoading, setIframeLoading] = useState(false);
+  const [iframeError, setIframeError] = useState(false);
+  const [iframeKey, setIframeKey] = useState(0);
+  const iframeTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!topic?.websiteUrl) return;
+    setIframeLoading(true);
+    setIframeError(false);
+    if (iframeTimeoutRef.current) window.clearTimeout(iframeTimeoutRef.current);
+    iframeTimeoutRef.current = window.setTimeout(() => {
+      setIframeLoading(false);
+      setIframeError(true);
+    }, 15000);
+    return () => {
+      if (iframeTimeoutRef.current) window.clearTimeout(iframeTimeoutRef.current);
+    };
+  }, [topic?.websiteUrl, iframeKey]);
+
+  const handleReloadIframe = () => {
+    setIframeLoading(true);
+    setIframeError(false);
+    setIframeKey((k) => k + 1);
+  };
 
   useEffect(() => {
     const fetchTopic = async () => {
@@ -66,11 +90,43 @@ function WebsiteTopicPage() {
         </div>
         <div className="bg-white rounded-lg shadow overflow-hidden">
           {topic.websiteUrl ? (
-            <iframe
-              title={topic.title}
-              src={topic.websiteUrl}
-              className={`w-full border-0 ${fullScreen ? 'h-[calc(100vh-140px)]' : 'h-[75vh]'}`}
-            />
+            <div className="relative">
+              {iframeLoading && !iframeError && (
+                <div className="absolute top-0 left-0 right-0 h-1 bg-blue-200 overflow-hidden z-10">
+                  <div className="h-full bg-blue-500 animate-pulse w-1/2" />
+                </div>
+              )}
+              {iframeError ? (
+                <div className="h-[50vh] flex flex-col items-center justify-center gap-4 text-gray-500">
+                  <p className="text-lg">网站加载失败</p>
+                  <p className="text-sm text-gray-400">请检查网站地址或稍后再试</p>
+                  <button
+                    type="button"
+                    onClick={handleReloadIframe}
+                    className="bg-blue-600 hover:bg-blue-700 text-white rounded-md px-4 py-2 text-sm transition-colors"
+                  >
+                    重新加载
+                  </button>
+                </div>
+              ) : (
+                <iframe
+                  key={iframeKey}
+                  title={topic.title}
+                  src={topic.websiteUrl}
+                  className={`w-full border-0 ${fullScreen ? 'h-[calc(100vh-140px)]' : 'h-[75vh]'}`}
+                  onLoad={() => {
+                    setIframeLoading(false);
+                    setIframeError(false);
+                    if (iframeTimeoutRef.current) window.clearTimeout(iframeTimeoutRef.current);
+                  }}
+                  onError={() => {
+                    setIframeLoading(false);
+                    setIframeError(true);
+                    if (iframeTimeoutRef.current) window.clearTimeout(iframeTimeoutRef.current);
+                  }}
+                />
+              )}
+            </div>
           ) : (
             <div className="h-[50vh] flex items-center justify-center text-gray-500">
               请先上传网站代码

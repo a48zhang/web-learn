@@ -14,16 +14,18 @@ const getServiceUrls = () => {
 export const createProxies = () => {
   const urls = getServiceUrls();
 
-  // http-proxy-middleware v3.x requires options object only (no context parameter)
-  // pathRewrite keeps the full path when proxying to downstream services
+  // http-proxy-middleware v3.x: when mounted with app.use('/api/auth', proxy),
+  // Express strips the mount point, so we need to restore it in pathRewrite
   console.log('[gateway] Creating auth proxy with target:', urls.auth);
   const authProxy = createProxyMiddleware({
     target: urls.auth,
     changeOrigin: true,
     proxyTimeout: 30000,
     pathRewrite: (path, req) => {
-      console.log('[gateway] Auth path rewrite:', path);
-      return path; // Keep full path: /api/auth/login stays as /api/auth/login
+      // Restore the full path with mount point
+      const fullPath = '/api/auth' + path;
+      console.log('[gateway] Auth path rewrite:', path, '->', fullPath);
+      return fullPath;
     },
   });
 
@@ -33,8 +35,10 @@ export const createProxies = () => {
     changeOrigin: true,
     proxyTimeout: 30000,
     pathRewrite: (path, req) => {
-      console.log('[gateway] TopicSpace path rewrite:', path);
-      return path; // Keep full path
+      // Restore the full path with mount point
+      const fullPath = '/api/topics' + path;
+      console.log('[gateway] TopicSpace path rewrite:', path, '->', fullPath);
+      return fullPath;
     },
   });
 
@@ -44,8 +48,10 @@ export const createProxies = () => {
     changeOrigin: true,
     proxyTimeout: 30000,
     pathRewrite: (path, req) => {
-      console.log('[gateway] AI path rewrite:', path);
-      return path; // Keep full path
+      // Restore the full path with mount point
+      const fullPath = '/api/ai' + path;
+      console.log('[gateway] AI path rewrite:', path, '->', fullPath);
+      return fullPath;
     },
   });
 

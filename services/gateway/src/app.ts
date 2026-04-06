@@ -49,6 +49,7 @@ const createApp = () => {
   });
 
   const proxies = createProxies();
+  // Mount proxies - the proxy will handle the full path including the mount point
   app.use('/api/auth', proxies.auth);
   app.use('/api/users', proxies.auth);
   app.use('/api/topics', proxies.topicSpace);

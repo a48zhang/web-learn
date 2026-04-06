@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { config } from './utils/config';
+import internalRoutes from './routes/internal';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 
@@ -25,6 +26,9 @@ app.use(cors({
 app.get('/health', (_req, res) => {
   res.json({ success: true, service: 'auth', timestamp: new Date().toISOString() });
 });
+
+// Internal routes (not exposed through gateway)
+app.use('/internal', internalRoutes);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);

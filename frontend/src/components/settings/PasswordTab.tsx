@@ -28,7 +28,7 @@ export default function PasswordTab({ onClose }: PasswordTabProps) {
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isDirty },
     reset,
   } = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordSchema),
@@ -95,7 +95,7 @@ export default function PasswordTab({ onClose }: PasswordTabProps) {
         </button>
         <button
           type="submit"
-          disabled={isChanging}
+          disabled={!isDirty || isChanging}
           className="px-4 py-2 text-sm rounded-md bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isChanging ? '修改中...' : '修改密码'}

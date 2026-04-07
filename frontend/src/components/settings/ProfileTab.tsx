@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -22,16 +23,21 @@ export default function ProfileTab({ onClose }: ProfileTabProps) {
     register,
     handleSubmit,
     formState: { errors, isDirty, isSubmitting },
+    reset,
   } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
-    defaultValues: {
-      username: user?.username || '',
-    },
   });
+
+  useEffect(() => {
+    if (user?.username) {
+      reset({ username: user.username });
+    }
+  }, [user?.username, reset]);
 
   const onSubmit = async (data: ProfileFormValues) => {
     try {
       await updateUser({ username: data.username });
+      reset({ username: data.username });
       toast.success('个人资料已更新');
     } catch {
       toast.error('更新失败，请稍后重试');

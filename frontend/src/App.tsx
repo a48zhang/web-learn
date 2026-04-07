@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-
 import { useEffect, useState } from 'react';
 import { useAuthStore } from './stores/useAuthStore';
 import { useToastStore } from './stores/useToastStore';
-import { useThemeStore } from './stores/useThemeStore';
 import { ToastContainer } from './components/Toast';
 import { LoadingOverlay } from './components/Loading';
 import LoginPage from './pages/LoginPage';
@@ -26,14 +25,6 @@ function App() {
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme-storage');
-    if (!savedTheme) {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      useThemeStore.getState().setTheme(prefersDark ? 'dark' : 'light');
-    }
-  }, []);
 
   if (isLoading) {
     return <LoadingOverlay message="初始化中..." />;

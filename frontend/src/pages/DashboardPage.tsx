@@ -1,12 +1,14 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useNavigate } from 'react-router-dom';
 import { useLayoutMeta } from '../components/layout/LayoutMetaContext';
+import SettingsModal from '../components/settings/SettingsModal';
 
 function DashboardPage() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const { setMeta } = useLayoutMeta();
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
 
   useEffect(() => {
     setMeta({
@@ -74,7 +76,10 @@ function DashboardPage() {
           <div className="bg-white shadow rounded-lg p-6 hover:shadow-lg transition-shadow">
             <h2 className="text-lg font-semibold text-gray-900 mb-2">账户设置</h2>
             <p className="text-gray-600 mb-4">更新您的个人资料和偏好设置</p>
-            <button className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-md transition-colors">
+            <button
+              onClick={() => setSettingsModalOpen(true)}
+              className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+            >
               设置
             </button>
           </div>
@@ -86,6 +91,7 @@ function DashboardPage() {
             暂无活动记录
           </div>
         </div>
+        <SettingsModal isOpen={settingsModalOpen} onClose={() => setSettingsModalOpen(false)} />
     </div>
   );
 }

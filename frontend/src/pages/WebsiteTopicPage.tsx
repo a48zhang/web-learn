@@ -6,6 +6,7 @@ import { LoadingOverlay } from '../components/Loading';
 import { getApiErrorMessage } from '../utils/errors';
 import { useLayoutMeta } from '../components/layout/LayoutMetaContext';
 import type { BreadcrumbSegment } from '../components/layout/LayoutMetaContext';
+import { getBaseBreadcrumbs } from '../utils/breadcrumbs';
 import { useIframeWithTimeout } from '../hooks/useIframeWithTimeout';
 
 function WebsiteTopicPage() {
@@ -29,8 +30,7 @@ function WebsiteTopicPage() {
 
   useEffect(() => {
     const segments: BreadcrumbSegment[] = [
-      { label: '首页', to: '/dashboard' },
-      { label: '专题列表', to: '/topics' },
+      ...getBaseBreadcrumbs(),
       { label: '网站专题' },
       ...(topic ? [{ label: topic.title }] : [{ label: '专题详情...' }]),
     ];

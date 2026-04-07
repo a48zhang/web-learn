@@ -12,6 +12,7 @@ import { LoadingOverlay } from '../components/Loading';
 import { flattenPages, findNode } from '../utils/treeUtils';
 import { useLayoutMeta } from '../components/layout/LayoutMetaContext';
 import type { BreadcrumbSegment } from '../components/layout/LayoutMetaContext';
+import { getBaseBreadcrumbs } from '../utils/breadcrumbs';
 
 function KnowledgeEditorPage() {
   const { id } = useParams<{ id: string }>();
@@ -247,8 +248,7 @@ function KnowledgeEditorPage() {
 
   useEffect(() => {
     const segments: BreadcrumbSegment[] = [
-      { label: '首页', to: '/dashboard' },
-      { label: '专题列表', to: '/topics' },
+      ...getBaseBreadcrumbs(),
       ...(topic ? [{ label: topic.title, to: `/topics/${topic.id}` }] : [{ label: '编辑中...' }]),
       { label: '编辑' },
     ];

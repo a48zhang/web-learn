@@ -13,6 +13,7 @@ import { getApiErrorMessage } from '../utils/errors';
 import { findFirstPage, findNode, findNodePath } from '../utils/treeUtils';
 import { useLayoutMeta } from '../components/layout/LayoutMetaContext';
 import type { BreadcrumbSegment } from '../components/layout/LayoutMetaContext';
+import { getBaseBreadcrumbs } from '../utils/breadcrumbs';
 
 function KnowledgeTopicPage() {
   const { id } = useParams<{ id: string }>();
@@ -101,8 +102,7 @@ function KnowledgeTopicPage() {
       setMeta({
         pageTitle: '专题详情...',
         breadcrumbSegments: [
-          { label: '首页', to: '/dashboard' },
-          { label: '专题列表', to: '/topics' },
+          ...getBaseBreadcrumbs(),
           { label: '知识库专题' },
           { label: '专题详情...' },
         ],
@@ -111,8 +111,7 @@ function KnowledgeTopicPage() {
     }
 
     const staticSegments: BreadcrumbSegment[] = [
-      { label: '首页', to: '/dashboard' },
-      { label: '专题列表', to: '/topics' },
+      ...getBaseBreadcrumbs(),
       { label: '知识库专题' },
       { label: topic.title, to: `/topics/${topic.id}` },
     ];

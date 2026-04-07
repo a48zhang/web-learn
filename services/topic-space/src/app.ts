@@ -1,8 +1,9 @@
-import express from 'express';
+import express, { Express } from 'express';
 import cors from 'cors';
 import { config } from './utils/config';
 import topicRoutes from './routes/topicRoutes';
 import pageRoutes from './routes/pageRoutes';
+import llmRoutes from './routes/llmRoutes';
 
 const isLocalOrigin = (origin: string) => {
   try {
@@ -13,7 +14,7 @@ const isLocalOrigin = (origin: string) => {
   }
 };
 
-const app = express();
+const app: Express = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(cors({
   origin: (origin, cb) => {
@@ -28,5 +29,6 @@ app.get('/health', (_req, res) => {
 
 app.use('/api/topics', topicRoutes);
 app.use('/api', pageRoutes);
+app.use('/api/llm', llmRoutes);
 
 export default app;

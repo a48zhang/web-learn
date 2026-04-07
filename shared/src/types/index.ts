@@ -30,7 +30,7 @@ export interface AuthResponse {
 
 // Topic types
 export type TopicStatusType = 'draft' | 'published' | 'closed';
-export type TopicType = 'knowledge' | 'website';
+export type TopicType = 'website';
 
 export interface Topic {
   id: string;
@@ -40,6 +40,10 @@ export interface Topic {
   websiteUrl?: string | null;
   createdBy: string;
   status: TopicStatusType;
+  filesSnapshot?: Record<string, string> | null;
+  chatHistory?: any[] | null;
+  publishedUrl?: string | null;
+  shareLink?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -155,6 +159,44 @@ export const TopicStatus = {
 } as const;
 
 export const TopicTypeMap = {
-  KNOWLEDGE: 'knowledge',
   WEBSITE: 'website',
 } as const;
+
+// Editor types
+export interface EditorFile {
+  path: string;
+  content: string;
+  isDirty: boolean;
+}
+
+export interface FileTreeNode {
+  name: string;
+  path: string;
+  type: 'file' | 'directory';
+  children?: FileTreeNode[];
+}
+
+export interface FileOperation {
+  action: 'create' | 'update' | 'delete';
+  path: string;
+  content?: string;
+}
+
+export interface AgentFileOperation {
+  path: string;
+  action: 'create' | 'update' | 'delete';
+  content?: string;
+}
+
+export interface AgentResponse {
+  message: string;
+  files: AgentFileOperation[];
+}
+
+export interface EditorState {
+  files: Record<string, string>; // path -> content
+  openFiles: string[]; // list of open file paths
+  activeFile: string | null;
+  isWebContainerReady: boolean;
+  previewUrl: string | null;
+}

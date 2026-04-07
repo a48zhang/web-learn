@@ -54,14 +54,13 @@ function TopicCreatePage() {
     setError(null);
 
     try {
-      const payload: CreateTopicDto = {
+      const topic = await topicApi.create({
         title: data.title,
         description: data.description,
-        type: data.type || 'knowledge',
-      };
-      await topicApi.create(payload);
+        type: 'website',
+      });
       sessionStorage.removeItem(DRAFT_KEY);
-      navigate('/topics');
+      navigate(`/topics/${topic.id}/edit`);
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, '创建专题失败'));
     } finally {
@@ -126,21 +125,6 @@ function TopicCreatePage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="请输入专题描述"
               />
-            </div>
-
-            {/* Topic Type */}
-            <div>
-              <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-2">
-                专题类型
-              </label>
-              <select
-                id="type"
-                {...register('type')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="knowledge">知识库</option>
-                <option value="website">网站</option>
-              </select>
             </div>
 
             {/* Form Actions */}

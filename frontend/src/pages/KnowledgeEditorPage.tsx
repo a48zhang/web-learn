@@ -73,11 +73,6 @@ function KnowledgeEditorPage() {
       setError(null);
       try {
         const topicData = await topicApi.getById(id);
-        if (topicData.type !== 'knowledge') {
-          setError('该专题不是知识库类型');
-          setLoading(false);
-          return;
-        }
         setTopic(topicData);
         await refreshPages(id, null);
       } catch (err: unknown) {

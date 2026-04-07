@@ -180,4 +180,21 @@ export const aiApi = {
   },
 };
 
+// Topic file operations (editor)
+export const topicFileApi = {
+  saveSnapshot: async (topicId: string, files: Record<string, string>): Promise<void> => {
+    await api.put(`/topics/${topicId}/files`, { files });
+  },
+
+  loadSnapshot: async (topicId: string): Promise<Record<string, string> | null> => {
+    const response = await api.get<ApiResponse<any>>(`/topics/${topicId}`);
+    const data = response.data.data;
+    return data?.filesSnapshot ?? null;
+  },
+
+  saveChatHistory: async (topicId: string, messages: any[]): Promise<void> => {
+    await api.put(`/topics/${topicId}/chat-history`, { messages });
+  },
+};
+
 export default api;

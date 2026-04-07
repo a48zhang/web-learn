@@ -22,7 +22,7 @@ export default function LeftNav({ isOpen, onClose, children }: LeftNavProps) {
     <>
       {/* Desktop sidebar */}
       {children && (
-        <aside className="hidden lg:block w-64 bg-white border-r border-gray-200 flex-shrink-0">
+        <aside className="hidden lg:block w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex-shrink-0">
           {children}
         </aside>
       )}
@@ -40,15 +40,15 @@ export default function LeftNav({ isOpen, onClose, children }: LeftNavProps) {
 
         {/* Drawer */}
         <div
-          className={`fixed left-0 top-0 bottom-0 z-50 bg-white w-[84vw] max-w-xs shadow-xl flex flex-col transition-transform duration-300 ${
+          className={`fixed left-0 top-0 bottom-0 z-50 bg-white dark:bg-gray-900 w-[84vw] max-w-xs shadow-xl flex flex-col transition-transform duration-300 ${
             isOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-            <span className="font-semibold text-gray-800">菜单</span>
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+            <span className="font-semibold text-gray-800 dark:text-gray-200">菜单</span>
             <button
               onClick={onClose}
-              className="p-1 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+              className="p-1 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
               aria-label="关闭菜单"
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

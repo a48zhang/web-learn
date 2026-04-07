@@ -33,7 +33,7 @@ export default function TopNav({ onMenuClick }: TopNavProps) {
 
 
   return (
-    <header className="h-16 bg-white border-b border-gray-200 shadow-sm flex items-center px-4 sm:px-6 justify-between">
+    <header className="h-16 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm flex items-center px-4 sm:px-6 justify-between">
       <div className="flex items-center gap-6">
         <Link to="/dashboard" className="font-bold text-blue-600 text-lg">
           WebLearn
@@ -46,7 +46,7 @@ export default function TopNav({ onMenuClick }: TopNavProps) {
               className={
                 isActive(link.to)
                   ? 'text-blue-600 border-b-2 border-blue-600 pb-0.5 text-sm font-medium'
-                  : 'text-gray-600 hover:text-gray-900 text-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 text-sm'
               }
             >
               {link.label}
@@ -58,7 +58,7 @@ export default function TopNav({ onMenuClick }: TopNavProps) {
       <div className="flex items-center gap-3">
         {isAuthenticated && user ? (
           <>
-            <span className="hidden md:inline text-sm text-gray-700">{user.username}</span>
+            <span className="hidden md:inline text-sm text-gray-700 dark:text-gray-300">{user.username}</span>
             <span
               className={`hidden md:inline text-xs font-medium px-2 py-0.5 rounded-full ${
                 user.role === 'teacher'
@@ -70,7 +70,7 @@ export default function TopNav({ onMenuClick }: TopNavProps) {
             </span>
             <button
               onClick={logout}
-              className="text-sm text-gray-500 hover:text-gray-900 hidden md:inline"
+              className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hidden md:inline"
             >
               退出
             </button>
@@ -78,7 +78,7 @@ export default function TopNav({ onMenuClick }: TopNavProps) {
         ) : null}
 
         <button
-          className="md:hidden p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+          className="md:hidden p-2 rounded-md text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
           onClick={onMenuClick}
           aria-label="打开菜单"
         >

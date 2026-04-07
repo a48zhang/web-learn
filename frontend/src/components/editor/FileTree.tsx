@@ -16,24 +16,26 @@ function getFileIcon(filename: string): string {
 
 interface FileTreeProps {
   onOpenFile: (path: string) => void;
+  onDeleteFile: (path: string) => void | Promise<void>;
 }
 
 function TreeNode({
   node,
   depth,
   onOpenFile,
+  onDeleteFile,
 }: {
   node: FileTreeNode;
   depth: number;
   onOpenFile: (path: string) => void;
+  onDeleteFile: (path: string) => void | Promise<void>;
 }) {
   const [expanded, setExpanded] = useState(true);
-  const { deleteFile } = useEditorStore();
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (confirm(`确定删除 ${node.path} 吗？`)) {
-      deleteFile(node.path);
+      void onDeleteFile(node.path);
     }
   };
 
@@ -71,7 +73,13 @@ function TreeNode({
       {expanded && node.children && (
         <div>
           {node.children.map((child) => (
-            <TreeNode key={child.path} node={child} depth={depth + 1} onOpenFile={onOpenFile} />
+            <TreeNode
+              key={child.path}
+              node={child}
+              depth={depth + 1}
+              onOpenFile={onOpenFile}
+              onDeleteFile={onDeleteFile}
+            />
           ))}
         </div>
       )}
@@ -79,7 +87,7 @@ function TreeNode({
   );
 }
 
-export default function FileTree({ onOpenFile }: FileTreeProps) {
+export default function FileTree({ onOpenFile, onDeleteFile }: FileTreeProps) {
   const { fileTree, createFile } = useEditorStore();
 
   const handleNewFile = () => {
@@ -100,7 +108,7 @@ export default function FileTree({ onOpenFile }: FileTreeProps) {
       <div className="flex-1 overflow-y-auto">
         {fileTree.length > 0 ? (
           fileTree.map((node) => (
-            <TreeNode key={node.path} node={node} depth={0} onOpenFile={onOpenFile} />
+            <TreeNode key={node.path} node={node} depth={0} onOpenFile={onOpenFile} onDeleteFile={onDeleteFile} />
           ))
         ) : (
           <div className="p-4 text-xs text-zinc-500 text-center">

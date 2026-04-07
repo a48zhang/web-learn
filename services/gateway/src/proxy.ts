@@ -55,9 +55,22 @@ export const createProxies = () => {
     },
   });
 
+  console.log('[gateway] Creating llm proxy with target:', urls.topicSpace);
+  const llmProxy = createProxyMiddleware({
+    target: urls.topicSpace,
+    changeOrigin: true,
+    proxyTimeout: 30000,
+    pathRewrite: (path) => {
+      const fullPath = '/api/llm' + path;
+      console.log('[gateway] LLM path rewrite:', path, '->', fullPath);
+      return fullPath;
+    },
+  });
+
   return {
     auth: authProxy,
     topicSpace: topicSpaceProxy,
     ai: aiProxy,
+    llm: llmProxy,
   };
 };

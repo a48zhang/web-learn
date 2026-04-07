@@ -1,18 +1,28 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface PreviewPanelProps {
   previewUrl: string | null;
   isReady: boolean;
   error: string | null;
-  onRefresh: () => void;
+  onRefresh?: () => void;
+  externalReloadKey?: number;
 }
 
-export default function PreviewPanel({ previewUrl, isReady, error, onRefresh }: PreviewPanelProps) {
+export default function PreviewPanel({ previewUrl, isReady, error, onRefresh, externalReloadKey }: PreviewPanelProps) {
   const [iframeKey, setIframeKey] = useState(0);
 
+  useEffect(() => {
+    if (typeof externalReloadKey === 'number') {
+      setIframeKey((k) => k + 1);
+    }
+  }, [externalReloadKey]);
+
   const handleReload = () => {
+    if (onRefresh) {
+      onRefresh();
+      return;
+    }
     setIframeKey((k) => k + 1);
-    onRefresh();
   };
 
   if (error) {

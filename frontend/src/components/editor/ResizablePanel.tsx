@@ -1,5 +1,4 @@
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
-import type { Layout } from 'react-resizable-panels';
 
 export { Panel, PanelGroup, PanelResizeHandle };
 
@@ -15,14 +14,12 @@ export interface PanelConfig {
 interface EditorPanelGroupProps {
   panels: PanelConfig[];
   direction?: 'horizontal' | 'vertical';
-  onLayoutChange?: (sizes: number[]) => void;
 }
 
-export function EditorPanelGroup({ panels, direction = 'horizontal', onLayoutChange }: EditorPanelGroupProps) {
+export function EditorPanelGroup({ panels, direction = 'horizontal' }: EditorPanelGroupProps) {
   return (
     <PanelGroup
       orientation={direction}
-      onLayoutChanged={(layout: Layout) => onLayoutChange?.(Object.values(layout))}
       className="h-full"
     >
       {panels.map((panel, index) => (

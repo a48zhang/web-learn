@@ -16,6 +16,7 @@ import AgentChat from '../components/editor/AgentChat';
 import PreviewPanel from '../components/editor/PreviewPanel';
 import { useWebContainer } from '../hooks/useWebContainer';
 import { useEditorStore } from '../stores/useEditorStore';
+import { useChatStore } from '../stores/useChatStore';
 
 function WebsiteEditorPage() {
   const { id } = useParams<{ id: string }>();
@@ -25,6 +26,7 @@ function WebsiteEditorPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showEditor, setShowEditor] = useState(false);
+  const [previewReloadKey, setPreviewReloadKey] = useState(0);
 
   const {
     isReady,
@@ -32,10 +34,11 @@ function WebsiteEditorPage() {
     error: wcError,
     init: initWC,
     writeFile: wcWriteFile,
-    refresh,
+    deleteFile: deleteFileWC,
   } = useWebContainer();
 
-  const { setFileContent, openFile, getAllFiles, loadSnapshot } = useEditorStore();
+  const { setFileContent, openFile, getAllFiles, loadSnapshot, deleteFile } = useEditorStore();
+  const { setMessages } = useChatStore();
 
   const canEdit = user?.role === 'teacher' && topic?.createdBy === user.id;
 
@@ -51,6 +54,9 @@ function WebsiteEditorPage() {
         const snapshot = await topicFileApi.loadSnapshot(id);
         if (snapshot && Object.keys(snapshot).length > 0) {
           loadSnapshot(snapshot);
+        }
+        if (topicData.chatHistory && Array.isArray(topicData.chatHistory)) {
+          setMessages(topicData.chatHistory);
         }
 
         setMeta({
@@ -69,7 +75,7 @@ function WebsiteEditorPage() {
       }
     };
     fetchData();
-  }, [id, setMeta, loadSnapshot]);
+  }, [id, setMeta, loadSnapshot, setMessages]);
 
   // Initialize WebContainer once topic is loaded
   useEffect(() => {
@@ -100,6 +106,15 @@ function WebsiteEditorPage() {
     setShowEditor(false);
   }, []);
 
+  const handleRefreshPreview = useCallback(() => {
+    setPreviewReloadKey((prev) => prev + 1);
+  }, []);
+
+  const handleDeleteFile = useCallback(async (path: string) => {
+    deleteFile(path);
+    await deleteFileWC(path);
+  }, [deleteFile, deleteFileWC]);
+
   if (loading) {
     return <LoadingOverlay message="加载编辑器中..." />;
   }
@@ -123,7 +138,7 @@ function WebsiteEditorPage() {
   return (
     <div className="h-screen flex flex-col bg-zinc-900">
       {/* Top Bar */}
-      <TopBar onRefreshPreview={refresh} />
+      <TopBar onRefreshPreview={handleRefreshPreview} />
 
       {/* Main Editor Area */}
       <div className="flex-1 overflow-hidden">
@@ -147,7 +162,7 @@ function WebsiteEditorPage() {
                   )}
                 </div>
               ),
-              content: showEditor ? <CodeEditor /> : <FileTree onOpenFile={handleOpenFile} />,
+              content: showEditor ? <CodeEditor /> : <FileTree onOpenFile={handleOpenFile} onDeleteFile={handleDeleteFile} />,
             },
             {
               id: 'agent-chat',
@@ -167,7 +182,8 @@ function WebsiteEditorPage() {
                   previewUrl={previewUrl}
                   isReady={isReady}
                   error={wcError}
-                  onRefresh={refresh}
+                  onRefresh={handleRefreshPreview}
+                  externalReloadKey={previewReloadKey}
                 />
               ),
             },

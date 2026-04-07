@@ -1,22 +1,30 @@
 import OpenAI from 'openai';
 import type { AIChatMessage, AgentResponse } from '@web-learn/shared';
 
-const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
-// Configure OpenAI SDK to point at our backend proxy
-const llmClient = new OpenAI({
-  apiKey: 'proxy-key', // Not used directly, backend handles auth
-  baseURL: `${API_BASE_URL}/llm`,
-  dangerouslyAllowBrowser: true,
-});
+const getAuthToken = () => localStorage.getItem('auth_token') || '';
+
+const createLlmClient = () =>
+  new OpenAI({
+    apiKey: getAuthToken(),
+    baseURL: `${API_BASE_URL}/llm`,
+    dangerouslyAllowBrowser: true,
+  });
 
 export async function sendChatMessage(
   messages: AIChatMessage[],
   onStream?: (chunk: string) => void
 ): Promise<AgentResponse | null> {
   try {
+    const token = getAuthToken();
+    if (!token) {
+      throw new Error('Missing auth token');
+    }
+    const llmClient = createLlmClient();
+
     const response = await llmClient.chat.completions.create({
-      model: (import.meta as any).env?.VITE_LLM_MODEL || 'gpt-4o',
+      model: import.meta.env.VITE_LLM_MODEL || 'gpt-4o',
       messages: messages as any,
       response_format: { type: 'json_object' },
       stream: !!onStream,

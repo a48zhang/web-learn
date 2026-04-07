@@ -80,10 +80,6 @@ export function useWebContainer() {
     }
   }, [writeFile]);
 
-  const refresh = useCallback(() => {
-    setPreviewUrl((prev) => prev);
-  }, []);
-
   return {
     isReady,
     previewUrl,
@@ -92,6 +88,5 @@ export function useWebContainer() {
     writeFile,
     deleteFile: deleteFileWC,
     syncFile,
-    refresh,
   };
 }

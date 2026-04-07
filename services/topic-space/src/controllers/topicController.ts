@@ -286,9 +286,6 @@ export const uploadWebsite = async (req: AuthRequest, res: Response) => {
   if (!ensureTopicOwner(topic, req)) {
     return res.status(403).json({ success: false, error: 'Access denied' });
   }
-  if (topic.type !== 'website') {
-    return res.status(400).json({ success: false, error: '只有网站型专题才能上传网站代码' });
-  }
 
   const storageService = getStorageService();
   let tempDir: string | undefined;
@@ -379,10 +376,6 @@ export const getWebsiteStats = async (req: AuthRequest, res: Response) => {
   if (!ensureTopicOwner(topic, req)) {
     return res.status(403).json({ success: false, error: 'Access denied' });
   }
-  if (topic.type !== 'website') {
-    return res.status(400).json({ success: false, error: '该专题不是网站型专题' });
-  }
-
   const storageService = getStorageService();
   const prefix = `topics/${topicIdStr}/`;
 

@@ -89,7 +89,7 @@ export const topicApi = {
     return response.data.data as Topic;
   },
 
-  getAll: async (params?: { type?: 'knowledge' | 'website' }): Promise<Topic[]> => {
+  getAll: async (params?: { type?: 'website' }): Promise<Topic[]> => {
     const response = await api.get<ApiResponse<Topic[]>>('/topics', { params });
     return response.data.data as Topic[];
   },

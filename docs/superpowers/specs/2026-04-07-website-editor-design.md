@@ -27,14 +27,14 @@
 │  顶部操作栏: [保存] [刷新预览] [发布到网站] [分享链接]        │
 ├──────────────┬──────────────────────┬───────────────────────┤
 │              │                      │                       │
-│  文件树      │   Agent 对话区       │   WebContainer        │
-│  (18%)       │   (28%)              │   浏览器预览 (自适应)  │
+│  文件树      │   Agent 对话区       │   应用预览 (iframe)    │
+│  (18%)       │   (28%)              │   (自适应)             │
 │  (可拖拽调整)│   (可拖拽调整)        │   (可拖拽调整)          │
 │              │                      │                       │
 │  📁          │   💬 Agent 对话      │   ┌───────────────┐   │
-│  index.html  │   [用户输入]          │   │  React/Vue    │   │
-│  src/        │   [上传文件]          │   │  实时预览      │   │
-│  public/     │   [发送]              │   │               │   │
+│  index.html  │   [用户输入]          │   │  网站预览      │   │
+│  src/        │   [上传文件]          │   │  (WebContainer  │   │
+│  public/     │   [发送]              │   │   后台运行)     │   │
 │              │                      │   └───────────────┘   │
 └──────────────┴──────────────────────┴───────────────────────┘
 ```
@@ -65,7 +65,7 @@
 
 - **左侧面板（文件系统树）**：宽度可调（18%默认），最小15%
 - **中间面板（Agent对话区）**：宽度可调（28%默认），最小20%
-- **右侧面板（浏览器预览）**：自适应剩余宽度
+- **右侧面板（应用预览）**：自适应剩余宽度，iframe嵌入WebContainer的dev server输出
 - **面板分割线**：支持拖拽调整宽度，参考VSCode风格
 - **面板可折叠**：每个面板都可收起，其他面板自适应扩展
 
@@ -88,13 +88,14 @@
 - **多轮对话**：支持连续对话修改，Agent理解上下文
 - **输入模式**：纯文本输入 + 附件上传按钮（支持多种格式）
 
-### 3.4 右侧：浏览器预览 + 代码编辑
+### 3.4 右侧：应用预览
 
-- **默认状态**：WebContainer浏览器预览
-- **文件双击时**：在预览区顶部覆盖/分隔显示代码编辑器（Monaco Editor）
-- **热更新**：文件修改后，WebContainer自动热重载预览
+- **默认状态**：应用预览（iframe嵌入），WebContainer在后台运行
+- **文件双击时**：在文件树所在区域打开代码编辑器（Monaco Editor），与文件树切换显示
+- **热更新**：文件修改后，WebContainer自动热重载，预览区实时更新
 - **响应式预览**：支持切换设备尺寸（桌面、平板、手机）
 - **刷新按钮**：手动刷新预览
+- **代码编辑器与文件树**：双击文件时文件树区域切换为Monaco编辑器，点击返回/关闭按钮回到文件树视图
 
 ### 3.5 顶部操作栏
 
@@ -124,7 +125,7 @@
 
 | 服务 | 说明 |
 |------|------|
-| LLM API代理 | 接收前端请求，转发到LLM（OpenAI/Claude等），返回响应 |
+| LLM API代理 | 接收前端OpenAI SDK标准请求，转发到实际LLM提供商（OpenAI/Claude等），返回兼容响应 |
 | 会话保存 | 保存文件快照和对话历史到数据库 |
 | 发布服务 | 将WebContainer中的文件打包发布到外部CDN |
 
@@ -208,26 +209,34 @@ Agent 修改代码
 
 ### 5.3 LLM API接口
 
+遵循OpenAI Chat Completions API标准格式，后端作为代理转发：
+
 ```
-POST /api/llm/chat
+POST /api/llm/chat/completions
 Request:
 {
-  "topicId": "123",
+  "model": "gpt-4o",
   "messages": [
+    { "role": "system", "content": "你是一名专业的前端开发者..." },
     { "role": "user", "content": "帮我做一个课程网站，风格简约" },
-    { "role": "assistant", "content": "..." }
+    { "role": "assistant", "content": "好的，请问您偏好什么颜色？" },
+    { "role": "user", "content": "蓝色系" }
   ],
-  "files": { "src/index.html": "<html>...", ... }
+  "response_format": { "type": "json_object" },
+  "stream": true
 }
 
-Response:
+Response (streaming):
 {
-  "message": "好的，我已经为您生成了课程网站...",
-  "files": [
-    { "path": "src/index.html", "action": "create", "content": "..." }
-  ]
+  "id": "chatcmpl-xxx",
+  "choices": [{
+    "delta": { "content": "{\"message\":\"...\",\"files\":[...]}" },
+    "finish_reason": null
+  }]
 }
 ```
+
+前端使用OpenAI SDK (`openai` npm包) 直接调用，后端代理转发到实际的LLM提供商（OpenAI/Claude等），兼容`@anthropic-ai/sdk`或OpenAI任一SDK的标准接口。
 
 ---
 

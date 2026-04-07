@@ -9,7 +9,7 @@ export interface LayoutMeta {
   pageTitle: string;
   breadcrumbSegments: BreadcrumbSegment[];
   sideNavSlot: React.ReactNode;
-  actions: Array<{ label: string; onClick: () => void }>;
+  actions?: Array<{ label: string; onClick: () => void }>;
 }
 
 const defaultMeta: LayoutMeta = {

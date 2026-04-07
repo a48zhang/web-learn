@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react';
-import { beforeEach, afterEach, describe, expect, it } from 'vitest';
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { useIframeWithTimeout } from './useIframeWithTimeout';
 
 describe('useIframeWithTimeout', () => {

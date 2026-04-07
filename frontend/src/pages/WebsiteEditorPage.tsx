@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useIframeWithTimeout } from '../hooks/useIframeWithTimeout';
 import { useParams } from 'react-router-dom';
 import type { Topic, WebsiteStats } from '@web-learn/shared';
 import { topicApi } from '../services/api';
@@ -20,32 +21,17 @@ function WebsiteEditorPage() {
   const [error, setError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const confirmActionRef = useRef<(() => void) | null>(null);
-  const [iframeLoading, setIframeLoading] = useState(false);
-  const [iframeError, setIframeError] = useState(false);
-  const [iframeKey, setIframeKey] = useState(0);
-  const iframeTimeoutRef = useRef<number | null>(null);
+  const {
+    iframeLoading,
+    iframeError,
+    iframeKey,
+    handleLoad,
+    handleError,
+    handleReload,
+  } = useIframeWithTimeout(15_000, topic?.websiteUrl ?? undefined);
 
+  const handleReloadIframe = handleReload;
   const canEdit = user?.role === 'teacher' && topic?.createdBy === user.id;
-
-  useEffect(() => {
-    if (!topic?.websiteUrl) return;
-    setIframeLoading(true);
-    setIframeError(false);
-    if (iframeTimeoutRef.current) window.clearTimeout(iframeTimeoutRef.current);
-    iframeTimeoutRef.current = window.setTimeout(() => {
-      setIframeLoading(false);
-      setIframeError(true);
-    }, 15000);
-    return () => {
-      if (iframeTimeoutRef.current) window.clearTimeout(iframeTimeoutRef.current);
-    };
-  }, [topic?.websiteUrl, iframeKey]);
-
-  const handleReloadIframe = () => {
-    setIframeLoading(true);
-    setIframeError(false);
-    setIframeKey((k) => k + 1);
-  };
 
   const refresh = async (topicId: string) => {
     const topicData = await topicApi.getById(topicId);
@@ -214,16 +200,8 @@ function WebsiteEditorPage() {
                   title={topic.title}
                   src={topic.websiteUrl}
                   className="w-full h-[70vh] border-0"
-                  onLoad={() => {
-                    setIframeLoading(false);
-                    setIframeError(false);
-                    if (iframeTimeoutRef.current) window.clearTimeout(iframeTimeoutRef.current);
-                  }}
-                  onError={() => {
-                    setIframeLoading(false);
-                    setIframeError(true);
-                    if (iframeTimeoutRef.current) window.clearTimeout(iframeTimeoutRef.current);
-                  }}
+                  onLoad={handleLoad}
+                  onError={handleError}
                 />
               )}
             </div>

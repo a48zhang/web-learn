@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import type { Topic } from '@web-learn/shared';
 import { topicApi } from '../services/api';
@@ -6,6 +6,7 @@ import { LoadingOverlay } from '../components/Loading';
 import { getApiErrorMessage } from '../utils/errors';
 import { useLayoutMeta } from '../components/layout/LayoutMetaContext';
 import type { BreadcrumbSegment } from '../components/layout/LayoutMetaContext';
+import { useIframeWithTimeout } from '../hooks/useIframeWithTimeout';
 
 function WebsiteTopicPage() {
   const { id } = useParams<{ id: string }>();
@@ -14,30 +15,17 @@ function WebsiteTopicPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [fullScreen, setFullScreen] = useState(false);
-  const [iframeLoading, setIframeLoading] = useState(false);
-  const [iframeError, setIframeError] = useState(false);
-  const [iframeKey, setIframeKey] = useState(0);
-  const iframeTimeoutRef = useRef<number | null>(null);
 
-  useEffect(() => {
-    if (!topic?.websiteUrl) return;
-    setIframeLoading(true);
-    setIframeError(false);
-    if (iframeTimeoutRef.current) window.clearTimeout(iframeTimeoutRef.current);
-    iframeTimeoutRef.current = window.setTimeout(() => {
-      setIframeLoading(false);
-      setIframeError(true);
-    }, 15000);
-    return () => {
-      if (iframeTimeoutRef.current) window.clearTimeout(iframeTimeoutRef.current);
-    };
-  }, [topic?.websiteUrl, iframeKey]);
+  const {
+    iframeLoading,
+    iframeError,
+    iframeKey,
+    handleLoad,
+    handleError,
+    handleReload,
+  } = useIframeWithTimeout(15_000, topic?.websiteUrl ?? undefined);
 
-  const handleReloadIframe = () => {
-    setIframeLoading(true);
-    setIframeError(false);
-    setIframeKey((k) => k + 1);
-  };
+  const handleReloadIframe = handleReload;
 
   useEffect(() => {
     const segments: BreadcrumbSegment[] = [
@@ -123,16 +111,8 @@ function WebsiteTopicPage() {
                   title={topic.title}
                   src={topic.websiteUrl}
                   className={`w-full border-0 ${fullScreen ? 'h-[calc(100vh-140px)]' : 'h-[75vh]'}`}
-                  onLoad={() => {
-                    setIframeLoading(false);
-                    setIframeError(false);
-                    if (iframeTimeoutRef.current) window.clearTimeout(iframeTimeoutRef.current);
-                  }}
-                  onError={() => {
-                    setIframeLoading(false);
-                    setIframeError(true);
-                    if (iframeTimeoutRef.current) window.clearTimeout(iframeTimeoutRef.current);
-                  }}
+                  onLoad={handleLoad}
+                  onError={handleError}
                 />
               )}
             </div>

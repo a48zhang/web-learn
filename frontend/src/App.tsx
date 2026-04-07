@@ -52,11 +52,11 @@ function App() {
           <Route
             path="/dashboard"
             element={
-              <AppShell>
-                <ProtectedRoute>
+              <ProtectedRoute>
+                <AppShell>
                   <DashboardPage />
-                </ProtectedRoute>
-              </AppShell>
+                </AppShell>
+              </ProtectedRoute>
             }
           />
           <Route
@@ -70,11 +70,11 @@ function App() {
           <Route
             path="/topics/create"
             element={
-              <AppShell>
-                <ProtectedRoute allowedRoles={['teacher']}>
+              <ProtectedRoute allowedRoles={['teacher']}>
+                <AppShell>
                   <TopicCreatePage />
-                </ProtectedRoute>
-              </AppShell>
+                </AppShell>
+              </ProtectedRoute>
             }
           />
           <Route
@@ -88,11 +88,11 @@ function App() {
           <Route
             path="/topics/:id/edit"
             element={
-              <AppShell>
-                <ProtectedRoute allowedRoles={['teacher']}>
+              <ProtectedRoute allowedRoles={['teacher']}>
+                <AppShell>
                   <TopicEditorRouter />
-                </ProtectedRoute>
-              </AppShell>
+                </AppShell>
+              </ProtectedRoute>
             }
           />
 

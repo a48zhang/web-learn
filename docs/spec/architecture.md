@@ -222,7 +222,9 @@ web-learn/
 │
 ├── docs/                   # 文档
 │   ├── spec/              # 产品规格文档
-│   ├── microservices-architecture-design.md # 微服务架构设计
+│   ├── superpowers/       # 设计和实施计划文档
+│   │   ├── specs/         # 设计文档
+│   │   └── plans/         # 实施计划
 │   └── archive/           # 已完成项目归档
 │       └── implementation-status-microservices-refactoring-2026-04-06.md
 │

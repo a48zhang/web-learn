@@ -15,11 +15,21 @@
 - **[API 设计](./spec/api-design.md)** - RESTful API 规范
 - **[技术架构](./spec/architecture.md)** - 系统架构设计
 
+### 设计与规划
 
-### 技术文档
+**[superpowers/specs/](./superpowers/specs/)** - 设计文档
+- **[网站编辑器设计](./superpowers/specs/2026-04-07-website-editor-design.md)** - VSCode风格三栏编辑器设计
 
-- **[data-models.md](./data-models.md)** - 完整数据模型文档（详细的表结构和字段说明）
-- **[implementation-status.md](./implementation-status.md)** - 实现状况报告（开发进度、已知问题）
+**[superpowers/plans/](./superpowers/plans/)** - 实施计划
+- **[网站编辑器实施计划](./superpowers/plans/2026-04-07-website-editor.md)** - 16步实施计划
+
+### 迁移文档
+
+**[migrations/](./migrations/)** - 数据库迁移文档
+
+## 文档归档
+
+- `archive/` - 已过时的文档归档（已完成的设计文档、旧计划等）
 
 ## 开发规范
 
@@ -30,7 +40,3 @@
 - 如有必要,拆分成多个 commit,不要一次性提交大量代码
 - 做计划不需要列出任何关于工期的内容
 - 很可能有人和你同时工作，因此请确保在提交 commit 时只选择你自己的文件，不要弄坏别人的文件
-
-## 文档归档
-
-- `archive/` - 已过时的文档归档

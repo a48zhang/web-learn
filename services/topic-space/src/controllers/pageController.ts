@@ -46,7 +46,6 @@ const toTree = (pages: TopicPage[]) => {
 const assertTopicWritableByUser = async (topicId: number, req: AuthRequest) => {
   const topic = await Topic.findByPk(topicId);
   if (!topic) return { ok: false, status: 404, error: 'Topic not found' } as const;
-  if (topic.type !== 'knowledge') return { ok: false, status: 400, error: 'Only knowledge topics support pages' } as const;
   if (!req.user || req.user.role !== 'teacher' || topic.created_by !== req.user.id) {
     return { ok: false, status: 403, error: 'Access denied' } as const;
   }
@@ -111,9 +110,6 @@ export const getPagesByTopic = async (req: Request, res: Response) => {
         (authReq.user.role === 'teacher' && authReq.user.id === topic.created_by));
     if (topic.status !== 'published' && !canViewPrivate) {
       return res.status(404).json({ success: false, error: 'Topic not found' });
-    }
-    if (topic.type !== 'knowledge') {
-      return res.status(400).json({ success: false, error: 'Only knowledge topics have pages' });
     }
 
     const pages = await TopicPage.findAll({

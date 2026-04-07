@@ -10,7 +10,6 @@ import DashboardPage from './pages/DashboardPage';
 import TopicListPage from './pages/TopicListPage';
 import TopicCreatePage from './pages/TopicCreatePage';
 import TopicDetailPage from './pages/TopicDetailPage';
-import KnowledgeEditorPage from './pages/KnowledgeEditorPage';
 import WebsiteEditorPage from './pages/WebsiteEditorPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppShell from './components/layout/AppShell';
@@ -154,12 +153,10 @@ function TopicEditorRouter() {
     return <LoadingOverlay message="加载中..." />;
   }
 
-  if (!topic) {
-    if (failed) {
-      return <Navigate to="/topics" replace />;
-    }
+  if (!topic || failed) {
     return <Navigate to="/topics" replace />;
   }
 
-  return topic.type === 'website' ? <WebsiteEditorPage /> : <KnowledgeEditorPage />;
+  // All topics now use the website editor
+  return <WebsiteEditorPage />;
 }

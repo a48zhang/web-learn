@@ -22,6 +22,10 @@ const formatTopic = (topic: any) => ({
     }
     : undefined,
   status: topic.status,
+  filesSnapshot: (() => { try { return topic.files_snapshot ? JSON.parse(topic.files_snapshot) : null; } catch { return null; } })(),
+  chatHistory: (() => { try { return topic.chat_history ? JSON.parse(topic.chat_history) : null; } catch { return null; } })(),
+  publishedUrl: topic.published_url ?? null,
+  shareLink: topic.share_link ?? null,
   createdAt: topic.createdAt.toISOString(),
   updatedAt: topic.updatedAt.toISOString(),
 });
@@ -86,17 +90,15 @@ export const createTopic = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ success: false, error: 'Only teachers can create topics' });
     }
 
-    const { title, description, type = 'knowledge' } = req.body;
+    const { title, description } = req.body;
     if (!title) {
       return res.status(400).json({ success: false, error: 'Title is required' });
     }
 
-    const normalizedType = type === 'website' ? 'website' : 'knowledge';
-
     const topic = await Topic.create({
       title,
       description,
-      type: normalizedType,
+      type: 'website',
       website_url: null,
       created_by: req.user.id,
       status: 'draft',
@@ -112,20 +114,10 @@ export const createTopic = async (req: AuthRequest, res: Response) => {
 // Get topic list (public for published, teachers also see own drafts/closed)
 export const getTopics = async (req: AuthRequest | any, res: Response) => {
   try {
-    const { type } = req.query as { type?: string };
-
     const basePublished: any = { status: 'published' };
-    if (type === 'knowledge' || type === 'website') {
-      basePublished.type = type;
-    }
-
     let where: any = basePublished;
     if (req.user?.role === 'teacher') {
-      const own: any = { created_by: req.user.id };
-      if (type === 'knowledge' || type === 'website') {
-        own.type = type;
-      }
-      where = { [Op.or]: [basePublished, own] };
+      where = { [Op.or]: [basePublished, { created_by: req.user.id }] };
     }
 
     const topics = await Topic.findAll({
@@ -190,21 +182,10 @@ export const updateTopic = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
 
-    const { title, description, type } = req.body;
-
-    // Type-switching protection: if topic already has website content, forbid switching away from website type
-    if (type !== undefined && topic.website_url && type !== 'website') {
-      return res
-        .status(400)
-        .json({ success: false, error: '已有网站内容的专题不能切换为其他类型' });
-    }
+    const { title, description } = req.body;
 
     if (title !== undefined) topic.title = title;
     if (description !== undefined) topic.description = description;
-    if (type !== undefined) topic.type = type === 'website' ? 'website' : 'knowledge';
-    if (topic.type === 'knowledge') {
-      topic.website_url = null;
-    }
 
     await topic.save();
     return res.json({ success: true, data: formatTopic(topic) });
@@ -305,9 +286,6 @@ export const uploadWebsite = async (req: AuthRequest, res: Response) => {
   if (!ensureTopicOwner(topic, req)) {
     return res.status(403).json({ success: false, error: 'Access denied' });
   }
-  if (topic.type !== 'website') {
-    return res.status(400).json({ success: false, error: '只有网站型专题才能上传网站代码' });
-  }
 
   const storageService = getStorageService();
   let tempDir: string | undefined;
@@ -398,10 +376,6 @@ export const getWebsiteStats = async (req: AuthRequest, res: Response) => {
   if (!ensureTopicOwner(topic, req)) {
     return res.status(403).json({ success: false, error: 'Access denied' });
   }
-  if (topic.type !== 'website') {
-    return res.status(400).json({ success: false, error: '该专题不是网站型专题' });
-  }
-
   const storageService = getStorageService();
   const prefix = `topics/${topicIdStr}/`;
 
@@ -429,5 +403,61 @@ export const getWebsiteStats = async (req: AuthRequest, res: Response) => {
       success: false,
       error: '获取网站统计信息失败',
     });
+  }
+};
+
+export const saveFilesSnapshot = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, error: 'Not authorized' });
+    }
+    const topicId = parseTopicId(req.params.id);
+    if (!topicId) {
+      return res.status(400).json({ success: false, error: 'Invalid topic ID' });
+    }
+    const topic = await Topic.findByPk(topicId);
+    if (!topic) {
+      return res.status(404).json({ success: false, error: 'Topic not found' });
+    }
+    if (!ensureTopicOwner(topic, req)) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+    const { files } = req.body;
+    if (!files || typeof files !== 'object') {
+      return res.status(400).json({ success: false, error: 'files object is required' });
+    }
+    await topic.update({ files_snapshot: JSON.stringify(files) });
+    return res.json({ success: true, message: 'Snapshot saved' });
+  } catch (error) {
+    console.error('saveFilesSnapshot error:', error);
+    return res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+};
+
+export const saveChatHistory = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, error: 'Not authorized' });
+    }
+    const topicId = parseTopicId(req.params.id);
+    if (!topicId) {
+      return res.status(400).json({ success: false, error: 'Invalid topic ID' });
+    }
+    const topic = await Topic.findByPk(topicId);
+    if (!topic) {
+      return res.status(404).json({ success: false, error: 'Topic not found' });
+    }
+    if (!ensureTopicOwner(topic, req)) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+    const { messages } = req.body;
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({ success: false, error: 'messages array is required' });
+    }
+    await topic.update({ chat_history: JSON.stringify(messages) });
+    return res.json({ success: true, message: 'Chat history saved' });
+  } catch (error) {
+    console.error('saveChatHistory error:', error);
+    return res.status(500).json({ success: false, error: 'Internal server error' });
   }
 };

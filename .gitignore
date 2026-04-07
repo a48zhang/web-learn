@@ -41,5 +41,6 @@ temp/
 
 # Uploads
 uploads//.worktrees/
+shared/package-lock.json
 
 .superpowers

@@ -9,6 +9,8 @@ import {
   uploadWebsite,
   deleteWebsite,
   getWebsiteStats,
+  saveFilesSnapshot,
+  saveChatHistory,
 } from '../controllers/topicController';
 import { internalAuthMiddleware } from '@web-learn/shared';
 import { optionalAuthMiddleware } from '../middlewares/optionalAuthMiddleware';
@@ -31,5 +33,7 @@ router.post('/:id/website/upload', uploadLimiter, internalAuthMiddleware, upload
 router.put('/:id/website/upload', uploadLimiter, internalAuthMiddleware, upload.single('file'), uploadWebsite);
 router.delete('/:id/website', writeLimiter, internalAuthMiddleware, deleteWebsite);
 router.get('/:id/website/stats', readLimiter, internalAuthMiddleware, getWebsiteStats);
+router.put('/:id/files', writeLimiter, internalAuthMiddleware, saveFilesSnapshot);
+router.put('/:id/chat-history', writeLimiter, internalAuthMiddleware, saveChatHistory);
 
 export default router;

@@ -35,8 +35,9 @@ function TreeNode({
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (confirm(`确定删除 ${node.path} 吗？`)) {
-      void Promise.resolve(onDeleteFile(node.path)).catch(() => {
-        // Error toast is handled by parent component
+      void Promise.resolve(onDeleteFile(node.path)).catch((error) => {
+        console.error('Delete file callback failed:', error);
+        // User-facing error toast is handled by parent component
       });
     }
   };

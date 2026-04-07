@@ -33,15 +33,16 @@ export const useThemeStore = create<ThemeState>()(
       name: 'theme-storage',
       partialize: (state) => ({ theme: state.theme }),
       onRehydrateStorage: () => (state, error) => {
+        const root = window.document.documentElement;
         if (error || !state) {
-          // No saved state: fall back to system preference
+          // No saved state: fall back to system preference and update store
           const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
           const theme = prefersDark ? 'dark' : 'light';
-          const root = window.document.documentElement;
           if (theme === 'dark') root.classList.add('dark');
           else root.classList.remove('dark');
+          useThemeStore.setState({ theme });
         } else if (state.theme === 'dark') {
-          window.document.documentElement.classList.add('dark');
+          root.classList.add('dark');
         }
       },
     }

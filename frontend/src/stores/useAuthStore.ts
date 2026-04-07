@@ -12,6 +12,8 @@ interface AuthState {
   register: (username: string, email: string, password: string, role: 'teacher' | 'student') => Promise<void>;
   logout: () => void;
   checkAuth: () => Promise<void>;
+  updateUser: (data: { username?: string }) => Promise<void>;
+  changePassword: (newPassword: string) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -90,6 +92,24 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
           });
         }
+      },
+
+      updateUser: async (data: { username?: string }) => {
+        // Optimistic update
+        const currentUser = get().user;
+        if (currentUser) {
+          set({ user: { ...currentUser, ...data } });
+        }
+        // TODO: Add API call when backend is ready
+        // await api.patch('/users/me', data);
+      },
+
+      changePassword: async (_newPassword: string) => {
+        // TODO: Add API call when backend is ready
+        // await api.post('/users/me/change-password', { newPassword });
+
+        // Security: logout after password change
+        get().logout();
       },
     }),
     {

@@ -3,11 +3,11 @@ import type { AIChatMessage, AgentResponse } from '@web-learn/shared';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
-const getAuthToken = () => localStorage.getItem('auth_token') || '';
+const getAuthToken = () => localStorage.getItem('auth_token');
 
-const createLlmClient = () =>
+const createLlmClient = (token: string) =>
   new OpenAI({
-    apiKey: getAuthToken(),
+    apiKey: token,
     baseURL: `${API_BASE_URL}/llm`,
     dangerouslyAllowBrowser: true,
   });
@@ -18,10 +18,10 @@ export async function sendChatMessage(
 ): Promise<AgentResponse | null> {
   try {
     const token = getAuthToken();
-    if (!token) {
+    if (!token?.trim()) {
       throw new Error('Missing auth token');
     }
-    const llmClient = createLlmClient();
+    const llmClient = createLlmClient(token);
 
     const response = await llmClient.chat.completions.create({
       model: import.meta.env.VITE_LLM_MODEL || 'gpt-4o',

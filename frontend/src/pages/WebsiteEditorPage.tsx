@@ -111,8 +111,13 @@ function WebsiteEditorPage() {
   }, []);
 
   const handleDeleteFile = useCallback(async (path: string) => {
-    deleteFile(path);
-    await deleteFileWC(path);
+    try {
+      await deleteFileWC(path);
+      deleteFile(path);
+    } catch (error) {
+      console.error('File deletion failed:', error);
+      toast.error('删除文件失败，请稍后重试');
+    }
   }, [deleteFile, deleteFileWC]);
 
   if (loading) {

@@ -41,7 +41,7 @@ export interface Topic {
   createdBy: string;
   status: TopicStatusType;
   filesSnapshot?: Record<string, string> | null;
-  chatHistory?: any[] | null;
+  chatHistory?: AIChatMessage[] | null;
   publishedUrl?: string | null;
   shareLink?: string | null;
   createdAt: string;

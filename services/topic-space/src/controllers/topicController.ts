@@ -22,8 +22,8 @@ const formatTopic = (topic: any) => ({
     }
     : undefined,
   status: topic.status,
-  filesSnapshot: topic.files_snapshot ? JSON.parse(topic.files_snapshot) : null,
-  chatHistory: topic.chat_history ? JSON.parse(topic.chat_history) : null,
+  filesSnapshot: (() => { try { return topic.files_snapshot ? JSON.parse(topic.files_snapshot) : null; } catch { return null; } })(),
+  chatHistory: (() => { try { return topic.chat_history ? JSON.parse(topic.chat_history) : null; } catch { return null; } })(),
   publishedUrl: topic.published_url ?? null,
   shareLink: topic.share_link ?? null,
   createdAt: topic.createdAt.toISOString(),

@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { useAgentRuntime } from '../agent/useAgentRuntime';
+import { useAgentStore } from '../stores/useAgentStore';
 import { topicApi, topicFileApi } from '../services/api';
-import { chatWithTools } from '../services/llmApi';
 import { getApiErrorMessage } from '../utils/errors';
 import type { AgentMessage } from '@web-learn/shared';
 
@@ -11,11 +12,12 @@ interface AIChatSidebarProps {
   title?: string;
 }
 
-function AIChatSidebar({ topicId, title = '学习助手' }: AIChatSidebarProps) {
+function AIChatSidebar({ topicId, title = 'AI 助手' }: AIChatSidebarProps) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [messages, setMessages] = useState<AgentMessage[]>([]);
+  const { runAgentLoop, visibleMessages } = useAgentRuntime();
+  const runState = useAgentStore((s) => s.runState);
+  const setVisibleMessages = useAgentStore((s) => s.setVisibleMessages);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load chat history on mount
@@ -27,16 +29,16 @@ function AIChatSidebar({ topicId, title = '学习助手' }: AIChatSidebarProps) 
           const visible: AgentMessage[] = data.chatHistory
             .filter((m: any) => m.role === 'user' || m.role === 'assistant')
             .map((m: any) => ({ role: m.role as 'user' | 'assistant', content: m.content || '' }));
-          setMessages(visible);
+          setVisibleMessages(visible);
         }
       } catch {
         // Silently fail — start with empty chat
       }
     };
     fetchTopic();
-  }, [topicId]);
+  }, [topicId, setVisibleMessages]);
 
-  // Debounced save function
+  // Debounced save function — only visible messages
   const debouncedSave = useCallback(
     (msgs: AgentMessage[]) => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -58,35 +60,26 @@ function AIChatSidebar({ topicId, title = '学习助手' }: AIChatSidebarProps) 
     };
   }, []);
 
+  // Save on visible message changes
+  useEffect(() => {
+    if (visibleMessages.length > 0) {
+      debouncedSave(visibleMessages);
+    }
+  }, [visibleMessages, debouncedSave]);
+
   const handleSend = async () => {
     const content = input.trim();
-    if (!content || loading) return;
-
-    const userMsg: AgentMessage = { role: 'user', content };
-    const nextMessages: AgentMessage[] = [...messages, userMsg];
-    setMessages(nextMessages);
+    if (!content || runState.isRunning) return;
     setInput('');
-    setLoading(true);
+    await runAgentLoop(content);
+  };
 
+  const handleClearChat = async () => {
+    setVisibleMessages([]);
     try {
-      const completion = await chatWithTools(nextMessages);
-      const assistantMsg = completion.choices?.[0]?.message;
-      if (assistantMsg) {
-        const reply: AgentMessage = { role: 'assistant', content: assistantMsg.content || '' };
-        const updated = [...nextMessages, reply];
-        setMessages(updated);
-        debouncedSave(updated);
-      }
-    } catch (error: unknown) {
-      const errMsg: AgentMessage = {
-        role: 'assistant',
-        content: `请求失败：${getApiErrorMessage(error, '未知错误')}`,
-      };
-      const updated = [...nextMessages, errMsg];
-      setMessages(updated);
-      debouncedSave(updated);
-    } finally {
-      setLoading(false);
+      await topicFileApi.saveChatHistory(topicId, []);
+    } catch {
+      // Silently fail
     }
   };
 
@@ -97,13 +90,16 @@ function AIChatSidebar({ topicId, title = '学习助手' }: AIChatSidebarProps) 
     }
   };
 
-  const handleClearChat = async () => {
-    setMessages([]);
-    try {
-      await topicFileApi.saveChatHistory(topicId, []);
-    } catch {
-      // Silently fail
-    }
+  const getToolActionText = (toolName: string): string => {
+    const map: Record<string, string> = {
+      read_file: '读取文件',
+      write_file: '写入文件',
+      create_file: '创建文件',
+      delete_file: '删除文件',
+      move_file: '移动文件',
+      list_files: '列出文件',
+    };
+    return map[toolName] || '执行工具';
   };
 
   return (
@@ -120,7 +116,7 @@ function AIChatSidebar({ topicId, title = '学习助手' }: AIChatSidebarProps) 
           <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
             <h3 className="font-semibold text-gray-900">{title}</h3>
             <div className="flex items-center gap-2">
-              {messages.length > 0 && (
+              {visibleMessages.length > 0 && (
                 <button
                   type="button"
                   onClick={handleClearChat}
@@ -139,10 +135,12 @@ function AIChatSidebar({ topicId, title = '学习助手' }: AIChatSidebarProps) 
             </div>
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
-            {messages.length === 0 && (
-              <p className="text-sm text-gray-500">你可以询问任何关于本专题的问题。</p>
+            {visibleMessages.length === 0 && (
+              <p className="text-sm text-gray-500">
+                让助手读取或修改项目文件。
+              </p>
             )}
-            {messages.map((message, idx) => (
+            {visibleMessages.map((message, idx) => (
               <div
                 key={`${message.role}-${idx}`}
                 className={`rounded-lg p-3 text-sm ${
@@ -162,22 +160,38 @@ function AIChatSidebar({ topicId, title = '学习助手' }: AIChatSidebarProps) 
                 )}
               </div>
             ))}
-            {loading && <p className="text-xs text-gray-500">助手思考中...</p>}
+
+            {/* Tool activity indicator */}
+            {runState.isRunning && runState.currentToolName && (
+              <div className="rounded-lg p-3 text-sm bg-blue-50 border border-blue-200 mr-8 text-blue-700">
+                {runState.currentToolPath
+                  ? `正在${getToolActionText(runState.currentToolName)}：${runState.currentToolPath}`
+                  : `正在调用工具：${runState.currentToolName}`}
+              </div>
+            )}
+            {runState.isRunning && !runState.currentToolName && (
+              <p className="text-xs text-gray-500">助手思考中...</p>
+            )}
+            {runState.error && (
+              <div className="rounded-lg p-3 text-sm bg-red-50 border border-red-200 mr-8 text-red-700">
+                工具执行失败：{runState.error}
+              </div>
+            )}
           </div>
           <div className="p-3 border-t border-gray-200 space-y-2">
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               rows={3}
-              placeholder="输入你的问题..."
-              disabled={loading}
+              placeholder="描述你想要的更改..."
+              disabled={runState.isRunning}
             />
             <button
               type="button"
               onClick={handleSend}
-              disabled={loading || !input.trim()}
+              disabled={runState.isRunning || !input.trim()}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-md py-2 text-sm disabled:opacity-50"
             >
               发送

@@ -200,3 +200,5 @@ export interface EditorState {
   isWebContainerReady: boolean;
   previewUrl: string | null;
 }
+
+export type { AgentToolDefinition, AgentToolResult, AgentMessage, AgentRunState } from '../agent/types';

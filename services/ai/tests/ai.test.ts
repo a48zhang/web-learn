@@ -128,7 +128,7 @@ describe('AI API', () => {
     expect(response.status).toBe(400);
   });
 
-  it('rejects oversized message list', async () => {
+  it('rejects message list exceeding 100 messages', async () => {
     (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
     mockUserModel.findByPk.mockResolvedValue({
       id: 9,

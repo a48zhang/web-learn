@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { topicApi, topicFileApi } from '../services/api';
@@ -106,8 +106,6 @@ function AIChatSidebar({ topicId, title = '学习助手' }: AIChatSidebarProps) 
     }
   };
 
-  const visibleMessages = useMemo(() => messages, [messages]);
-
   return (
     <>
       <button
@@ -122,7 +120,7 @@ function AIChatSidebar({ topicId, title = '学习助手' }: AIChatSidebarProps) 
           <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
             <h3 className="font-semibold text-gray-900">{title}</h3>
             <div className="flex items-center gap-2">
-              {visibleMessages.length > 0 && (
+              {messages.length > 0 && (
                 <button
                   type="button"
                   onClick={handleClearChat}
@@ -141,10 +139,10 @@ function AIChatSidebar({ topicId, title = '学习助手' }: AIChatSidebarProps) 
             </div>
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
-            {visibleMessages.length === 0 && (
+            {messages.length === 0 && (
               <p className="text-sm text-gray-500">你可以询问任何关于本专题的问题。</p>
             )}
-            {visibleMessages.map((message, idx) => (
+            {messages.map((message, idx) => (
               <div
                 key={`${message.role}-${idx}`}
                 className={`rounded-lg p-3 text-sm ${

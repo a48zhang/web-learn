@@ -32,13 +32,19 @@ export const runMigrations = async () => {
     }
 
     try {
+      await sequelize.getQueryInterface().describeTable('auth_users');
+      await sequelize.query("UPDATE auth_users SET role = 'user' WHERE role IN ('teacher', 'student')");
       await sequelize.query(
         "ALTER TABLE auth_users MODIFY COLUMN role ENUM('admin', 'user') NOT NULL DEFAULT 'user'"
       );
-      await sequelize.query("UPDATE auth_users SET role = 'user' WHERE role IN ('teacher', 'student')");
       console.log('[migration] Updated auth_users role enum and data');
     } catch (error) {
-      console.log('[migration] auth_users role enum update skipped or already applied', error);
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes('Unknown table') || message.includes("doesn't exist")) {
+        console.log('[migration] auth_users table not found, skipped role migration');
+      } else {
+        throw error;
+      }
     }
 
     console.log('[migration] Completed successfully');

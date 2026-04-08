@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { AIChatAgentType, AIChatMessage } from '@web-learn/shared';
-import { aiApi } from '../services/api';
+import { aiApi, topicApi, topicFileApi } from '../services/api';
 import { getApiErrorMessage } from '../utils/errors';
 
 interface AIChatSidebarProps {
@@ -16,6 +16,7 @@ function AIChatSidebar({ topicId, agentType, title }: AIChatSidebarProps) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState<AIChatMessage[]>([]);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const buttonText = title || (agentType === 'building' ? '搭建助手' : '学习助手');
 
@@ -24,16 +25,50 @@ function AIChatSidebar({ topicId, agentType, title }: AIChatSidebarProps) {
     [messages]
   );
 
+  // Load chat history on mount
+  useEffect(() => {
+    const fetchTopic = async () => {
+      try {
+        const data = await topicApi.getById(topicId);
+        if (data.chatHistory && Array.isArray(data.chatHistory)) {
+          setMessages(data.chatHistory);
+        }
+      } catch {
+        // Silently fail — start with empty chat
+      }
+    };
+    fetchTopic();
+  }, [topicId]);
+
+  // Debounced save function
+  const debouncedSave = useCallback(
+    (msgs: AIChatMessage[]) => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(async () => {
+        try {
+          await topicFileApi.saveChatHistory(topicId, msgs);
+        } catch {
+          // Silently fail — will retry on next message
+        }
+      }, 2000);
+    },
+    [topicId]
+  );
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, []);
+
   const handleSend = async () => {
     const content = input.trim();
     if (!content || loading) return;
     if (!/^\d+$/.test(topicId)) {
       setMessages((prev) => [
         ...prev,
-        {
-          role: 'assistant',
-          content: '请求失败：无效的专题ID',
-        },
+        { role: 'assistant', content: '请求失败：无效的专题ID' },
       ]);
       return;
     }
@@ -49,18 +84,28 @@ function AIChatSidebar({ topicId, agentType, title }: AIChatSidebarProps) {
       });
       const assistant = response.choices?.[0]?.message;
       if (assistant) {
-        setMessages((prev) => [...prev, assistant as AIChatMessage]);
+        const updated = [...nextMessages, assistant as AIChatMessage];
+        setMessages(updated);
+        debouncedSave(updated);
       }
     } catch (error: unknown) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: `请求失败：${getApiErrorMessage(error, '未知错误')}`,
-        },
-      ]);
+      const errorMsg: AIChatMessage[] = [
+        ...nextMessages,
+        { role: 'assistant', content: `请求失败：${getApiErrorMessage(error, '未知错误')}` },
+      ];
+      setMessages(errorMsg);
+      debouncedSave(errorMsg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleClearChat = async () => {
+    setMessages([]);
+    try {
+      await topicFileApi.saveChatHistory(topicId, []);
+    } catch {
+      // Silently fail
     }
   };
 
@@ -77,13 +122,24 @@ function AIChatSidebar({ topicId, agentType, title }: AIChatSidebarProps) {
         <aside className="fixed top-0 right-0 h-full w-full sm:w-[420px] bg-white border-l border-gray-200 shadow-2xl z-50 flex flex-col">
           <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
             <h3 className="font-semibold text-gray-900">{buttonText}</h3>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              关闭
-            </button>
+            <div className="flex items-center gap-2">
+              {visibleMessages.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearChat}
+                  className="text-xs text-gray-500 hover:text-red-500"
+                >
+                  清空对话
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                关闭
+              </button>
+            </div>
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
             {visibleMessages.length === 0 && (

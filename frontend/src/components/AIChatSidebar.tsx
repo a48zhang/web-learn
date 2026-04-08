@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { AIChatAgentType, AIChatMessage } from '@web-learn/shared';
-import { aiApi } from '../services/api';
+import { aiApi, topicApi, topicFileApi } from '../services/api';
 import { getApiErrorMessage } from '../utils/errors';
 
 interface AIChatSidebarProps {
@@ -23,6 +23,29 @@ function AIChatSidebar({ topicId, agentType, title }: AIChatSidebarProps) {
     () => messages.filter((message) => message.role === 'user' || message.role === 'assistant'),
     [messages]
   );
+
+  // Load chat history on mount
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const data = await topicApi.getById(topicId);
+        if (data.chatHistory && Array.isArray(data.chatHistory)) {
+          setMessages(data.chatHistory);
+        }
+      } catch {
+        // Silently fail — start with empty chat
+      }
+    };
+    fetchHistory();
+  }, [topicId]);
+
+  const saveMessages = async (msgs: AIChatMessage[]) => {
+    try {
+      await topicFileApi.saveChatHistory(topicId, msgs);
+    } catch {
+      // Silently fail — will retry on next save
+    }
+  };
 
   const handleSend = async () => {
     const content = input.trim();
@@ -49,18 +72,31 @@ function AIChatSidebar({ topicId, agentType, title }: AIChatSidebarProps) {
       });
       const assistant = response.choices?.[0]?.message;
       if (assistant) {
-        setMessages((prev) => [...prev, assistant as AIChatMessage]);
+        const updated = [...nextMessages, assistant as AIChatMessage];
+        setMessages(updated);
+        await saveMessages(updated);
       }
     } catch (error: unknown) {
-      setMessages((prev) => [
-        ...prev,
+      const errorMsg = [
+        ...nextMessages,
         {
           role: 'assistant',
           content: `请求失败：${getApiErrorMessage(error, '未知错误')}`,
         },
-      ]);
+      ];
+      setMessages(errorMsg);
+      await saveMessages(errorMsg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleClearChat = async () => {
+    setMessages([]);
+    try {
+      await topicFileApi.saveChatHistory(topicId, []);
+    } catch {
+      // Silently fail
     }
   };
 
@@ -77,13 +113,24 @@ function AIChatSidebar({ topicId, agentType, title }: AIChatSidebarProps) {
         <aside className="fixed top-0 right-0 h-full w-full sm:w-[420px] bg-white border-l border-gray-200 shadow-2xl z-50 flex flex-col">
           <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
             <h3 className="font-semibold text-gray-900">{buttonText}</h3>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              关闭
-            </button>
+            <div className="flex items-center gap-2">
+              {visibleMessages.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearChat}
+                  className="text-xs text-gray-500 hover:text-red-500"
+                >
+                  清空对话
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                关闭
+              </button>
+            </div>
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
             {visibleMessages.length === 0 && (

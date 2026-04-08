@@ -5,7 +5,7 @@ import DashboardPage from './DashboardPage';
 const navigateMock = vi.hoisted(() => vi.fn());
 const setMetaMock = vi.hoisted(() => vi.fn());
 const authState = vi.hoisted(() => ({
-  user: { username: 'alice', role: 'student' as const },
+  user: { username: 'alice', role: 'user' as const },
 }));
 
 vi.mock('../stores/useAuthStore', () => ({
@@ -28,20 +28,20 @@ describe('DashboardPage', () => {
   beforeEach(() => {
     navigateMock.mockReset();
     setMetaMock.mockReset();
-    authState.user = { username: 'alice', role: 'student' };
+    authState.user = { username: 'alice', role: 'user' };
   });
 
-  it('shows student quick actions for topics', () => {
+  it('shows dashboard quick actions for topics', () => {
     render(<DashboardPage />);
 
     expect(screen.getByText('控制台')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '去浏览' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '开始创建' })).toBeInTheDocument();
   });
 
   it('navigates to topics from quick actions', () => {
     render(<DashboardPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: '去浏览' }));
+    fireEvent.click(screen.getByRole('button', { name: '查看专题' }));
 
     expect(navigateMock).toHaveBeenCalledWith('/topics');
   });

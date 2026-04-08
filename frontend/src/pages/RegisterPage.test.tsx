@@ -28,7 +28,7 @@ describe('RegisterPage', () => {
     errorMock.mockReset();
   });
 
-  it('submits teacher registration with the selected role', async () => {
+  it('submits registration successfully', async () => {
     registerMock.mockResolvedValue(undefined);
 
     render(
@@ -41,11 +41,10 @@ describe('RegisterPage', () => {
     fireEvent.change(screen.getByLabelText('邮箱地址'), { target: { value: 'alice@example.com' } });
     fireEvent.change(screen.getByLabelText('密码'), { target: { value: 'secret123' } });
     fireEvent.change(screen.getByLabelText('确认密码'), { target: { value: 'secret123' } });
-    fireEvent.click(screen.getByDisplayValue('teacher'));
     fireEvent.click(screen.getByRole('button', { name: '注册' }));
 
     await waitFor(() => {
-      expect(registerMock).toHaveBeenCalledWith('alice', 'alice@example.com', 'secret123', 'teacher');
+      expect(registerMock).toHaveBeenCalledWith('alice', 'alice@example.com', 'secret123');
     });
     expect(successMock).toHaveBeenCalledWith('注册成功！');
     expect(errorMock).not.toHaveBeenCalled();

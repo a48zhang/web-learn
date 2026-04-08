@@ -2,9 +2,11 @@ import app from './app';
 import { config } from './utils/config';
 import { sequelize } from './utils/database';
 import { initStorageService, createNullStorageService } from './services/storageService';
+import { runMigrations } from './utils/migrate';
 
 (async () => {
   await sequelize.authenticate();
+  await runMigrations();
   await sequelize.sync(process.env.NODE_ENV === 'production' ? {} : { alter: true });
   console.log('[topic-space] database synced');
 

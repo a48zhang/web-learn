@@ -42,7 +42,7 @@ function KnowledgeEditorPage() {
 
   const { setMeta } = useLayoutMeta();
 
-  const canEdit = user?.role === 'teacher' && topic?.createdBy === user.id;
+  const canEdit = !!user && !!topic && (user.role === 'admin' || (topic.editors ?? []).includes(user.id));
 
   const refreshPages = useCallback(async (topicId: string, selectedId?: string | null) => {
     const tree = await pageApi.getByTopic(topicId);

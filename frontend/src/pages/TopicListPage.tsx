@@ -118,6 +118,12 @@ function TopicListPage() {
     }
   };
 
+  const isTopicEditor = (topic: Topic) => {
+    if (!user) return false;
+    if (user.role === 'admin') return true;
+    return (topic.editors as string[] | undefined)?.includes(user.id.toString());
+  };
+
   if (loading) {
     return <LoadingOverlay message="加载中..." />;
   }
@@ -128,17 +134,15 @@ function TopicListPage() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
-              {user?.role === 'teacher' ? '专题列表' : '公开专题'}
+              专题列表
             </h1>
           </div>
-          {user?.role === 'teacher' && (
-            <button
-              onClick={() => navigate('/topics/create')}
-              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
-            >
-              创建专题
-            </button>
-          )}
+          <button
+            onClick={() => navigate('/topics/create')}
+            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+          >
+            创建专题
+          </button>
         </div>
 
         {error && (
@@ -149,29 +153,21 @@ function TopicListPage() {
 
         <div className="space-y-4">
           {topics.length === 0 ? (
-            user?.role === 'teacher' ? (
-              <EmptyState
-                icon="folder"
-                title="还没有专题"
-                description="创建您的第一个专题，开始组织教学内容"
-                action={{
-                  label: '创建专题',
-                  onClick: () => navigate('/topics/create'),
-                }}
-              />
-            ) : (
-              <EmptyState
-                icon="folder"
-                title="暂无可用专题"
-                description="教师还没有发布任何专题，请稍后再来查看"
-              />
-            )
+            <EmptyState
+              icon="folder"
+              title="还没有专题"
+              description="创建您的第一个专题，开始组织教学内容"
+              action={{
+                label: '创建专题',
+                onClick: () => navigate('/topics/create'),
+              }}
+            />
           ) : (
             topics.map((topic) => (
               <div key={topic.id} className="bg-white shadow rounded-lg p-6 hover:shadow-md transition-shadow">
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start sm:items-center gap-3 mb-2 flex-wrap">
+                    <div className="flex items-start sm:items-center gap-3 flex-wrap">
                       <h2 className="text-xl font-semibold text-gray-900">
                         <Link to={`/topics/${topic.id}`} className="hover:text-blue-600">
                           {topic.title}
@@ -196,7 +192,7 @@ function TopicListPage() {
                     >
                       查看详情 →
                     </Link>
-                    {user?.role === 'teacher' && topic.createdBy === user.id && (
+                    {isTopicEditor(topic) && (
                       <>
                         <Link
                           to={`/topics/${topic.id}/edit`}
@@ -288,7 +284,7 @@ function TopicListPage() {
           <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-4 space-y-3">
             <h3 className="text-lg font-semibold text-gray-900">删除专题</h3>
             <p className="text-sm text-gray-600">
-              确认删除“{pendingDeleteTopic.title}”？该操作会删除专题及其页面内容。
+              确认删除"{pendingDeleteTopic.title}"？该操作会删除专题及其页面内容。
             </p>
             <div className="flex justify-end gap-2">
               <button

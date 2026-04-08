@@ -118,12 +118,13 @@ describe('Pages API', () => {
       id: 5,
       username: 'teacher',
       email: 'teacher@example.com',
-      role: 'teacher',
+      role: 'user',
     });
     mockTopicModel.findByPk.mockResolvedValue({
       id: 1,
       type: 'knowledge',
       created_by: 5,
+      editors: ['5'],
     });
     mockPageModel.findOne.mockResolvedValue(null);
     mockPageModel.create.mockResolvedValue({
@@ -139,7 +140,10 @@ describe('Pages API', () => {
 
     const response = await request(app)
       .post('/api/topics/1/pages')
-      .set('Authorization', 'Bearer teacher-token')
+      .set('x-user-id', '5')
+      .set('x-user-username', 'teacher')
+      .set('x-user-email', 'teacher@example.com')
+      .set('x-user-role', 'user')
       .send({
         title: 'Page 1',
       });
@@ -168,6 +172,7 @@ describe('Pages API', () => {
       type: 'knowledge',
       status: 'published',
       created_by: 5,
+      editors: ['5'],
     });
 
     const response = await request(app).get('/api/pages/11');
@@ -181,7 +186,7 @@ describe('Pages API', () => {
       id: 5,
       username: 'teacher',
       email: 'teacher@example.com',
-      role: 'teacher',
+      role: 'user',
     });
     const save = jest.fn();
     mockPageModel.findByPk
@@ -201,11 +206,15 @@ describe('Pages API', () => {
       id: 1,
       type: 'knowledge',
       created_by: 5,
+      editors: ['5'],
     });
 
     const response = await request(app)
       .put('/api/pages/100')
-      .set('Authorization', 'Bearer teacher-token')
+      .set('x-user-id', '5')
+      .set('x-user-username', 'teacher')
+      .set('x-user-email', 'teacher@example.com')
+      .set('x-user-role', 'user')
       .send({ title: 'Updated', content: 'Body' });
 
     expect(response.status).toBe(200);
@@ -219,7 +228,7 @@ describe('Pages API', () => {
       id: 5,
       username: 'teacher',
       email: 'teacher@example.com',
-      role: 'teacher',
+      role: 'user',
     });
     mockPageModel.findByPk.mockResolvedValue({
       id: 100,
@@ -235,6 +244,7 @@ describe('Pages API', () => {
       id: 1,
       type: 'knowledge',
       created_by: 5,
+      editors: ['5'],
     });
     mockPageModel.findAll
       .mockResolvedValueOnce([{ id: 101 }])
@@ -243,7 +253,10 @@ describe('Pages API', () => {
 
     const response = await request(app)
       .delete('/api/pages/100')
-      .set('Authorization', 'Bearer teacher-token');
+      .set('x-user-id', '5')
+      .set('x-user-username', 'teacher')
+      .set('x-user-email', 'teacher@example.com')
+      .set('x-user-role', 'user');
 
     expect(response.status).toBe(200);
     expect(response.body.data.deleted).toEqual(expect.arrayContaining(['100', '101']));
@@ -255,17 +268,21 @@ describe('Pages API', () => {
       id: 5,
       username: 'teacher',
       email: 'teacher@example.com',
-      role: 'teacher',
+      role: 'user',
     });
     mockTopicModel.findByPk.mockResolvedValue({
       id: 1,
       type: 'knowledge',
       created_by: 5,
+      editors: ['5'],
     });
 
     const response = await request(app)
       .patch('/api/topics/1/pages/reorder')
-      .set('Authorization', 'Bearer teacher-token')
+      .set('x-user-id', '5')
+      .set('x-user-username', 'teacher')
+      .set('x-user-email', 'teacher@example.com')
+      .set('x-user-role', 'user')
       .send({
         pages: [
           { id: 100, order: 0, parent_page_id: null },

@@ -40,7 +40,7 @@ function WebsiteEditorPage() {
   const { setFileContent, openFile, getAllFiles, loadSnapshot, deleteFile } = useEditorStore();
   const { setMessages } = useChatStore();
 
-  const canEdit = user?.role === 'teacher' && topic?.createdBy === user.id;
+  const canEdit = !!user && !!topic && (user.role === 'admin' || (topic.editors ?? []).includes(user.id));
 
   // Load topic and restore snapshot
   useEffect(() => {

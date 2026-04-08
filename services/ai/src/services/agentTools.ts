@@ -58,7 +58,8 @@ const ensureBuildingAccess = async (topicId: number, context: ToolContext) => {
   if (!topic) {
     throw new Error('Topic not found');
   }
-  if (context.userRole !== 'teacher' || topic.created_by !== context.userId) {
+  const editors = (topic.editors as string[]) || [];
+  if (!editors.includes(context.userId.toString()) && context.userRole !== 'admin') {
     throw new Error('Access denied');
   }
   if (topic.type !== 'knowledge') {

@@ -45,7 +45,7 @@ describe('Auth Service', () => {
     it('registers a new user successfully', async () => {
       mockUserModel.findOne.mockResolvedValue(null);
       mockUserModel.create.mockResolvedValue({
-        id: 1, username: 'alice', email: 'alice@example.com', role: 'student',
+        id: 1, username: 'alice', email: 'alice@example.com', role: 'user',
         createdAt: new Date('2026-04-01T00:00:00.000Z'),
         updatedAt: new Date('2026-04-01T00:00:00.000Z'),
       });
@@ -59,11 +59,11 @@ describe('Auth Service', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.data.token).toBe('mock-jwt-token');
       expect(res.body.data.user).toEqual({
-        id: '1', username: 'alice', email: 'alice@example.com', role: 'student',
+        id: '1', username: 'alice', email: 'alice@example.com', role: 'user',
         createdAt: '2026-04-01T00:00:00.000Z', updatedAt: '2026-04-01T00:00:00.000Z',
       });
       expect(mockUserModel.create).toHaveBeenCalledWith({
-        username: 'alice', email: 'alice@example.com', password: 'password123', role: 'student',
+        username: 'alice', email: 'alice@example.com', password: 'password123', role: 'user',
       });
     });
 
@@ -71,46 +71,6 @@ describe('Auth Service', () => {
       const res = await request(app).post('/api/auth/register').send({ email: 'alice@example.com' });
       expect(res.status).toBe(400);
       expect(res.body).toEqual({ success: false, error: 'Username, email, and password are required' });
-    });
-
-    it('forces public registration to student when admin role is requested', async () => {
-      mockUserModel.findOne.mockResolvedValue(null);
-      mockUserModel.create.mockResolvedValue({
-        id: 4, username: 'eve', email: 'eve@example.com', role: 'student',
-        createdAt: new Date('2026-04-01T00:00:00.000Z'),
-        updatedAt: new Date('2026-04-01T00:00:00.000Z'),
-      });
-      (jwt.sign as jest.Mock).mockReturnValue('forced-student-token');
-
-      const res = await request(app).post('/api/auth/register').send({
-        username: 'eve', email: 'eve@example.com', password: 'password123', role: 'admin',
-      });
-
-      expect(res.status).toBe(201);
-      expect(res.body.data.user.role).toBe('student');
-      expect(mockUserModel.create).toHaveBeenCalledWith({
-        username: 'eve', email: 'eve@example.com', password: 'password123', role: 'student',
-      });
-    });
-
-    it('keeps teacher role when explicitly requested', async () => {
-      mockUserModel.findOne.mockResolvedValue(null);
-      mockUserModel.create.mockResolvedValue({
-        id: 6, username: 'tom', email: 'tom@example.com', role: 'teacher',
-        createdAt: new Date('2026-04-01T00:00:00.000Z'),
-        updatedAt: new Date('2026-04-01T00:00:00.000Z'),
-      });
-      (jwt.sign as jest.Mock).mockReturnValue('teacher-token');
-
-      const res = await request(app).post('/api/auth/register').send({
-        username: 'tom', email: 'tom@example.com', password: 'password123', role: 'teacher',
-      });
-
-      expect(res.status).toBe(201);
-      expect(res.body.data.user.role).toBe('teacher');
-      expect(mockUserModel.create).toHaveBeenCalledWith({
-        username: 'tom', email: 'tom@example.com', password: 'password123', role: 'teacher',
-      });
     });
 
     it('rejects duplicate username or email', async () => {
@@ -127,7 +87,7 @@ describe('Auth Service', () => {
     it('logs in with valid credentials', async () => {
       const comparePassword = jest.fn().mockResolvedValue(true);
       mockUserModel.findOne.mockResolvedValue({
-        id: 2, username: 'bob', email: 'bob@example.com', role: 'teacher',
+        id: 2, username: 'bob', email: 'bob@example.com', role: 'user',
         createdAt: new Date('2026-04-01T00:00:00.000Z'),
         updatedAt: new Date('2026-04-01T00:00:00.000Z'),
         comparePassword,
@@ -155,7 +115,7 @@ describe('Auth Service', () => {
     it('rejects invalid credentials when password does not match', async () => {
       const comparePassword = jest.fn().mockResolvedValue(false);
       mockUserModel.findOne.mockResolvedValue({
-        id: 3, username: 'charlie', email: 'charlie@example.com', role: 'student', comparePassword,
+        id: 3, username: 'charlie', email: 'charlie@example.com', role: 'user', comparePassword,
       });
       const res = await request(app).post('/api/auth/login').send({
         email: 'charlie@example.com', password: 'wrong-password',
@@ -169,9 +129,9 @@ describe('Auth Service', () => {
     it('returns the current user for a valid token', async () => {
       (jwt.verify as jest.Mock).mockReturnValue({ id: 5 });
       mockUserModel.findByPk
-        .mockResolvedValueOnce({ id: 5, username: 'diana', email: 'diana@example.com', role: 'student' })
+        .mockResolvedValueOnce({ id: 5, username: 'diana', email: 'diana@example.com', role: 'user' })
         .mockResolvedValueOnce({
-          id: 5, username: 'diana', email: 'diana@example.com', role: 'student',
+          id: 5, username: 'diana', email: 'diana@example.com', role: 'user',
           createdAt: new Date('2026-04-01T00:00:00.000Z'),
           updatedAt: new Date('2026-04-01T01:00:00.000Z'),
         });

@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { AIChatAgentType, AIChatMessage } from '@web-learn/shared';
@@ -16,7 +16,6 @@ function AIChatSidebar({ topicId, agentType, title }: AIChatSidebarProps) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState<AIChatMessage[]>([]);
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const buttonText = title || (agentType === 'building' ? '搭建助手' : '学习助手');
 
@@ -27,7 +26,7 @@ function AIChatSidebar({ topicId, agentType, title }: AIChatSidebarProps) {
 
   // Load chat history on mount
   useEffect(() => {
-    const fetchTopic = async () => {
+    const fetchHistory = async () => {
       try {
         const data = await topicApi.getById(topicId);
         if (data.chatHistory && Array.isArray(data.chatHistory)) {
@@ -37,30 +36,16 @@ function AIChatSidebar({ topicId, agentType, title }: AIChatSidebarProps) {
         // Silently fail — start with empty chat
       }
     };
-    fetchTopic();
+    fetchHistory();
   }, [topicId]);
 
-  // Debounced save function
-  const debouncedSave = useCallback(
-    (msgs: AIChatMessage[]) => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = setTimeout(async () => {
-        try {
-          await topicFileApi.saveChatHistory(topicId, msgs);
-        } catch {
-          // Silently fail — will retry on next message
-        }
-      }, 2000);
-    },
-    [topicId]
-  );
-
-  // Cleanup timer on unmount
-  useEffect(() => {
-    return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    };
-  }, []);
+  const saveMessages = async (msgs: AIChatMessage[]) => {
+    try {
+      await topicFileApi.saveChatHistory(topicId, msgs);
+    } catch {
+      // Silently fail — will retry on next save
+    }
+  };
 
   const handleSend = async () => {
     const content = input.trim();
@@ -68,7 +53,10 @@ function AIChatSidebar({ topicId, agentType, title }: AIChatSidebarProps) {
     if (!/^\d+$/.test(topicId)) {
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: '请求失败：无效的专题ID' },
+        {
+          role: 'assistant',
+          content: '请求失败：无效的专题ID',
+        },
       ]);
       return;
     }
@@ -86,15 +74,18 @@ function AIChatSidebar({ topicId, agentType, title }: AIChatSidebarProps) {
       if (assistant) {
         const updated = [...nextMessages, assistant as AIChatMessage];
         setMessages(updated);
-        debouncedSave(updated);
+        await saveMessages(updated);
       }
     } catch (error: unknown) {
-      const errorMsg: AIChatMessage[] = [
+      const errorMsg = [
         ...nextMessages,
-        { role: 'assistant', content: `请求失败：${getApiErrorMessage(error, '未知错误')}` },
+        {
+          role: 'assistant',
+          content: `请求失败：${getApiErrorMessage(error, '未知错误')}`,
+        },
       ];
       setMessages(errorMsg);
-      debouncedSave(errorMsg);
+      await saveMessages(errorMsg);
     } finally {
       setLoading(false);
     }

@@ -141,7 +141,7 @@ function WebsiteEditorPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-zinc-900">
+    <div className="fixed inset-0 flex flex-col bg-zinc-900">
       {/* Top Bar */}
       <TopBar onRefreshPreview={handleRefreshPreview} />
 
@@ -152,7 +152,7 @@ function WebsiteEditorPage() {
             {
               id: 'file-tree',
               minSize: 15,
-              defaultSize: 18,
+              defaultSize: 20,
               collapsible: true,
               header: (
                 <div className="flex items-center justify-between w-full">
@@ -172,7 +172,7 @@ function WebsiteEditorPage() {
             {
               id: 'agent-chat',
               minSize: 20,
-              defaultSize: 28,
+              defaultSize: 25,
               collapsible: true,
               header: 'Agent 对话',
               content: <AgentChat onApplyFiles={handleApplyFiles} />,
@@ -180,6 +180,7 @@ function WebsiteEditorPage() {
             {
               id: 'preview',
               minSize: 30,
+              defaultSize: 55,
               collapsible: false,
               header: '应用预览',
               content: (

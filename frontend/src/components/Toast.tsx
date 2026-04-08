@@ -19,7 +19,7 @@ function ToastItem({ toast, onDismiss }: ToastProps) {
     if (toast.type === 'loading') return;
     const timer = setTimeout(() => {
       onDismiss(toast.id);
-    }, toast.duration || 5000);
+    }, toast.duration ?? (toast.type === 'error' ? 5000 : 3000));
 
     return () => clearTimeout(timer);
   }, [toast.id, toast.duration, toast.type, onDismiss]);

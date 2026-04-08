@@ -44,7 +44,12 @@ export default function PreviewPanel({ previewUrl, isReady, error, onRefresh, ex
     return (
       <div className="h-full flex items-center justify-center bg-zinc-900 text-zinc-500">
         <div className="text-center">
-          <div className="text-2xl mb-2">⏳</div>
+          <div className="mb-3">
+            <svg className="animate-spin h-8 w-8 text-zinc-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+          </div>
           <p className="text-sm">WebContainer初始化中...</p>
         </div>
       </div>
@@ -54,8 +59,8 @@ export default function PreviewPanel({ previewUrl, isReady, error, onRefresh, ex
   return (
     <div className="h-full flex flex-col bg-white">
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-3 py-1.5 bg-zinc-100 border-b border-zinc-200 shrink-0">
-        <div className="flex items-center gap-2 text-xs text-zinc-600">
+      <div className="flex items-center justify-between px-3 py-1.5 bg-zinc-800 border-b border-zinc-700 shrink-0">
+        <div className="flex items-center gap-2 text-xs text-zinc-400">
           <span>预览</span>
           {previewUrl && (
             <span className="text-zinc-400 truncate max-w-[200px]">{previewUrl}</span>
@@ -63,7 +68,7 @@ export default function PreviewPanel({ previewUrl, isReady, error, onRefresh, ex
         </div>
         <button
           onClick={handleReload}
-          className="text-zinc-500 hover:text-zinc-700 text-xs px-2 py-1 rounded hover:bg-zinc-200"
+          className="text-zinc-400 hover:text-white text-xs px-2 py-1 rounded hover:bg-zinc-700"
         >
           刷新
         </button>

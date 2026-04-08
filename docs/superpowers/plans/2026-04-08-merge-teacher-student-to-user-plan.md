@@ -1430,3 +1430,77 @@ export interface Topic {
 git add shared/src/types/index.ts
 git commit -m "feat: add editors field to Topic interface"
 ```
+
+---
+
+### Task 12: Update test files for new role model
+
+**Files:**
+- Modify: `services/auth/tests/auth.test.ts`
+- Modify: `services/ai/tests/ai.test.ts`
+- Modify: `services/topic-space/tests/topics.test.ts`
+- Modify: `services/topic-space/tests/pages.test.ts`
+- Modify: `services/gateway/tests/auth-integration.test.ts`
+
+- [ ] **Step 1: Update auth tests — change role references**
+
+In `services/auth/tests/auth.test.ts`, replace all `'student'` and `'teacher'` with `'user'`:
+
+```typescript
+// All role: 'student' → role: 'user'
+// All role: 'teacher' → role: 'user'
+// Remove test "forces public registration to student when admin role is requested"
+// Remove test "keeps teacher role when explicitly requested" (both are now the same role)
+```
+
+In `services/gateway/tests/auth-integration.test.ts`, change line 188:
+```typescript
+// OLD: expect(res.body.data.user.role).toBe('student');
+// NEW: expect(res.body.data.user.role).toBe('user');
+```
+
+- [ ] **Step 2: Update topic-space tests — add editors field to test topics**
+
+In `services/topic-space/tests/topics.test.ts` and `services/topic-space/tests/pages.test.ts`:
+
+All test users now have `role: 'user'`. When creating topics in tests, add `editors: [userId.toString()]` to the topic attributes. The `ensureTopicOwner` → `hasTopicEditAccess` logic now checks `editors.includes(userId.toString())`.
+
+Example pattern for all topic creation in tests:
+
+```typescript
+// When mocking Topic.create, ensure editors is set:
+Topic.create.mockResolvedValue({
+  id: 1,
+  title: 'Test Topic',
+  created_by: 1,
+  editors: ['1'],
+  // ... other fields
+});
+```
+
+For topic.findByPk mocks, add `editors: ['1']` (or the appropriate user ID) to returned objects.
+
+- [ ] **Step 3: Update AI tests — remove teacher-only building test, update mocks**
+
+In `services/ai/tests/ai.test.ts`:
+- Replace all `role: 'student'` with `role: 'user'`
+- Replace all `role: 'teacher'` with `role: 'user'`
+- Remove test "blocks building chat for non-teacher user" — this no longer applies
+- Update topic mocks to include `editors: ['1']` so building access checks pass
+- Update test "rejects building chat for non-owner teacher" → "rejects building chat for non-editor"
+
+- [ ] **Step 4: Run all tests and fix any remaining failures**
+
+```bash
+# If the project has a test runner, run it:
+npm test 2>&1 | head -100
+```
+
+Fix any remaining test failures caused by role references.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add services/auth/tests/auth.test.ts services/ai/tests/ai.test.ts services/topic-space/tests/topics.test.ts services/topic-space/tests/pages.test.ts services/gateway/tests/auth-integration.test.ts
+git commit -m "test: update tests for unified 'user' role and editors-based permissions"
+```

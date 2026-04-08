@@ -13,9 +13,10 @@ interface TopicAttributes {
   chat_history?: string | null;
   published_url?: string | null;
   share_link?: string | null;
+  editors: string[];
 }
 
-interface TopicCreationAttributes extends Optional<TopicAttributes, 'id' | 'description' | 'website_url' | 'status' | 'type' | 'files_snapshot' | 'chat_history' | 'published_url' | 'share_link'> {}
+interface TopicCreationAttributes extends Optional<TopicAttributes, 'id' | 'description' | 'website_url' | 'status' | 'type' | 'files_snapshot' | 'chat_history' | 'published_url' | 'share_link' | 'editors'> {}
 
 class Topic extends Model<TopicAttributes, TopicCreationAttributes> implements TopicAttributes {
   public id!: number;
@@ -29,6 +30,7 @@ class Topic extends Model<TopicAttributes, TopicCreationAttributes> implements T
   public chat_history?: string | null;
   public published_url?: string | null;
   public share_link?: string | null;
+  public editors!: string[];
   public declare createdAt: Date;
   public declare updatedAt: Date;
 }
@@ -49,6 +51,11 @@ Topic.init(
     chat_history: { type: DataTypes.TEXT, allowNull: true },
     published_url: { type: DataTypes.STRING(500), allowNull: true },
     share_link: { type: DataTypes.STRING(500), allowNull: true },
+    editors: {
+      type: DataTypes.JSON,
+      allowNull: false,
+      defaultValue: [],
+    },
   },
   { sequelize, tableName: 'topic_topics', underscored: true }
 );

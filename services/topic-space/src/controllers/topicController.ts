@@ -1,4 +1,3 @@
-import { Op } from 'sequelize';
 import { Response } from 'express';
 import type { Express } from 'express';
 import { AuthenticatedRequest as AuthRequest } from '@web-learn/shared';
@@ -26,6 +25,7 @@ const formatTopic = (topic: any) => ({
   chatHistory: (() => { try { return topic.chat_history ? JSON.parse(topic.chat_history) : null; } catch { return null; } })(),
   publishedUrl: topic.published_url ?? null,
   shareLink: topic.share_link ?? null,
+  editors: topic.editors ?? [],
   createdAt: topic.createdAt.toISOString(),
   updatedAt: topic.updatedAt.toISOString(),
 });
@@ -35,8 +35,11 @@ const parseTopicId = (id: string) => {
   return Number.isNaN(parsed) ? null : parsed;
 };
 
-const ensureTopicOwner = (topic: any, req: AuthRequest) =>
-  req.user && req.user.role === 'teacher' && topic.created_by === req.user.id;
+const hasTopicEditAccess = (topic: any, req: AuthRequest) =>
+  req.user && (topic.editors?.includes(req.user.id.toString()) || req.user.role === 'admin');
+
+const hasTopicViewAccess = (topic: any, req: AuthRequest) =>
+  topic.status === 'published' || hasTopicEditAccess(topic, req);
 
 const ZIP_MAGIC_BYTES = Buffer.from([0x50, 0x4b, 0x03, 0x04]);
 
@@ -80,14 +83,11 @@ const validateUploadedZip = async (file?: Express.Multer.File | null) => {
   return { ok: true } as const;
 };
 
-// Create a new topic (teacher only)
+// Create a new topic
 export const createTopic = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) {
       return res.status(401).json({ success: false, error: 'Not authorized' });
-    }
-    if (req.user.role !== 'teacher') {
-      return res.status(403).json({ success: false, error: 'Only teachers can create topics' });
     }
 
     const { title, description } = req.body;
@@ -102,6 +102,7 @@ export const createTopic = async (req: AuthRequest, res: Response) => {
       website_url: null,
       created_by: req.user.id,
       status: 'draft',
+      editors: [req.user.id.toString()],
     });
 
     return res.status(201).json({ success: true, data: formatTopic(topic) });
@@ -111,23 +112,24 @@ export const createTopic = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Get topic list (public for published, teachers also see own drafts/closed)
+// Get topic list (published for everyone, editors/admin also see draft/closed)
 export const getTopics = async (req: AuthRequest | any, res: Response) => {
   try {
-    const basePublished: any = { status: 'published' };
-    let where: any = basePublished;
-    if (req.user?.role === 'teacher') {
-      where = { [Op.or]: [basePublished, { created_by: req.user.id }] };
-    }
-
     const topics = await Topic.findAll({
-      where,
       order: [['created_at', 'DESC']],
     });
 
+    let filtered = topics;
+    if (req.user?.role !== 'admin') {
+      const uid = req.user?.id?.toString();
+      filtered = topics.filter(
+        (t) => t.status === 'published' || t.editors?.includes(uid)
+      );
+    }
+
     return res.json({
       success: true,
-      data: topics.map((topic) => formatTopic(topic)),
+      data: filtered.map((topic) => formatTopic(topic)),
     });
   } catch (error) {
     console.error('Get topics error:', error);
@@ -147,11 +149,7 @@ export const getTopicById = async (req: AuthRequest | any, res: Response) => {
     if (!topic) {
       return res.status(404).json({ success: false, error: 'Topic not found' });
     }
-    if (
-      topic.status !== 'published' &&
-      !(req.user?.role === 'teacher' && req.user.id === topic.created_by) &&
-      req.user?.role !== 'admin'
-    ) {
+    if (!hasTopicViewAccess(topic, req as AuthRequest)) {
       return res.status(404).json({ success: false, error: 'Topic not found' });
     }
 
@@ -178,7 +176,7 @@ export const updateTopic = async (req: AuthRequest, res: Response) => {
     if (!topic) {
       return res.status(404).json({ success: false, error: 'Topic not found' });
     }
-    if (!ensureTopicOwner(topic, req)) {
+    if (!hasTopicEditAccess(topic, req)) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
 
@@ -209,7 +207,7 @@ export const updateTopicStatus = async (req: AuthRequest, res: Response) => {
     if (!topic) {
       return res.status(404).json({ success: false, error: 'Topic not found' });
     }
-    if (!ensureTopicOwner(topic, req)) {
+    if (!hasTopicEditAccess(topic, req)) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
 
@@ -241,7 +239,7 @@ export const deleteTopic = async (req: AuthRequest, res: Response) => {
     if (!topic) {
       return res.status(404).json({ success: false, error: 'Topic not found' });
     }
-    if (!ensureTopicOwner(topic, req)) {
+    if (!hasTopicEditAccess(topic, req)) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
 
@@ -283,7 +281,7 @@ export const uploadWebsite = async (req: AuthRequest, res: Response) => {
   if (!topic) {
     return res.status(404).json({ success: false, error: '专题不存在' });
   }
-  if (!ensureTopicOwner(topic, req)) {
+  if (!hasTopicEditAccess(topic, req)) {
     return res.status(403).json({ success: false, error: 'Access denied' });
   }
 
@@ -343,7 +341,7 @@ export const deleteWebsite = async (req: AuthRequest, res: Response) => {
     if (!topic) {
       return res.status(404).json({ success: false, error: '专题不存在' });
     }
-    if (!ensureTopicOwner(topic, req)) {
+    if (!hasTopicEditAccess(topic, req)) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
 
@@ -373,7 +371,7 @@ export const getWebsiteStats = async (req: AuthRequest, res: Response) => {
   if (!topic) {
     return res.status(404).json({ success: false, error: '专题不存在' });
   }
-  if (!ensureTopicOwner(topic, req)) {
+  if (!hasTopicEditAccess(topic, req)) {
     return res.status(403).json({ success: false, error: 'Access denied' });
   }
   const storageService = getStorageService();
@@ -419,7 +417,7 @@ export const saveFilesSnapshot = async (req: AuthRequest, res: Response) => {
     if (!topic) {
       return res.status(404).json({ success: false, error: 'Topic not found' });
     }
-    if (!ensureTopicOwner(topic, req)) {
+    if (!hasTopicEditAccess(topic, req)) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
     const { files } = req.body;
@@ -447,7 +445,7 @@ export const saveChatHistory = async (req: AuthRequest, res: Response) => {
     if (!topic) {
       return res.status(404).json({ success: false, error: 'Topic not found' });
     }
-    if (!ensureTopicOwner(topic, req)) {
+    if (!hasTopicEditAccess(topic, req)) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
     const { messages } = req.body;

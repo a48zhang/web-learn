@@ -15,11 +15,11 @@ const serializeUser = (user: User) => ({
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const { username, email, password, role: bodyRole } = req.body;
+    const { username, email, password } = req.body;
     if (!username || !email || !password) {
       return res.status(400).json({ success: false, error: 'Username, email, and password are required' });
     }
-    const role = bodyRole === 'teacher' ? 'teacher' : 'student';
+    const role = 'user';
     const existing = await User.findOne({ where: { [Op.or]: [{ username }, { email }] } });
     if (existing) {
       return res.status(400).json({ success: false, error: 'Username or email already exists' });

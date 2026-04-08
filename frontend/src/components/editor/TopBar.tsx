@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { topicFileApi } from '../../services/api';
 import { useEditorStore } from '../../stores/useEditorStore';
-import { useChatStore } from '../../stores/useChatStore';
+import { useAgentStore } from '../../stores/useAgentStore';
 import { toast } from '../../stores/useToastStore';
 import SaveIndicator from './SaveIndicator';
 
@@ -15,7 +15,7 @@ interface TopBarProps {
 export default function TopBar({ onRefreshPreview, onPublish, onShare }: TopBarProps) {
   const { id } = useParams<{ id: string }>();
   const { getAllFiles, markSaved } = useEditorStore();
-  const { messages } = useChatStore();
+  const visibleMessages = useAgentStore((s) => s.visibleMessages);
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -25,7 +25,7 @@ export default function TopBar({ onRefreshPreview, onPublish, onShare }: TopBarP
       const files = getAllFiles();
       await topicFileApi.saveSnapshot(id, files);
       markSaved();
-      await topicFileApi.saveChatHistory(id, messages as any[]);
+      await topicFileApi.saveChatHistory(id, visibleMessages);
       toast.success('保存成功');
     } catch {
       toast.error('保存失败，请检查网络连接');

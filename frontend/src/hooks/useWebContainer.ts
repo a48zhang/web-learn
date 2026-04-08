@@ -1,6 +1,7 @@
 import { useRef, useState, useCallback } from 'react';
 import { WebContainer } from '@webcontainer/api';
 import { useEditorStore } from '../stores/useEditorStore';
+import { setWebContainerInstance } from '../agent/webcontainer';
 
 let webcontainerInstance: WebContainer | null = null;
 
@@ -42,6 +43,7 @@ export function useWebContainer() {
     try {
       if (!webcontainerInstance) {
         webcontainerInstance = await WebContainer.boot();
+        setWebContainerInstance(webcontainerInstance);
       }
 
       // Write initial files

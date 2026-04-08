@@ -1,8 +1,9 @@
 import { useEffect, useCallback, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import type { Topic, AgentFileOperation } from '@web-learn/shared';
+import type { Topic } from '@web-learn/shared';
 import { topicApi, topicFileApi } from '../services/api';
 import { useAuthStore } from '../stores/useAuthStore';
+import { useAgentStore } from '../stores/useAgentStore';
 import { toast } from '../stores/useToastStore';
 import { getApiErrorMessage } from '../utils/errors';
 import { LoadingOverlay } from '../components/Loading';
@@ -16,7 +17,7 @@ import AgentChat from '../components/editor/AgentChat';
 import PreviewPanel from '../components/editor/PreviewPanel';
 import { useWebContainer } from '../hooks/useWebContainer';
 import { useEditorStore } from '../stores/useEditorStore';
-import { useChatStore } from '../stores/useChatStore';
+import '../agent/tools/index';
 
 function WebsiteEditorPage() {
   const { id } = useParams<{ id: string }>();
@@ -33,12 +34,11 @@ function WebsiteEditorPage() {
     previewUrl,
     error: wcError,
     init: initWC,
-    writeFile: wcWriteFile,
     deleteFile: deleteFileWC,
   } = useWebContainer();
 
-  const { setFileContent, openFile, getAllFiles, loadSnapshot, deleteFile } = useEditorStore();
-  const { setMessages } = useChatStore();
+  const { openFile, getAllFiles, loadSnapshot, deleteFile } = useEditorStore();
+  const setVisibleMessages = useAgentStore((s) => s.setVisibleMessages);
 
   const canEdit = user?.role === 'teacher' && topic?.createdBy === user.id;
 
@@ -56,7 +56,11 @@ function WebsiteEditorPage() {
           loadSnapshot(snapshot);
         }
         if (topicData.chatHistory && Array.isArray(topicData.chatHistory)) {
-          setMessages(topicData.chatHistory);
+          setVisibleMessages(
+            topicData.chatHistory
+              .filter((m: any) => m.role === 'user' || m.role === 'assistant')
+              .map((m: any) => ({ role: m.role, content: m.content || '' }))
+          );
         }
 
         setMeta({
@@ -75,7 +79,7 @@ function WebsiteEditorPage() {
       }
     };
     fetchData();
-  }, [id, setMeta, loadSnapshot, setMessages]);
+  }, [id, setMeta, loadSnapshot, setVisibleMessages]);
 
   // Initialize WebContainer once topic is loaded
   useEffect(() => {
@@ -83,19 +87,6 @@ function WebsiteEditorPage() {
     const currentFiles = getAllFiles();
     initWC(Object.keys(currentFiles).length > 0 ? currentFiles : undefined);
   }, [topic, id, initWC, getAllFiles]);
-
-  // Apply files from Agent response
-  const handleApplyFiles = useCallback(async (operations: AgentFileOperation[]) => {
-    for (const op of operations) {
-      if (op.action === 'create' || op.action === 'update') {
-        if (op.content !== undefined) {
-          setFileContent(op.path, op.content);
-          await wcWriteFile(op.path, op.content);
-        }
-      }
-    }
-    toast.success(`已应用 ${operations.length} 个文件更改`);
-  }, [setFileContent, wcWriteFile]);
 
   const handleOpenFile = useCallback((path: string) => {
     openFile(path);
@@ -175,7 +166,7 @@ function WebsiteEditorPage() {
               defaultSize: 25,
               collapsible: true,
               header: 'Agent 对话',
-              content: <AgentChat onApplyFiles={handleApplyFiles} />,
+              content: <AgentChat />,
             },
             {
               id: 'preview',

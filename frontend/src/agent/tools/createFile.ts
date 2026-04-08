@@ -1,5 +1,6 @@
 import { registerTool } from '../toolRegistry';
 import { wcCreateFile } from '../webcontainer';
+import { useEditorStore } from '../../stores/useEditorStore';
 
 registerTool('create_file', {
   name: 'create_file',
@@ -19,5 +20,6 @@ registerTool('create_file', {
     return { content: 'path is required and must be a string', isError: true };
   }
   await wcCreateFile(path, content);
+  useEditorStore.getState().setFileContent(path, content);
   return { content: `Successfully created file ${path}` };
 });

@@ -9,9 +9,10 @@ interface TopicAttributes {
   website_url?: string | null;
   created_by: number;
   status: 'draft' | 'published' | 'closed';
+  editors: string[];
 }
 
-interface TopicCreationAttributes extends Optional<TopicAttributes, 'id' | 'description' | 'website_url' | 'status' | 'type'> {}
+interface TopicCreationAttributes extends Optional<TopicAttributes, 'id' | 'description' | 'website_url' | 'status' | 'type' | 'editors'> {}
 
 class Topic extends Model<TopicAttributes, TopicCreationAttributes> implements TopicAttributes {
   public id!: number;
@@ -21,6 +22,7 @@ class Topic extends Model<TopicAttributes, TopicCreationAttributes> implements T
   public website_url?: string | null;
   public created_by!: number;
   public status!: 'draft' | 'published' | 'closed';
+  public editors!: string[];
   public declare createdAt: Date;
   public declare updatedAt: Date;
 }
@@ -36,6 +38,11 @@ Topic.init(
     status: {
       type: DataTypes.ENUM('draft', 'published', 'closed'),
       allowNull: false, defaultValue: 'draft',
+    },
+    editors: {
+      type: DataTypes.JSON,
+      allowNull: false,
+      defaultValue: [],
     },
   },
   { sequelize, tableName: 'topic_topics', underscored: true }

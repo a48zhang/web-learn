@@ -7,7 +7,7 @@ interface UserAttributes {
   username: string;
   email: string;
   password: string;
-  role: 'admin' | 'teacher' | 'student';
+  role: 'admin' | 'user';
 }
 
 interface UserCreationAttributes extends Optional<UserAttributes, 'id'> {}
@@ -17,7 +17,7 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   public username!: string;
   public email!: string;
   public password!: string;
-  public role!: 'admin' | 'teacher' | 'student';
+  public role!: 'admin' | 'user';
   public declare createdAt: Date;
   public declare updatedAt: Date;
 
@@ -38,9 +38,9 @@ User.init(
     },
     password: { type: DataTypes.CHAR(60), allowNull: false },
     role: {
-      type: DataTypes.ENUM('admin', 'teacher', 'student'),
+      type: DataTypes.ENUM('admin', 'user'),
       allowNull: false,
-      defaultValue: 'student',
+      defaultValue: 'user',
     },
   },
   {

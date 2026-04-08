@@ -8,7 +8,7 @@ const getSystemPrompt = (agentType: 'learning' | 'building', topic: Topic) => {
   if (agentType === 'building') {
     return [
       '你是专题搭建助手。',
-      '目标：帮助教师创建与编辑专题内容。',
+      '目标：帮助用户创建与编辑专题内容。',
       '你必须优先使用工具读写页面内容。',
       `当前专题：${topic.title}（ID=${topic.id}，type=${topic.type}，status=${topic.status}）`,
     ].join('\n');
@@ -84,11 +84,9 @@ export const chat = async (req: AuthRequest | Request, res: Response) => {
     }
 
     if (agent_type === 'building') {
-      if (authReq.user.role !== 'teacher') {
-        return res.status(403).json({ success: false, error: 'Only teachers can use building assistant' });
-      }
-      if (topic.created_by !== authReq.user.id) {
-        return res.status(403).json({ success: false, error: 'Only topic creator can use building assistant' });
+      const editors = (topic.editors as string[]) || [];
+      if (!editors.includes(authReq.user.id.toString()) && authReq.user.role !== 'admin') {
+        return res.status(403).json({ success: false, error: 'Access denied' });
       }
       if (topic.type !== 'knowledge') {
         return res.status(400).json({ success: false, error: 'Building assistant currently supports knowledge topics only' });

@@ -102,6 +102,7 @@ describe('Topics API', () => {
           type: 'knowledge',
           website_url: null,
           created_by: 2,
+          editors: ['2'],
           status: 'published',
           createdAt: new Date('2026-04-01T00:00:00.000Z'),
           updatedAt: new Date('2026-04-01T00:00:00.000Z'),
@@ -126,7 +127,7 @@ describe('Topics API', () => {
         id: 10,
         username: 'teacher1',
         email: 'teacher@example.com',
-        role: 'teacher',
+        role: 'user',
       });
       mockTopicModel.create.mockResolvedValue({
         id: 7,
@@ -135,6 +136,7 @@ describe('Topics API', () => {
         type: 'website',
         website_url: null,
         created_by: 10,
+        editors: ['10'],
         status: 'draft',
         createdAt: new Date('2026-04-01T00:00:00.000Z'),
         updatedAt: new Date('2026-04-01T00:00:00.000Z'),
@@ -166,7 +168,7 @@ describe('Topics API', () => {
         id: 10,
         username: 'teacher1',
         email: 'teacher@example.com',
-        role: 'teacher',
+        role: 'user',
       });
       mockTopicModel.findByPk.mockResolvedValue({
         id: 8,
@@ -175,6 +177,7 @@ describe('Topics API', () => {
         type: 'website',
         website_url: '/test.zip',
         created_by: 10,
+        editors: ['10'],
         status: 'draft',
         createdAt: new Date('2026-04-01T00:00:00.000Z'),
         updatedAt: new Date('2026-04-01T00:00:00.000Z'),
@@ -196,7 +199,7 @@ describe('Topics API', () => {
         id: 10,
         username: 'teacher1',
         email: 'teacher@example.com',
-        role: 'teacher',
+        role: 'user',
       });
       const save = jest.fn();
       mockTopicModel.findByPk.mockResolvedValue({
@@ -206,6 +209,7 @@ describe('Topics API', () => {
         type: 'knowledge',
         website_url: null,
         created_by: 10,
+        editors: ['10'],
         status: 'draft',
         save,
         createdAt: new Date('2026-04-01T00:00:00.000Z'),
@@ -233,7 +237,7 @@ describe('Topics API', () => {
         id: 10,
         username: 'teacher1',
         email: 'teacher@example.com',
-        role: 'teacher',
+        role: 'user',
       });
       const save = jest.fn();
       mockTopicModel.findByPk.mockResolvedValue({
@@ -243,6 +247,7 @@ describe('Topics API', () => {
         type: 'knowledge',
         website_url: null,
         created_by: 10,
+        editors: ['10'],
         status: 'draft',
         save,
         createdAt: new Date('2026-04-01T00:00:00.000Z'),
@@ -267,7 +272,7 @@ describe('Topics API', () => {
         id: 10,
         username: 'teacher1',
         email: 'teacher@example.com',
-        role: 'teacher',
+        role: 'user',
       });
       mockTopicModel.findByPk.mockResolvedValue({
         id: 7,
@@ -276,6 +281,7 @@ describe('Topics API', () => {
         type: 'knowledge',
         website_url: null,
         created_by: 10,
+        editors: ['10'],
         status: 'draft',
         save: jest.fn(),
         createdAt: new Date('2026-04-01T00:00:00.000Z'),
@@ -296,7 +302,7 @@ describe('Topics API', () => {
         id: 10,
         username: 'teacher1',
         email: 'teacher@example.com',
-        role: 'teacher',
+        role: 'user',
       });
       mockTopicModel.findByPk.mockResolvedValue({
         id: 7,
@@ -305,6 +311,7 @@ describe('Topics API', () => {
         type: 'website',
         website_url: null,
         created_by: 10,
+        editors: ['10'],
         status: 'draft',
         save: jest.fn(),
         createdAt: new Date('2026-04-01T00:00:00.000Z'),
@@ -330,7 +337,7 @@ describe('Topics API', () => {
         id: 10,
         username: 'teacher1',
         email: 'teacher@example.com',
-        role: 'teacher',
+        role: 'user',
       });
       mockTopicModel.findByPk.mockResolvedValue({
         id: 7,
@@ -339,6 +346,7 @@ describe('Topics API', () => {
         type: 'website',
         website_url: null,
         created_by: 10,
+        editors: ['10'],
         status: 'draft',
         save: jest.fn(),
         createdAt: new Date('2026-04-01T00:00:00.000Z'),

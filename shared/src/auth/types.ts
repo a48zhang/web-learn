@@ -2,7 +2,7 @@ export interface InternalUser {
   id: number;
   username: string;
   email: string;
-  role: 'admin' | 'teacher' | 'student';
+  role: 'admin' | 'user';
 }
 
 export interface AuthHeaders {

@@ -5,7 +5,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuthStore } from '../stores/useAuthStore';
 import { toast } from '../stores/useToastStore';
-import { UserRole } from '@web-learn/shared';
 import { getApiErrorMessage } from '../utils/errors';
 
 const registerSchema = z.object({
@@ -13,7 +12,6 @@ const registerSchema = z.object({
   email: z.string().email('请输入有效的邮箱地址'),
   password: z.string().min(6, '密码至少需要6个字符'),
   confirmPassword: z.string(),
-  role: z.enum([UserRole.TEACHER, UserRole.STUDENT]),
 }).refine((data) => data.password === data.confirmPassword, {
   message: '两次输入的密码不一致',
   path: ['confirmPassword'],
@@ -37,14 +35,13 @@ function RegisterPage() {
       email: '',
       password: '',
       confirmPassword: '',
-      role: UserRole.STUDENT,
     },
   });
 
   const onSubmit = async (data: RegisterFormValues) => {
     setError(null);
     try {
-      await registerUser(data.username, data.email, data.password, data.role);
+      await registerUser(data.username, data.email, data.password);
       toast.success('注册成功！');
       navigate('/dashboard');
     } catch (err: unknown) {
@@ -140,40 +137,6 @@ function RegisterPage() {
               />
               {errors.confirmPassword && (
                 <p id="confirmPassword-error" className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                选择角色
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <label className="flex items-center justify-center p-4 border-2 rounded-md cursor-pointer hover:border-blue-500 transition-colors">
-                  <input
-                    type="radio"
-                    value={UserRole.STUDENT}
-                    {...register('role')}
-                    className="sr-only"
-                  />
-                  <div className="text-center">
-                    <div className="text-2xl mb-1">🎓</div>
-                    <div className="font-medium text-gray-900">学生</div>
-                  </div>
-                </label>
-                <label className="flex items-center justify-center p-4 border-2 rounded-md cursor-pointer hover:border-blue-500 transition-colors">
-                  <input
-                    type="radio"
-                    value={UserRole.TEACHER}
-                    {...register('role')}
-                    className="sr-only"
-                  />
-                  <div className="text-center">
-                    <div className="text-2xl mb-1">👨‍🏫</div>
-                    <div className="font-medium text-gray-900">教师</div>
-                  </div>
-                </label>
-              </div>
-              {errors.role && (
-                <p className="mt-1 text-sm text-red-600">{errors.role.message}</p>
               )}
             </div>
           </div>

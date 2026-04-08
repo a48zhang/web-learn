@@ -118,12 +118,13 @@ describe('Pages API', () => {
       id: 5,
       username: 'teacher',
       email: 'teacher@example.com',
-      role: 'teacher',
+      role: 'user',
     });
     mockTopicModel.findByPk.mockResolvedValue({
       id: 1,
       type: 'knowledge',
       created_by: 5,
+      editors: ['5'],
     });
     mockPageModel.findOne.mockResolvedValue(null);
     mockPageModel.create.mockResolvedValue({
@@ -168,6 +169,7 @@ describe('Pages API', () => {
       type: 'knowledge',
       status: 'published',
       created_by: 5,
+      editors: ['5'],
     });
 
     const response = await request(app).get('/api/pages/11');
@@ -181,7 +183,7 @@ describe('Pages API', () => {
       id: 5,
       username: 'teacher',
       email: 'teacher@example.com',
-      role: 'teacher',
+      role: 'user',
     });
     const save = jest.fn();
     mockPageModel.findByPk
@@ -201,6 +203,7 @@ describe('Pages API', () => {
       id: 1,
       type: 'knowledge',
       created_by: 5,
+      editors: ['5'],
     });
 
     const response = await request(app)
@@ -219,7 +222,7 @@ describe('Pages API', () => {
       id: 5,
       username: 'teacher',
       email: 'teacher@example.com',
-      role: 'teacher',
+      role: 'user',
     });
     mockPageModel.findByPk.mockResolvedValue({
       id: 100,
@@ -235,6 +238,7 @@ describe('Pages API', () => {
       id: 1,
       type: 'knowledge',
       created_by: 5,
+      editors: ['5'],
     });
     mockPageModel.findAll
       .mockResolvedValueOnce([{ id: 101 }])
@@ -255,12 +259,13 @@ describe('Pages API', () => {
       id: 5,
       username: 'teacher',
       email: 'teacher@example.com',
-      role: 'teacher',
+      role: 'user',
     });
     mockTopicModel.findByPk.mockResolvedValue({
       id: 1,
       type: 'knowledge',
       created_by: 5,
+      editors: ['5'],
     });
 
     const response = await request(app)

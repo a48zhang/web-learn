@@ -98,9 +98,9 @@ describe('AI API', () => {
     (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
     mockUserModel.findByPk.mockResolvedValue({
       id: 9,
-      username: 'student',
-      email: 'student@example.com',
-      role: 'student',
+      username: 'user',
+      email: 'user@example.com',
+      role: 'user',
     });
     mockTopicModel.findByPk.mockResolvedValue({
       id: 1,
@@ -108,6 +108,7 @@ describe('AI API', () => {
       type: 'knowledge',
       status: 'published',
       created_by: 5,
+      editors: ['9'],
     });
     mockCreate.mockResolvedValue({
       id: 'chatcmpl-1',
@@ -129,41 +130,13 @@ describe('AI API', () => {
     expect(response.body.choices[0].message.content).toBe('ok');
   });
 
-  it('blocks building chat for non-teacher user', async () => {
-    (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
-    mockUserModel.findByPk.mockResolvedValue({
-      id: 9,
-      username: 'student',
-      email: 'student@example.com',
-      role: 'student',
-    });
-    mockTopicModel.findByPk.mockResolvedValue({
-      id: 1,
-      title: 'Topic',
-      type: 'knowledge',
-      status: 'published',
-      created_by: 5,
-    });
-
-    const response = await request(app)
-      .post('/api/ai/chat')
-      .set('Authorization', 'Bearer token')
-      .send({
-        messages: [{ role: 'user', content: 'hello' }],
-        topic_id: 1,
-        agent_type: 'building',
-      });
-
-    expect(response.status).toBe(403);
-  });
-
   it('rejects invalid messages payload', async () => {
     (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
     mockUserModel.findByPk.mockResolvedValue({
       id: 9,
-      username: 'student',
-      email: 'student@example.com',
-      role: 'student',
+      username: 'user',
+      email: 'user@example.com',
+      role: 'user',
     });
 
     const response = await request(app)
@@ -182,9 +155,9 @@ describe('AI API', () => {
     (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
     mockUserModel.findByPk.mockResolvedValue({
       id: 9,
-      username: 'student',
-      email: 'student@example.com',
-      role: 'student',
+      username: 'user',
+      email: 'user@example.com',
+      role: 'user',
     });
 
     const response = await request(app)
@@ -203,9 +176,9 @@ describe('AI API', () => {
     (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
     mockUserModel.findByPk.mockResolvedValue({
       id: 9,
-      username: 'student',
-      email: 'student@example.com',
-      role: 'student',
+      username: 'user',
+      email: 'user@example.com',
+      role: 'user',
     });
 
     const response = await request(app)
@@ -224,9 +197,9 @@ describe('AI API', () => {
     (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
     mockUserModel.findByPk.mockResolvedValue({
       id: 9,
-      username: 'student',
-      email: 'student@example.com',
-      role: 'student',
+      username: 'user',
+      email: 'user@example.com',
+      role: 'user',
     });
 
     const response = await request(app)
@@ -245,9 +218,9 @@ describe('AI API', () => {
     (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
     mockUserModel.findByPk.mockResolvedValue({
       id: 9,
-      username: 'student',
-      email: 'student@example.com',
-      role: 'student',
+      username: 'user',
+      email: 'user@example.com',
+      role: 'user',
     });
     mockTopicModel.findByPk.mockResolvedValue({
       id: 1,
@@ -255,6 +228,7 @@ describe('AI API', () => {
       type: 'knowledge',
       status: 'draft',
       created_by: 5,
+      editors: ['9'],
     });
 
     const response = await request(app)
@@ -269,13 +243,13 @@ describe('AI API', () => {
     expect(response.status).toBe(403);
   });
 
-  it('rejects building chat for non-owner teacher', async () => {
+  it('rejects building chat for non-editor', async () => {
     (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
     mockUserModel.findByPk.mockResolvedValue({
       id: 9,
-      username: 'teacher',
-      email: 'teacher@example.com',
-      role: 'teacher',
+      username: 'user',
+      email: 'user@example.com',
+      role: 'user',
     });
     mockTopicModel.findByPk.mockResolvedValue({
       id: 1,
@@ -283,6 +257,7 @@ describe('AI API', () => {
       type: 'knowledge',
       status: 'published',
       created_by: 5,
+      editors: ['5'],
     });
 
     const response = await request(app)
@@ -301,9 +276,9 @@ describe('AI API', () => {
     (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
     mockUserModel.findByPk.mockResolvedValue({
       id: 9,
-      username: 'teacher',
-      email: 'teacher@example.com',
-      role: 'teacher',
+      username: 'user',
+      email: 'user@example.com',
+      role: 'user',
     });
     mockTopicModel.findByPk.mockResolvedValue({
       id: 1,
@@ -311,6 +286,7 @@ describe('AI API', () => {
       type: 'website',
       status: 'published',
       created_by: 9,
+      editors: ['9'],
     });
 
     const response = await request(app)

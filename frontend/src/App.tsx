@@ -69,7 +69,7 @@ function App() {
           <Route
             path="/topics/create"
             element={
-              <ProtectedRoute allowedRoles={['teacher']}>
+              <ProtectedRoute>
                 <AppShell>
                   <TopicCreatePage />
                 </AppShell>
@@ -87,7 +87,7 @@ function App() {
           <Route
             path="/topics/:id/edit"
             element={
-              <ProtectedRoute allowedRoles={['teacher']}>
+              <ProtectedRoute>
                 <AppShell>
                   <TopicEditorRouter />
                 </AppShell>

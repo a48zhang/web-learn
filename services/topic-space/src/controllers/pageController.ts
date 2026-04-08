@@ -46,7 +46,8 @@ const toTree = (pages: TopicPage[]) => {
 const assertTopicWritableByUser = async (topicId: number, req: AuthRequest) => {
   const topic = await Topic.findByPk(topicId);
   if (!topic) return { ok: false, status: 404, error: 'Topic not found' } as const;
-  if (!req.user || req.user.role !== 'teacher' || topic.created_by !== req.user.id) {
+  const user = req.user;
+  if (!user || (!topic.editors?.includes(user.id.toString()) && user.role !== 'admin')) {
     return { ok: false, status: 403, error: 'Access denied' } as const;
   }
   return { ok: true, topic } as const;
@@ -107,7 +108,7 @@ export const getPagesByTopic = async (req: Request, res: Response) => {
     const canViewPrivate =
       authReq.user &&
       (authReq.user.role === 'admin' ||
-        (authReq.user.role === 'teacher' && authReq.user.id === topic.created_by));
+        authReq.user.id && topic.editors?.includes(authReq.user.id.toString()));
     if (topic.status !== 'published' && !canViewPrivate) {
       return res.status(404).json({ success: false, error: 'Topic not found' });
     }
@@ -144,7 +145,7 @@ export const getPageById = async (req: Request, res: Response) => {
     const canViewPrivate =
       authReq.user &&
       (authReq.user.role === 'admin' ||
-        (authReq.user.role === 'teacher' && authReq.user.id === topic.created_by));
+        authReq.user.id && topic.editors?.includes(authReq.user.id.toString()));
     if (topic.status !== 'published' && !canViewPrivate) {
       return res.status(404).json({ success: false, error: 'Page not found' });
     }

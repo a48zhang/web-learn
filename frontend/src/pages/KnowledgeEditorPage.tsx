@@ -42,7 +42,7 @@ function KnowledgeEditorPage() {
 
   const { setMeta } = useLayoutMeta();
 
-  const canEdit = user?.role === 'teacher' && topic?.createdBy === user.id;
+  const canEdit = !!user && !!topic && (user.role === 'admin' || (topic.editors ?? []).includes(user.id));
 
   const refreshPages = useCallback(async (topicId: string, selectedId?: string | null) => {
     const tree = await pageApi.getByTopic(topicId);
@@ -347,7 +347,7 @@ function KnowledgeEditorPage() {
           <p className="text-sm text-gray-500">请先创建页面</p>
         )}
       </main>
-      {id && <AIChatSidebar topicId={id} title="搭建助手" />}
+      {id && <AIChatSidebar topicId={id} agentType="building" />}
       {createDialogOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-4 space-y-3">

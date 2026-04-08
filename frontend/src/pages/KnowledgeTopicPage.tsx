@@ -161,7 +161,7 @@ function KnowledgeTopicPage() {
           <p className="text-gray-500">暂无页面内容</p>
         )}
       </div>
-      {id && <AIChatSidebar topicId={id} title="学习助手" />}
+      {id && <AIChatSidebar topicId={id} agentType="learning" />}
     </div>
   );
 }

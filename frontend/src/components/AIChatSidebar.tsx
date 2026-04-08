@@ -1,29 +1,22 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import type { AIChatAgentType, AIChatMessage } from '@web-learn/shared';
-import { aiApi, topicApi, topicFileApi } from '../services/api';
+import { topicApi, topicFileApi } from '../services/api';
+import { chatWithTools } from '../services/llmApi';
 import { getApiErrorMessage } from '../utils/errors';
+import type { AgentMessage } from '@web-learn/shared';
 
 interface AIChatSidebarProps {
   topicId: string;
-  agentType: AIChatAgentType;
   title?: string;
 }
 
-function AIChatSidebar({ topicId, agentType, title }: AIChatSidebarProps) {
+function AIChatSidebar({ topicId, title = '学习助手' }: AIChatSidebarProps) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [messages, setMessages] = useState<AIChatMessage[]>([]);
+  const [messages, setMessages] = useState<AgentMessage[]>([]);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const buttonText = title || (agentType === 'building' ? '搭建助手' : '学习助手');
-
-  const visibleMessages = useMemo(
-    () => messages.filter((message) => message.role === 'user' || message.role === 'assistant'),
-    [messages]
-  );
 
   // Load chat history on mount
   useEffect(() => {
@@ -31,7 +24,10 @@ function AIChatSidebar({ topicId, agentType, title }: AIChatSidebarProps) {
       try {
         const data = await topicApi.getById(topicId);
         if (data.chatHistory && Array.isArray(data.chatHistory)) {
-          setMessages(data.chatHistory);
+          const visible: AgentMessage[] = data.chatHistory
+            .filter((m: any) => m.role === 'user' || m.role === 'assistant')
+            .map((m: any) => ({ role: m.role as 'user' | 'assistant', content: m.content || '' }));
+          setMessages(visible);
         }
       } catch {
         // Silently fail — start with empty chat
@@ -42,7 +38,7 @@ function AIChatSidebar({ topicId, agentType, title }: AIChatSidebarProps) {
 
   // Debounced save function
   const debouncedSave = useCallback(
-    (msgs: AIChatMessage[]) => {
+    (msgs: AgentMessage[]) => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       saveTimerRef.current = setTimeout(async () => {
         try {
@@ -65,38 +61,39 @@ function AIChatSidebar({ topicId, agentType, title }: AIChatSidebarProps) {
   const handleSend = async () => {
     const content = input.trim();
     if (!content || loading) return;
-    if (!/^\d+$/.test(topicId)) {
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: '请求失败：无效的专题ID' },
-      ]);
-      return;
-    }
-    const nextMessages: AIChatMessage[] = [...messages, { role: 'user', content }];
+
+    const userMsg: AgentMessage = { role: 'user', content };
+    const nextMessages: AgentMessage[] = [...messages, userMsg];
     setMessages(nextMessages);
     setInput('');
     setLoading(true);
+
     try {
-      const response = await aiApi.chat({
-        messages: nextMessages,
-        topic_id: Number(topicId),
-        agent_type: agentType,
-      });
-      const assistant = response.choices?.[0]?.message;
-      if (assistant) {
-        const updated = [...nextMessages, assistant as AIChatMessage];
+      const completion = await chatWithTools(nextMessages);
+      const assistantMsg = completion.choices?.[0]?.message;
+      if (assistantMsg) {
+        const reply: AgentMessage = { role: 'assistant', content: assistantMsg.content || '' };
+        const updated = [...nextMessages, reply];
         setMessages(updated);
         debouncedSave(updated);
       }
     } catch (error: unknown) {
-      const errorMsg: AIChatMessage[] = [
-        ...nextMessages,
-        { role: 'assistant', content: `请求失败：${getApiErrorMessage(error, '未知错误')}` },
-      ];
-      setMessages(errorMsg);
-      debouncedSave(errorMsg);
+      const errMsg: AgentMessage = {
+        role: 'assistant',
+        content: `请求失败：${getApiErrorMessage(error, '未知错误')}`,
+      };
+      const updated = [...nextMessages, errMsg];
+      setMessages(updated);
+      debouncedSave(updated);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
     }
   };
 
@@ -109,6 +106,8 @@ function AIChatSidebar({ topicId, agentType, title }: AIChatSidebarProps) {
     }
   };
 
+  const visibleMessages = useMemo(() => messages, [messages]);
+
   return (
     <>
       <button
@@ -116,12 +115,12 @@ function AIChatSidebar({ topicId, agentType, title }: AIChatSidebarProps) {
         onClick={() => setOpen((v) => !v)}
         className="fixed bottom-6 right-6 z-40 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-full px-4 py-3 shadow-lg"
       >
-        {open ? '关闭助手' : buttonText}
+        {open ? '关闭助手' : title}
       </button>
       {open && (
         <aside className="fixed top-0 right-0 h-full w-full sm:w-[420px] bg-white border-l border-gray-200 shadow-2xl z-50 flex flex-col">
           <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-            <h3 className="font-semibold text-gray-900">{buttonText}</h3>
+            <h3 className="font-semibold text-gray-900">{title}</h3>
             <div className="flex items-center gap-2">
               {visibleMessages.length > 0 && (
                 <button
@@ -143,11 +142,7 @@ function AIChatSidebar({ topicId, agentType, title }: AIChatSidebarProps) {
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
             {visibleMessages.length === 0 && (
-              <p className="text-sm text-gray-500">
-                {agentType === 'building'
-                  ? '你可以让助手创建或修改专题页面。'
-                  : '你可以询问当前专题的内容。'}
-              </p>
+              <p className="text-sm text-gray-500">你可以询问任何关于本专题的问题。</p>
             )}
             {visibleMessages.map((message, idx) => (
               <div
@@ -175,9 +170,11 @@ function AIChatSidebar({ topicId, agentType, title }: AIChatSidebarProps) {
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               rows={3}
               placeholder="输入你的问题..."
+              disabled={loading}
             />
             <button
               type="button"

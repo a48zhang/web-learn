@@ -347,7 +347,7 @@ function KnowledgeEditorPage() {
           <p className="text-sm text-gray-500">请先创建页面</p>
         )}
       </main>
-      {id && <AIChatSidebar topicId={id} agentType="building" />}
+      {id && <AIChatSidebar topicId={id} title="搭建助手" />}
       {createDialogOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-4 space-y-3">

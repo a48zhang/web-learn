@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import type { AIChatMessage, AgentResponse } from '@web-learn/shared';
+import type { AIChatMessage } from '@web-learn/shared';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -12,52 +12,24 @@ const createLlmClient = (token: string) =>
     dangerouslyAllowBrowser: true,
   });
 
-export async function sendChatMessage(
+export async function chatWithTools(
   messages: AIChatMessage[],
+  tools?: OpenAI.Chat.Completions.ChatCompletionTool[],
   onStream?: (chunk: string) => void
-): Promise<AgentResponse | null> {
-  try {
-    const token = getAuthToken();
-    if (!token?.trim()) {
-      throw new Error('Missing auth token');
-    }
-    const llmClient = createLlmClient(token);
-
-    const response = await llmClient.chat.completions.create({
-      model: import.meta.env.VITE_LLM_MODEL || 'gpt-4o',
-      messages: messages as any,
-      response_format: { type: 'json_object' },
-      stream: !!onStream,
-    });
-
-    if (onStream) {
-      // Streaming response
-      let fullContent = '';
-      for await (const chunk of response as any) {
-        const content = chunk.choices[0]?.delta?.content || '';
-        fullContent += content;
-        onStream(content);
-      }
-      // Parse JSON from full content
-      try {
-        return JSON.parse(fullContent) as AgentResponse;
-      } catch {
-        return { message: fullContent, files: [] };
-      }
-    }
-
-    // Non-streaming response
-    const completion = response as any;
-    const content = completion.choices?.[0]?.message?.content;
-    if (!content) return null;
-
-    try {
-      return JSON.parse(content) as AgentResponse;
-    } catch {
-      return { message: content, files: [] };
-    }
-  } catch (error) {
-    console.error('LLM API error:', error);
-    throw error;
+): Promise<OpenAI.Chat.Completions.ChatCompletion> {
+  const token = getAuthToken();
+  if (!token?.trim()) {
+    throw new Error('Missing auth token');
   }
+  const llmClient = createLlmClient(token);
+
+  const response = await llmClient.chat.completions.create({
+    model: import.meta.env.VITE_LLM_MODEL || 'gpt-4o',
+    messages: messages as any,
+    tools,
+    tool_choice: tools && tools.length > 0 ? 'auto' : undefined,
+    stream: !!onStream,
+  });
+
+  return response as OpenAI.Chat.Completions.ChatCompletion;
 }

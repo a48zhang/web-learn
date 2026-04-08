@@ -144,7 +144,10 @@ describe('Topics API', () => {
 
       const response = await request(app)
         .post('/api/topics')
-        .set('Authorization', 'Bearer teacher-token')
+        .set('x-user-id', '10')
+        .set('x-user-username', 'teacher1')
+        .set('x-user-email', 'teacher@example.com')
+        .set('x-user-role', 'user')
         .send({
           title: 'Website Topic',
           description: 'Testing fundamentals',
@@ -162,7 +165,7 @@ describe('Topics API', () => {
   });
 
   describe('PUT /api/topics/:id', () => {
-    it('rejects type switch from website to knowledge when website_url is set', async () => {
+    it('ignores unsupported type field updates', async () => {
       (jwt.verify as jest.Mock).mockReturnValue({ id: 10 });
       mockUserModel.findByPk.mockResolvedValue({
         id: 10,
@@ -170,6 +173,7 @@ describe('Topics API', () => {
         email: 'teacher@example.com',
         role: 'user',
       });
+      const save = jest.fn();
       mockTopicModel.findByPk.mockResolvedValue({
         id: 8,
         title: 'Website Topic',
@@ -179,18 +183,23 @@ describe('Topics API', () => {
         created_by: 10,
         editors: ['10'],
         status: 'draft',
+        save,
         createdAt: new Date('2026-04-01T00:00:00.000Z'),
         updatedAt: new Date('2026-04-01T00:00:00.000Z'),
       });
 
       const response = await request(app)
         .put('/api/topics/8')
-        .set('Authorization', 'Bearer teacher-token')
+        .set('x-user-id', '10')
+        .set('x-user-username', 'teacher1')
+        .set('x-user-email', 'teacher@example.com')
+        .set('x-user-role', 'user')
         .send({ type: 'knowledge' });
 
-      expect(response.status).toBe(400);
-      expect(response.body.success).toBe(false);
-      expect(response.body.error).toBe('已有网站内容的专题不能切换为其他类型');
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.type).toBe('website');
+      expect(save).toHaveBeenCalled();
     });
 
     it('updates topic for owner teacher', async () => {
@@ -218,7 +227,10 @@ describe('Topics API', () => {
 
       const response = await request(app)
         .put('/api/topics/7')
-        .set('Authorization', 'Bearer teacher-token')
+        .set('x-user-id', '10')
+        .set('x-user-username', 'teacher1')
+        .set('x-user-email', 'teacher@example.com')
+        .set('x-user-role', 'user')
         .send({
           title: 'New',
           description: 'new-desc',
@@ -256,7 +268,10 @@ describe('Topics API', () => {
 
       const response = await request(app)
         .patch('/api/topics/7/status')
-        .set('Authorization', 'Bearer teacher-token')
+        .set('x-user-id', '10')
+        .set('x-user-username', 'teacher1')
+        .set('x-user-email', 'teacher@example.com')
+        .set('x-user-role', 'user')
         .send({ status: 'published' });
 
       expect(response.status).toBe(200);
@@ -290,7 +305,10 @@ describe('Topics API', () => {
 
       const response = await request(app)
         .post('/api/topics/7/website/upload')
-        .set('Authorization', 'Bearer teacher-token')
+        .set('x-user-id', '10')
+        .set('x-user-username', 'teacher1')
+        .set('x-user-email', 'teacher@example.com')
+        .set('x-user-role', 'user')
         .send({});
 
       expect(response.status).toBe(400);
@@ -320,7 +338,10 @@ describe('Topics API', () => {
 
       const response = await request(app)
         .get('/api/topics/7/website/stats')
-        .set('Authorization', 'Bearer teacher-token');
+        .set('x-user-id', '10')
+        .set('x-user-username', 'teacher1')
+        .set('x-user-email', 'teacher@example.com')
+        .set('x-user-role', 'user');
 
       expect(response.status).toBe(200);
       expect(response.body.data).toMatchObject({
@@ -356,7 +377,10 @@ describe('Topics API', () => {
 
       const response = await request(app)
         .delete('/api/topics/7')
-        .set('Authorization', 'Bearer teacher-token');
+        .set('x-user-id', '10')
+        .set('x-user-username', 'teacher1')
+        .set('x-user-email', 'teacher@example.com')
+        .set('x-user-role', 'user');
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);

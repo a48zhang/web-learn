@@ -119,7 +119,10 @@ describe('AI API', () => {
 
     const response = await request(app)
       .post('/api/ai/chat')
-      .set('Authorization', 'Bearer token')
+      .set('x-user-id', '9')
+      .set('x-user-username', 'user')
+      .set('x-user-email', 'user@example.com')
+      .set('x-user-role', 'user')
       .send({
         messages: [{ role: 'user', content: 'hello' }],
         topic_id: 1,
@@ -141,7 +144,10 @@ describe('AI API', () => {
 
     const response = await request(app)
       .post('/api/ai/chat')
-      .set('Authorization', 'Bearer token')
+      .set('x-user-id', '9')
+      .set('x-user-username', 'user')
+      .set('x-user-email', 'user@example.com')
+      .set('x-user-role', 'user')
       .send({
         messages: 'not-array',
         topic_id: 1,
@@ -162,7 +168,10 @@ describe('AI API', () => {
 
     const response = await request(app)
       .post('/api/ai/chat')
-      .set('Authorization', 'Bearer token')
+      .set('x-user-id', '9')
+      .set('x-user-username', 'user')
+      .set('x-user-email', 'user@example.com')
+      .set('x-user-role', 'user')
       .send({
         messages: Array.from({ length: 51 }).map((_, i) => ({ role: 'user', content: `m-${i}` })),
         topic_id: 1,
@@ -183,7 +192,10 @@ describe('AI API', () => {
 
     const response = await request(app)
       .post('/api/ai/chat')
-      .set('Authorization', 'Bearer token')
+      .set('x-user-id', '9')
+      .set('x-user-username', 'user')
+      .set('x-user-email', 'user@example.com')
+      .set('x-user-role', 'user')
       .send({
         messages: [{ role: 'hacker', content: 'hello' }],
         topic_id: 1,
@@ -204,7 +216,10 @@ describe('AI API', () => {
 
     const response = await request(app)
       .post('/api/ai/chat')
-      .set('Authorization', 'Bearer token')
+      .set('x-user-id', '9')
+      .set('x-user-username', 'user')
+      .set('x-user-email', 'user@example.com')
+      .set('x-user-role', 'user')
       .send({
         messages: [{ role: 'user', content: 'x'.repeat(10001) }],
         topic_id: 1,
@@ -233,7 +248,10 @@ describe('AI API', () => {
 
     const response = await request(app)
       .post('/api/ai/chat')
-      .set('Authorization', 'Bearer token')
+      .set('x-user-id', '9')
+      .set('x-user-username', 'user')
+      .set('x-user-email', 'user@example.com')
+      .set('x-user-role', 'user')
       .send({
         messages: [{ role: 'user', content: 'hello' }],
         topic_id: 1,
@@ -262,7 +280,10 @@ describe('AI API', () => {
 
     const response = await request(app)
       .post('/api/ai/chat')
-      .set('Authorization', 'Bearer token')
+      .set('x-user-id', '9')
+      .set('x-user-username', 'user')
+      .set('x-user-email', 'user@example.com')
+      .set('x-user-role', 'user')
       .send({
         messages: [{ role: 'user', content: 'hello' }],
         topic_id: 1,
@@ -291,7 +312,10 @@ describe('AI API', () => {
 
     const response = await request(app)
       .post('/api/ai/chat')
-      .set('Authorization', 'Bearer token')
+      .set('x-user-id', '9')
+      .set('x-user-username', 'user')
+      .set('x-user-email', 'user@example.com')
+      .set('x-user-role', 'user')
       .send({
         messages: [{ role: 'user', content: 'hello' }],
         topic_id: 1,

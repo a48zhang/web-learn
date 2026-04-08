@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useEditorStore } from '../../stores/useEditorStore';
+import { topicFileApi } from '../../services/api';
 
 interface SaveIndicatorProps {
   topicId: string;
@@ -7,6 +8,7 @@ interface SaveIndicatorProps {
 
 function SaveIndicator({ topicId }: SaveIndicatorProps) {
   const { hasUnsavedChanges, lastSavedAt, markSaved, getAllFiles } = useEditorStore();
+  const [, setTick] = useState(0);
 
   // Auto-save when changes are made (debounced)
   useEffect(() => {
@@ -15,7 +17,6 @@ function SaveIndicator({ topicId }: SaveIndicatorProps) {
     const timer = setTimeout(async () => {
       const files = getAllFiles();
       try {
-        const { topicFileApi } = await import('../../services/api');
         await topicFileApi.saveSnapshot(topicId, files);
         markSaved();
       } catch {
@@ -25,6 +26,13 @@ function SaveIndicator({ topicId }: SaveIndicatorProps) {
 
     return () => clearTimeout(timer);
   }, [hasUnsavedChanges, topicId, getAllFiles, markSaved]);
+
+  // Refresh relative time display every 30 seconds
+  useEffect(() => {
+    if (!lastSavedAt) return;
+    const interval = setInterval(() => setTick((t) => t + 1), 30_000);
+    return () => clearInterval(interval);
+  }, [lastSavedAt]);
 
   // Navigation warning
   useEffect(() => {

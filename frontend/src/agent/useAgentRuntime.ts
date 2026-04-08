@@ -1,8 +1,7 @@
 import { chatWithTools } from '../services/llmApi';
 import { getOpenAITools, executeTool } from './toolRegistry';
 import { useAgentStore } from '../stores/useAgentStore';
-import type { AgentMessage, AIChatMessage } from '@web-learn/shared';
-import OpenAI from 'openai';
+import type { AIChatMessage } from '@web-learn/shared';
 
 const MAX_TOOL_LOOPS = 8;
 
@@ -10,7 +9,6 @@ export function useAgentRuntime() {
   const visibleMessages = useAgentStore((s) => s.visibleMessages);
   const addVisibleMessage = useAgentStore((s) => s.addVisibleMessage);
   const setRunState = useAgentStore((s) => s.setRunState);
-  const clearRunState = useAgentStore((s) => s.clearRunState);
 
   async function runAgentLoop(userMessage: string): Promise<void> {
     // Build internal messages for this run
@@ -22,11 +20,11 @@ export function useAgentRuntime() {
 
     const openAITools = getOpenAITools();
 
+    addVisibleMessage({ role: 'user', content: userMessage });
     setRunState({ isRunning: true, error: null });
 
     try {
       for (let i = 0; i < MAX_TOOL_LOOPS; i++) {
-        setRunState({ isRunning: true });
 
         const completion = await chatWithTools(internalMessages, openAITools);
         const choice = completion.choices[0];
@@ -68,9 +66,9 @@ export function useAgentRuntime() {
       }
     } catch (error: unknown) {
       const errorMsg = error instanceof Error ? error.message : 'LLM request failed';
-      setRunState({ error: errorMsg });
+      setRunState({ error: errorMsg, isRunning: false, currentToolName: null, currentToolPath: null });
     } finally {
-      clearRunState();
+      setRunState({ isRunning: false, currentToolName: null, currentToolPath: null });
     }
   }
 

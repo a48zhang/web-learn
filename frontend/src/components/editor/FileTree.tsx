@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useEditorStore } from '../../stores/useEditorStore';
 import type { FileTreeNode } from '@web-learn/shared';
-import { FiPlus, FiFile, FiFileText, FiPalette, FiCode, FiSettings, FiImage, FiEdit2, FiFolder, FiFolderOpen } from 'react-icons/fi';
+import { FiPlus, FiFile, FiFileText, FiCode, FiSettings, FiImage, FiEdit2, FiFolder, FiDroplet, FiArchive } from 'react-icons/fi';
 
 function getFileIcon(filename: string): React.ReactNode {
   if (filename.endsWith('.html') || filename.endsWith('.htm')) return <FiFileText size={14} />;
-  if (filename.endsWith('.css')) return <FiPalette size={14} />;
+  if (filename.endsWith('.css')) return <FiDroplet size={14} />;
   if (filename.endsWith('.js') || filename.endsWith('.jsx')) return <FiCode size={14} />;
   if (filename.endsWith('.ts') || filename.endsWith('.tsx')) return <FiCode size={14} />;
   if (filename.endsWith('.json')) return <FiSettings size={14} />;
@@ -73,7 +73,7 @@ function TreeNode({
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
         onClick={() => setExpanded((v) => !v)}
       >
-        <span className="shrink-0 text-zinc-400">{expanded ? <FiFolderOpen size={14} /> : <FiFolder size={14} />}</span>
+        <span className="shrink-0 text-zinc-400">{expanded ? <FiArchive size={14} /> : <FiFolder size={14} />}</span>
         <span className="truncate">{node.name}</span>
       </div>
       {expanded && node.children && (

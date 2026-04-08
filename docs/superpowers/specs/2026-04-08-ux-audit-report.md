@@ -143,3 +143,14 @@ const saveChatHistory = useCallback(
 **建议方案**：
 - 将主题偏好保存到用户设置（后端）或 localStorage（未登录用户）
 - 登录后自动应用用户偏好
+
+---
+
+## 已验证问题
+
+#### 4. 所有用户 - 主题偏好持久化 ✅
+
+**状态：** 无需修改
+
+`useThemeStore` 已使用 Zustand `persist` 中间件将主题偏好保存到 localStorage（key: `theme-storage`）。
+刷新页面、重新登录后均能正确恢复主题偏好。

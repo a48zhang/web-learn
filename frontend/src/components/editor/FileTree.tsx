@@ -1,17 +1,17 @@
 import { useState } from 'react';
 import { useEditorStore } from '../../stores/useEditorStore';
 import type { FileTreeNode } from '@web-learn/shared';
-import { FiPlus } from 'react-icons/fi';
+import { FiPlus, FiFile, FiFileText, FiCode, FiSettings, FiImage, FiEdit2, FiFolder, FiDroplet, FiArchive } from 'react-icons/fi';
 
-function getFileIcon(filename: string): string {
-  if (filename.endsWith('.html') || filename.endsWith('.htm')) return '📄';
-  if (filename.endsWith('.css')) return '🎨';
-  if (filename.endsWith('.js') || filename.endsWith('.jsx')) return '📜';
-  if (filename.endsWith('.ts') || filename.endsWith('.tsx')) return '📘';
-  if (filename.endsWith('.json')) return '⚙️';
-  if (filename.endsWith('.png') || filename.endsWith('.jpg') || filename.endsWith('.svg')) return '🖼️';
-  if (filename.endsWith('.md')) return '📝';
-  return '📄';
+function getFileIcon(filename: string): React.ReactNode {
+  if (filename.endsWith('.html') || filename.endsWith('.htm')) return <FiFileText size={14} />;
+  if (filename.endsWith('.css')) return <FiDroplet size={14} />;
+  if (filename.endsWith('.js') || filename.endsWith('.jsx')) return <FiCode size={14} />;
+  if (filename.endsWith('.ts') || filename.endsWith('.tsx')) return <FiCode size={14} />;
+  if (filename.endsWith('.json')) return <FiSettings size={14} />;
+  if (filename.endsWith('.png') || filename.endsWith('.jpg') || filename.endsWith('.svg')) return <FiImage size={14} />;
+  if (filename.endsWith('.md')) return <FiEdit2 size={14} />;
+  return <FiFile size={14} />;
 }
 
 interface FileTreeProps {
@@ -50,14 +50,17 @@ function TreeNode({
         onClick={() => onOpenFile(node.path)}
         title={node.path}
       >
-        <span className="text-xs shrink-0">{getFileIcon(node.name)}</span>
+        <span className="shrink-0 text-zinc-400">{getFileIcon(node.name)}</span>
         <span className="truncate flex-1">{node.name}</span>
         <button
           className="hidden group-hover:flex text-zinc-500 hover:text-red-400 ml-1 shrink-0"
           onClick={handleDelete}
           title="删除"
+          aria-label={`删除 ${node.name}`}
         >
-          ✕
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
         </button>
       </div>
     );
@@ -70,7 +73,7 @@ function TreeNode({
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
         onClick={() => setExpanded((v) => !v)}
       >
-        <span className="text-xs shrink-0">{expanded ? '📂' : '📁'}</span>
+        <span className="shrink-0 text-zinc-400">{expanded ? <FiArchive size={14} /> : <FiFolder size={14} />}</span>
         <span className="truncate">{node.name}</span>
       </div>
       {expanded && node.children && (

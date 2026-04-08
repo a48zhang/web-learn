@@ -4,6 +4,7 @@ import { topicFileApi } from '../../services/api';
 import { useEditorStore } from '../../stores/useEditorStore';
 import { useChatStore } from '../../stores/useChatStore';
 import { toast } from '../../stores/useToastStore';
+import SaveIndicator from './SaveIndicator';
 
 interface TopBarProps {
   onRefreshPreview: () => void;
@@ -13,7 +14,7 @@ interface TopBarProps {
 
 export default function TopBar({ onRefreshPreview, onPublish, onShare }: TopBarProps) {
   const { id } = useParams<{ id: string }>();
-  const { getAllFiles } = useEditorStore();
+  const { getAllFiles, markSaved } = useEditorStore();
   const { messages } = useChatStore();
   const [saving, setSaving] = useState(false);
 
@@ -23,6 +24,7 @@ export default function TopBar({ onRefreshPreview, onPublish, onShare }: TopBarP
     try {
       const files = getAllFiles();
       await topicFileApi.saveSnapshot(id, files);
+      markSaved();
       await topicFileApi.saveChatHistory(id, messages as any[]);
       toast.success('保存成功');
     } catch {
@@ -38,6 +40,7 @@ export default function TopBar({ onRefreshPreview, onPublish, onShare }: TopBarP
         <span className="text-zinc-400 font-medium">网站编辑器</span>
       </div>
       <div className="flex items-center gap-2">
+        <SaveIndicator topicId={id ?? ''} />
         <button
           type="button"
           onClick={onRefreshPreview}

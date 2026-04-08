@@ -11,6 +11,7 @@ import TopicListPage from './pages/TopicListPage';
 import TopicCreatePage from './pages/TopicCreatePage';
 import TopicDetailPage from './pages/TopicDetailPage';
 import WebsiteEditorPage from './pages/WebsiteEditorPage';
+import PublicHomePage from './pages/PublicHomePage';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppShell from './components/layout/AppShell';
 import { LayoutMetaProvider } from './components/layout/LayoutMetaContext';
@@ -34,6 +35,12 @@ function App() {
       <LayoutMetaProvider>
         <Routes>
           {/* Public routes */}
+          <Route
+            path="/"
+            element={
+              isAuthenticated ? <Navigate to="/dashboard" replace /> : <PublicHomePage />
+            }
+          />
           <Route
             path="/login"
             element={
@@ -88,17 +95,9 @@ function App() {
             path="/topics/:id/edit"
             element={
               <ProtectedRoute allowedRoles={['teacher']}>
-                <AppShell>
-                  <TopicEditorRouter />
-                </AppShell>
+                <TopicEditorRouter />
               </ProtectedRoute>
             }
-          />
-
-          {/* Default route */}
-          <Route
-            path="/"
-            element={<Navigate to="/dashboard" replace />}
           />
 
           {/* 404 route */}

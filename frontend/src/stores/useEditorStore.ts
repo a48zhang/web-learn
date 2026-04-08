@@ -2,17 +2,14 @@ import { create } from 'zustand';
 import type { FileTreeNode } from '@web-learn/shared';
 
 interface EditorState {
-  // File system
-  files: Record<string, string>; // path -> content
+  files: Record<string, string>;
   fileTree: FileTreeNode[];
-  openFiles: string[]; // paths of open files
+  openFiles: string[];
   activeFile: string | null;
-
-  // WebContainer
   previewUrl: string | null;
   isWebContainerReady: boolean;
-
-  // Actions
+  hasUnsavedChanges: boolean;
+  lastSavedAt: Date | null;
   setFileContent: (path: string, content: string) => void;
   openFile: (path: string) => void;
   closeFile: (path: string) => void;
@@ -25,6 +22,8 @@ interface EditorState {
   loadSnapshot: (files: Record<string, string>) => void;
   getAllFiles: () => Record<string, string>;
   getFileTree: () => FileTreeNode[];
+  markSaved: () => void;
+  markUnsaved: () => void;
 }
 
 function buildFileTree(files: Record<string, string>): FileTreeNode[] {
@@ -66,10 +65,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   activeFile: null,
   previewUrl: null,
   isWebContainerReady: false,
+  hasUnsavedChanges: false,
+  lastSavedAt: null,
 
   setFileContent: (path, content) => {
     set((state) => ({
       files: { ...state.files, [path]: content },
+      hasUnsavedChanges: true,
     }));
   },
 
@@ -110,6 +112,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         files: newFiles,
         openFiles: state.openFiles.filter((f) => f !== path && !f.startsWith(path + '/')),
         fileTree: buildFileTree(newFiles),
+        hasUnsavedChanges: true,
       };
     });
   },
@@ -126,7 +129,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           newFiles[key] = value;
         }
       }
-      return { files: newFiles, fileTree: buildFileTree(newFiles) };
+      return { files: newFiles, fileTree: buildFileTree(newFiles), hasUnsavedChanges: true };
     });
   },
 
@@ -134,14 +137,23 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set((state) => ({
       files: { ...state.files, [path]: content },
       fileTree: buildFileTree({ ...state.files, [path]: content }),
+      hasUnsavedChanges: true,
     }));
   },
 
   setPreviewUrl: (url) => set({ previewUrl: url }),
   setWebContainerReady: (ready) => set({ isWebContainerReady: ready }),
 
-  loadSnapshot: (files) => set({ files, fileTree: buildFileTree(files) }),
+  loadSnapshot: (files) => set({
+    files,
+    fileTree: buildFileTree(files),
+    hasUnsavedChanges: false,
+    lastSavedAt: null,
+  }),
 
   getAllFiles: () => get().files,
   getFileTree: () => get().fileTree,
+
+  markSaved: () => set({ hasUnsavedChanges: false, lastSavedAt: new Date() }),
+  markUnsaved: () => set({ hasUnsavedChanges: true }),
 }));

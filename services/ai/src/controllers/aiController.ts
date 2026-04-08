@@ -39,11 +39,10 @@ export const chat = async (req: AuthRequest, res: Response) => {
     }
 
     // Forward the OpenAI-compatible request body as-is
-    const { messages, tools, tool_choice, stream, model } = req.body as {
+    const { messages, tools, tool_choice, model } = req.body as {
       messages: any[];
       tools?: any[];
       tool_choice?: string;
-      stream?: boolean;
       model?: string;
     };
 

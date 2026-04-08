@@ -118,6 +118,83 @@ describe('Topics API', () => {
         type: 'knowledge',
       });
     });
+
+    it('returns only published topics for non-editor users', async () => {
+      mockTopicModel.findAll.mockResolvedValue([
+        { id: 1, title: 'Published', status: 'published', editors: ['2'], created_by: 2, createdAt: new Date('2026-04-01'), updatedAt: new Date('2026-04-01') },
+        { id: 2, title: 'Draft', status: 'draft', editors: ['3'], created_by: 3, createdAt: new Date('2026-04-02'), updatedAt: new Date('2026-04-02') },
+        { id: 3, title: 'Closed', status: 'closed', editors: ['4'], created_by: 4, createdAt: new Date('2026-04-03'), updatedAt: new Date('2026-04-03') },
+      ]);
+      (jwt.verify as jest.Mock).mockReturnValue({ id: 5 });
+      mockUserModel.findByPk.mockResolvedValue({
+        id: 5,
+        username: 'viewer',
+        email: 'viewer@example.com',
+        role: 'user',
+      });
+
+      const response = await request(app)
+        .get('/api/topics')
+        .set('x-user-id', '5')
+        .set('x-user-username', 'viewer')
+        .set('x-user-email', 'viewer@example.com')
+        .set('x-user-role', 'user');
+
+      expect(response.status).toBe(200);
+      expect(response.body.data).toHaveLength(1);
+      expect(response.body.data[0].title).toBe('Published');
+    });
+
+    it('includes draft topics for editors', async () => {
+      mockTopicModel.findAll.mockResolvedValue([
+        { id: 1, title: 'Published', status: 'published', editors: ['2'], created_by: 2, createdAt: new Date('2026-04-01'), updatedAt: new Date('2026-04-01') },
+        { id: 2, title: 'My Draft', status: 'draft', editors: ['10'], created_by: 10, createdAt: new Date('2026-04-02'), updatedAt: new Date('2026-04-02') },
+        { id: 3, title: 'Other Draft', status: 'draft', editors: ['3'], created_by: 3, createdAt: new Date('2026-04-03'), updatedAt: new Date('2026-04-03') },
+      ]);
+      (jwt.verify as jest.Mock).mockReturnValue({ id: 10 });
+      mockUserModel.findByPk.mockResolvedValue({
+        id: 10,
+        username: 'editor',
+        email: 'editor@example.com',
+        role: 'user',
+      });
+
+      const response = await request(app)
+        .get('/api/topics')
+        .set('x-user-id', '10')
+        .set('x-user-username', 'editor')
+        .set('x-user-email', 'editor@example.com')
+        .set('x-user-role', 'user');
+
+      expect(response.status).toBe(200);
+      expect(response.body.data).toHaveLength(2);
+      expect(response.body.data.map((t: any) => t.title)).toContain('My Draft');
+    });
+
+    it('returns all topics for admin users', async () => {
+      mockTopicModel.findAll.mockResolvedValue([
+        { id: 1, title: 'Published', status: 'published', editors: ['2'], created_by: 2, createdAt: new Date('2026-04-01'), updatedAt: new Date('2026-04-01') },
+        { id: 2, title: 'Draft', status: 'draft', editors: ['3'], created_by: 3, createdAt: new Date('2026-04-02'), updatedAt: new Date('2026-04-02') },
+        { id: 3, title: 'Closed', status: 'closed', editors: ['4'], created_by: 4, createdAt: new Date('2026-04-03'), updatedAt: new Date('2026-04-03') },
+      ]);
+      (jwt.verify as jest.Mock).mockReturnValue({ id: 99 });
+      mockUserModel.findByPk.mockResolvedValue({
+        id: 99,
+        username: 'admin',
+        email: 'admin@example.com',
+        role: 'admin',
+      });
+
+      const response = await request(app)
+        .get('/api/topics')
+        .set('x-user-id', '99')
+        .set('x-user-username', 'admin')
+        .set('x-user-email', 'admin@example.com')
+        .set('x-user-role', 'admin');
+
+      expect(response.status).toBe(200);
+      expect(response.body.data).toHaveLength(3);
+    });
   });
 
   describe('POST /api/topics', () => {

@@ -112,17 +112,24 @@ export const createTopic = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Get topic list
+// Get topic list (published for everyone, editors/admin also see draft/closed)
 export const getTopics = async (req: AuthRequest | any, res: Response) => {
   try {
     const topics = await Topic.findAll({
-      where: {},
       order: [['created_at', 'DESC']],
     });
 
+    let filtered = topics;
+    if (req.user?.role !== 'admin') {
+      const uid = req.user?.id?.toString();
+      filtered = topics.filter(
+        (t) => t.status === 'published' || t.editors?.includes(uid)
+      );
+    }
+
     return res.json({
       success: true,
-      data: topics.map((topic) => formatTopic(topic)),
+      data: filtered.map((topic) => formatTopic(topic)),
     });
   } catch (error) {
     console.error('Get topics error:', error);

@@ -1,6 +1,6 @@
 # API 设计
 
-> 最后更新：2026-04-06
+> 最后更新：2026-04-07
 
 ## RESTful API 概览
 
@@ -21,7 +21,6 @@
 - `/api/auth/*` → Auth Service (端口 3001)
 - `/api/users/*` → Auth Service (端口 3001)
 - `/api/topics/*` → Topic Space Service (端口 3002)
-- `/api/pages/*` → Topic Space Service (端口 3002)
 - `/api/ai/*` → AI Service (端口 3003)
 
 ## API 端点
@@ -42,6 +41,8 @@ GET    /:service/health      - 服务健康检查（公开，各服务独立）
 
 ### 专题管理
 
+所有专题统一为网站形式，通过文件快照和对话历史进行管理。
+
 ```
 POST   /api/topics           - 创建专题（教师，需认证）
 GET    /api/topics           - 获取专题列表（公开访问）
@@ -50,56 +51,56 @@ PUT    /api/topics/:id       - 更新专题（创建者，需认证）
 PATCH  /api/topics/:id/status - 更新专题状态（创建者，需认证）
 ```
 
-#### 知识库版专题（Markdown）
+#### 专题网站文件管理
 
 ```
-POST   /api/topics/:id/pages            - 创建页面（需认证）
-GET    /api/topics/:id/pages            - 获取页面列表（公开访问）
-GET    /api/pages/:id                   - 获取页面详情（公开访问）
-PUT    /api/pages/:id                   - 更新页面 Markdown（需认证）
-DELETE /api/pages/:id                   - 删除页面（需认证）
-PATCH  /api/topics/:id/pages/reorder    - 调整页面顺序（需认证）
+POST   /api/topics/:id/files              - 保存文件快照（需认证）
+GET    /api/topics/:id/files              - 获取文件快照（公开访问，已发布）
+POST   /api/topics/:id/chat-history       - 保存对话历史（需认证）
+GET    /api/topics/:id/chat-history       - 获取对话历史（创建者，需认证）
+POST   /api/topics/:id/publish            - 发布专题网站（需认证）
+POST   /api/topics/:id/share              - 生成分享链接（需认证）
 ```
 
-**页面创建请求：**
+**创建专题请求：**
 ```json
 {
-  "title": "神经网络基础",
-  "parent_page_id": null,
-  "content": ""
+  "title": "机器学习入门",
+  "description": "从基础概念到实践应用的机器学习专题"
 }
 ```
 
-**页面更新请求：**
+**保存文件快照请求：**
 ```json
 {
-  "content": "# 第一章：神经网络概述\n\n神经网络是深度学习的基础...\n\n## 1.1 基本概念\n\n- 输入层\n- 隐藏层\n- 输出层\n\n![网络结构图](https://example.com/network.png)\n\n```python\nimport torch\n```"
+  "files_snapshot": {
+    "index.html": "<!DOCTYPE html><html><body>...</body></html>",
+    "style.css": "body { ... }",
+    "script.js": "// ...",
+    "package.json": "{ \"name\": \"topic-site\", ... }"
+  }
 }
 ```
 
-**页面详情响应：**
+**专题详情响应：**
 ```json
 {
   "success": true,
   "data": {
     "id": 1,
-    "title": "神经网络基础",
-    "content": "# 第一章...",
-    "parent_page_id": null,
-    "order": 1,
+    "title": "机器学习入门",
+    "description": "从基础概念到实践应用的机器学习专题",
+    "type": "website",
+    "files_snapshot": { "index.html": "..." },
+    "chat_history": [...],
+    "published_url": "https://example.com/topic/1",
+    "share_link": "https://example.com/share/abc123",
+    "created_by": 1,
+    "status": "published",
     "created_at": "2026-04-01T00:00:00.000Z",
     "updated_at": "2026-04-01T00:00:00.000Z"
   }
 }
-```
-
-#### 网站版专题
-
-```
-POST   /api/topics/:id/website/upload   - 上传网站代码（需认证）
-PUT    /api/topics/:id/website/upload   - 更新网站代码（需认证）
-DELETE /api/topics/:id/website          - 删除网站代码（需认证）
-GET    /api/topics/:id/website/stats    - 获取访问统计（需认证）
 ```
 
 ### AI Agent
@@ -117,7 +118,7 @@ POST   /api/ai/chat          - AI 对话（需认证）
   "messages": [
     {
       "role": "user",
-      "content": "这个专题的核心内容是什么？"
+      "content": "帮我创建一个关于机器学习的专题网站"
     }
   ],
   "tools": [
@@ -138,7 +139,7 @@ POST   /api/ai/chat          - AI 对话（需认证）
   ],
   "metadata": {
     "topic_id": 1,
-    "agent_type": "learning"
+    "agent_type": "building"
   }
 }
 ```
@@ -152,7 +153,7 @@ POST   /api/ai/chat          - AI 对话（需认证）
     {
       "message": {
         "role": "assistant",
-        "content": "根据专题信息，核心内容是...",
+        "content": "好的！我来帮你创建一个机器学习专题网站。首先让我了解一些你的偏好...",
         "tool_calls": [
           {
             "id": "call_abc123",
@@ -179,29 +180,15 @@ POST   /api/ai/chat          - AI 对话（需认证）
 |------|:----:|:----:|:----:|
 | GET /api/topics | ✓ 所有已发布的 | ✓ 所有已发布的 | ✓ 自己创建的 + 所有已发布的 |
 | GET /api/topics/:id | ✓ 所有已发布的 | ✓ 所有已发布的 | ✓ 自己创建的 + 所有已发布的 |
+| GET /api/topics/:id/files | ✓ 所有已发布的 | ✓ 所有已发布的 | ✓ 自己创建的 + 所有已发布的 |
 | POST /api/topics | ✗ | ✗ | ✓ |
 | PUT /api/topics/:id | ✗ | ✗ | ✓ 自己创建的 |
 | PATCH /api/topics/:id/status | ✗ | ✗ | ✓ 自己创建的 |
-
-#### 知识库版专题权限（Markdown）
-
-| 端点 | 访客 | 学生 | 教师 |
-|------|:----:|:----:|:----:|
-| GET /api/topics/:id/pages | ✓ 所有已发布的 | ✓ 所有已发布的 | ✓ 所有已发布的 |
-| GET /api/pages/:id | ✓ 所有已发布的 | ✓ 所有已发布的 | ✓ 所有已发布的 |
-| POST /api/topics/:id/pages | ✗ | ✗ | ✓ 自己创建的 |
-| PUT /api/pages/:id | ✗ | ✗ | ✓ 专题创建者 |
-| DELETE /api/pages/:id | ✗ | ✗ | ✓ 专题创建者 |
-| PATCH /api/topics/:id/pages/reorder | ✗ | ✗ | ✓ 专题创建者 |
-
-#### 网站版专题权限
-
-| 端点 | 访客 | 学生 | 教师 |
-|------|:----:|:----:|:----:|
-| POST /api/topics/:id/website/upload | ✗ | ✗ | ✓ 自己创建的 |
-| PUT /api/topics/:id/website/upload | ✗ | ✗ | ✓ 自己创建的 |
-| DELETE /api/topics/:id/website | ✗ | ✗ | ✓ 自己创建的 |
-| GET /api/topics/:id/website/stats | ✗ | ✗ | ✓ 自己创建的 |
+| POST /api/topics/:id/files | ✗ | ✗ | ✓ 自己创建的 |
+| POST /api/topics/:id/chat-history | ✗ | ✗ | ✓ 自己创建的 |
+| GET /api/topics/:id/chat-history | ✗ | ✗ | ✓ 自己创建的 |
+| POST /api/topics/:id/publish | ✗ | ✗ | ✓ 自己创建的 |
+| POST /api/topics/:id/share | ✗ | ✗ | ✓ 自己创建的 |
 
 #### AI Agent 权限
 
@@ -214,7 +201,7 @@ POST   /api/ai/chat          - AI 对话（需认证）
 
 **完全公开访问：**
 - 所有已发布的专题对所有人公开可见（包括未登录访客）
-- 访客可以查看任何已发布专题的详情和页面内容
+- 访客可以查看任何已发布专题的详情和网站文件
 - 不需要"加入"操作
 - 健康检查端点（`/health`）对所有服务公开
 
@@ -234,7 +221,6 @@ POST   /api/ai/chat          - AI 对话（需认证）
 app.use('/api/auth', proxy('http://auth:3001'))     // Auth Service
 app.use('/api/users', proxy('http://auth:3001'))    // Auth Service
 app.use('/api/topics', proxy('http://topic-space:3002')) // Topic Space
-app.use('/api/pages', proxy('http://topic-space:3002'))  // Topic Space
 app.use('/api/ai', proxy('http://ai:3003'))         // AI Service
 ```
 
@@ -257,7 +243,7 @@ GET http://gateway:3000/health
 {
   "success": true,
   "service": "auth",
-  "timestamp": "2026-04-06T12:00:00.000Z"
+  "timestamp": "2026-04-07T12:00:00.000Z"
 }
 ```
 
@@ -265,7 +251,7 @@ GET http://gateway:3000/health
 
 **数据库表隔离：**
 - `auth_users` → Auth Service 独立管理
-- `topic_topics`, `topic_topic_pages` → Topic Space Service 管理
+- `topic_topics` → Topic Space Service 管理
 - AI Service 通过 HTTP 调用 Auth/Topic Space 获取数据，不直接操作表
 
 **JWT 跨服务验证：**
@@ -314,8 +300,7 @@ jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] })
 **公开 API：** 无需认证
 - GET /api/topics
 - GET /api/topics/:id
-- GET /api/topics/:id/pages
-- GET /api/pages/:id
+- GET /api/topics/:id/files
 - GET /:service/health（各服务健康检查）
 
 **需认证 API：** 需要有效的 JWT Token
@@ -375,8 +360,34 @@ GET /api/topics?page=1&limit=20
 ```
 GET /api/topics?status=published
 GET /api/topics?created_by=1
-GET /api/topics?type=knowledge
 ```
+
+## 与旧设计的差异
+
+### 已移除的 API
+
+根据新的统一网站模型，以下 API 端点已被移除：
+
+- ❌ `GET /api/topics?type=knowledge` - 类型过滤（统一为 website）
+- ❌ `POST /api/topics/:id/pages` - Markdown 页面创建
+- ❌ `GET /api/topics/:id/pages` - Markdown 页面列表
+- ❌ `GET /api/pages/:id` - Markdown 页面详情
+- ❌ `PUT /api/pages/:id` - Markdown 页面更新
+- ❌ `DELETE /api/pages/:id` - Markdown 页面删除
+- ❌ `PATCH /api/topics/:id/pages/reorder` - 页面重排序
+- ❌ `POST /api/topics/:id/website/upload` - ZIP 上传
+- ❌ `PUT /api/topics/:id/website/upload` - ZIP 更新
+- ❌ `DELETE /api/topics/:id/website` - 网站删除
+- ❌ `GET /api/topics/:id/website/stats` - 访问统计
+
+### 新的 API
+
+- ✅ `POST /api/topics/:id/files` - 保存文件快照
+- ✅ `GET /api/topics/:id/files` - 获取文件快照
+- ✅ `POST /api/topics/:id/chat-history` - 保存对话历史
+- ✅ `GET /api/topics/:id/chat-history` - 获取对话历史
+- ✅ `POST /api/topics/:id/publish` - 发布专题网站
+- ✅ `POST /api/topics/:id/share` - 生成分享链接
 
 ## 相关文档
 

@@ -16,27 +16,27 @@ export const createProxies = () => {
 
   // http-proxy-middleware v3.x: when mounted with app.use('/api/auth', proxy),
   // Express strips the mount point, so we need to restore it in pathRewrite
+  // Auth proxy is shared between /api/auth and /api/users mounts, so use req.baseUrl
   console.log('[gateway] Creating auth proxy with target:', urls.auth);
   const authProxy = createProxyMiddleware({
     target: urls.auth,
     changeOrigin: true,
     proxyTimeout: 30000,
     pathRewrite: (path, req) => {
-      // Restore the full path with mount point
-      const fullPath = '/api/auth' + path;
+      const fullPath = (req.baseUrl || '') + path;
       console.log('[gateway] Auth path rewrite:', path, '->', fullPath);
       return fullPath;
     },
   });
 
+  // topicSpace proxy is shared between /api/topics and /api/pages mounts, so use req.baseUrl
   console.log('[gateway] Creating topicSpace proxy with target:', urls.topicSpace);
   const topicSpaceProxy = createProxyMiddleware({
     target: urls.topicSpace,
     changeOrigin: true,
     proxyTimeout: 30000,
     pathRewrite: (path, req) => {
-      // Restore the full path with mount point
-      const fullPath = '/api/topics' + path;
+      const fullPath = (req.baseUrl || '') + path;
       console.log('[gateway] TopicSpace path rewrite:', path, '->', fullPath);
       return fullPath;
     },

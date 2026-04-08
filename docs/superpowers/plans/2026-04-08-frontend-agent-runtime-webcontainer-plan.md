@@ -4,7 +4,7 @@
 
 **Goal:** Move agent runtime from backend to frontend — backend becomes a generic LLM proxy + chat history persistence, frontend implements full tool-calling loop with WebContainer-based file tools.
 
-**Architecture:** Frontend owns agent runtime, tool registry, and tool execution in WebContainer. Backend only proxies OpenAI-compatible requests and persists user-visible messages. WebContainer FS is the single source of truth for file state.
+**Architecture:** Frontend owns agent runtime, tool registry, and tool execution in WebContainer. Backend is an **OpenAI-compatible LLM proxy** — it does NOT own an LLM, only forwards requests to an external provider (OpenAI, DashScope, DeepSeek, etc.) configured via `OPENAI_API_KEY` + `OPENAI_BASE_URL`. Both legs (frontend→backend and backend→provider) use the OpenAI SDK and chat completions protocol. Backend also persists user-visible messages. WebContainer FS is the single source of truth for file state.
 
 **Tech Stack:** TypeScript, React, Zustand, OpenAI SDK, WebContainer API, Express, Sequelize (MySQL)
 
@@ -921,7 +921,16 @@ git commit -m "feat: update editor page for new permission model and WebContaine
 
 ---
 
-### Task 9: Refactor backend AI service — remove tool loop and topic-specific logic
+### Task 9: Refactor backend AI service — remove tool loop, implement OpenAI-compatible LLM proxy
+
+> **IMPORTANT:** The backend LLM API MUST be an **OpenAI-compatible proxy**. It does NOT own or run its own LLM. It forwards requests to an upstream LLM provider (configured via `OPENAI_API_KEY` + `OPENAI_BASE_URL`). The entire request/response chain follows OpenAI chat completions protocol — both the frontend→backend and backend→upstream-provider legs.
+>
+> This means:
+> - The frontend uses the OpenAI SDK to call the backend — no custom API shape
+> - The backend uses the OpenAI SDK to call the upstream provider — no custom API shape
+> - Any OpenAI-compatible provider (OpenAI, Azure, DashScope, DeepSeek, etc.) can be plugged in by changing `OPENAI_BASE_URL`
+> - The backend MUST NOT inject topic semantics, agent types, or business logic into prompts
+> - The proxy is a **dumb pipe** that adds auth, validation, and configuration only
 
 **Files:**
 - Modify: `services/ai/src/controllers/aiController.ts`
@@ -929,7 +938,7 @@ git commit -m "feat: update editor page for new permission model and WebContaine
 - Modify: `services/ai/src/services/aiService.ts`
 - Modify: `services/ai/src/app.ts`
 
-- [ ] **Step 1: Rewrite `aiController.ts` as a generic LLM proxy**
+- [ ] **Step 1: Rewrite `aiController.ts` as an OpenAI-compatible proxy endpoint**
 
 Replace entire file:
 
@@ -974,6 +983,7 @@ export const chat = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ success: false, error: 'Not authorized' });
     }
 
+    // Forward the OpenAI-compatible request body as-is
     const { messages, tools, tool_choice, stream, model } = req.body as {
       messages: any[];
       tools?: any[];
@@ -999,7 +1009,10 @@ export const chat = async (req: AuthRequest, res: Response) => {
 };
 ```
 
-- [ ] **Step 2: Rewrite `aiService.ts` as a thin LLM proxy**
+- [ ] **Step 2: Rewrite `aiService.ts` as a thin OpenAI-compatible proxy layer**
+
+> This file uses the OpenAI SDK to call an **external LLM provider** configured via `OPENAI_API_KEY` and `OPENAI_BASE_URL`.
+> The `OPENAI_BASE_URL` can point to any OpenAI-compatible service (OpenAI, DashScope, DeepSeek, Together, etc.).
 
 Replace entire file:
 
@@ -1007,6 +1020,8 @@ Replace entire file:
 import OpenAI from 'openai';
 import { config } from '../utils/config';
 
+// The backend LLM client connects to an EXTERNAL OpenAI-compatible provider.
+// Configure the target via OPENAI_API_KEY (required) and OPENAI_BASE_URL (optional).
 const client = config.ai.apiKey
   ? new OpenAI({
       apiKey: config.ai.apiKey,

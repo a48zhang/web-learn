@@ -6,7 +6,6 @@ import { runMigrations } from './utils/migrate';
 
 (async () => {
   await sequelize.authenticate();
-  await runMigrations();
 
   const isProd = process.env.NODE_ENV === 'production';
 
@@ -20,6 +19,9 @@ import { runMigrations } from './utils/migrate';
     await sequelize.sync();
     console.log('[topic-space] database synced (production mode)');
   }
+
+  // Run manual migrations (e.g. add editors column) after tables are created
+  await runMigrations();
 
   // Initialize storage service with null implementation for now
   // In production, this should be replaced with actual storage provider (OSS/S3/Azure)

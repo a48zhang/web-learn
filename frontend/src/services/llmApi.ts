@@ -8,7 +8,7 @@ const getAuthToken = () => localStorage.getItem('auth_token');
 const createLlmClient = (token: string) =>
   new OpenAI({
     apiKey: token,
-    baseURL: `${API_BASE_URL}/llm`,
+    baseURL: `${API_BASE_URL}/ai`,
     dangerouslyAllowBrowser: true,
   });
 

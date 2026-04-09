@@ -1,6 +1,6 @@
 # API 设计
 
-> 最后更新：2026-04-07
+> 最后更新：2026-04-08
 
 ## RESTful API 概览
 
@@ -176,26 +176,26 @@ POST   /api/ai/chat          - AI 对话（需认证）
 
 ### API 权限矩阵
 
-| 端点 | 访客 | 学生 | 教师 |
-|------|:----:|:----:|:----:|
-| GET /api/topics | ✓ 所有已发布的 | ✓ 所有已发布的 | ✓ 自己创建的 + 所有已发布的 |
-| GET /api/topics/:id | ✓ 所有已发布的 | ✓ 所有已发布的 | ✓ 自己创建的 + 所有已发布的 |
-| GET /api/topics/:id/files | ✓ 所有已发布的 | ✓ 所有已发布的 | ✓ 自己创建的 + 所有已发布的 |
-| POST /api/topics | ✗ | ✗ | ✓ |
-| PUT /api/topics/:id | ✗ | ✗ | ✓ 自己创建的 |
-| PATCH /api/topics/:id/status | ✗ | ✗ | ✓ 自己创建的 |
-| POST /api/topics/:id/files | ✗ | ✗ | ✓ 自己创建的 |
-| POST /api/topics/:id/chat-history | ✗ | ✗ | ✓ 自己创建的 |
-| GET /api/topics/:id/chat-history | ✗ | ✗ | ✓ 自己创建的 |
-| POST /api/topics/:id/publish | ✗ | ✗ | ✓ 自己创建的 |
-| POST /api/topics/:id/share | ✗ | ✗ | ✓ 自己创建的 |
+| 端点 | 访客 | 用户（非editor） | 用户（editor） |
+|------|:----:|:----------------:|:--------------:|
+| GET /api/topics | ✓ 所有已发布的 | ✓ 所有已发布的 | ✓ 自己参与的 + 所有已发布的（含draft） |
+| GET /api/topics/:id | ✓ 所有已发布的 | ✓ 所有已发布的 | ✓ 自己参与的 + 所有已发布的 |
+| GET /api/topics/:id/files | ✓ 所有已发布的 | ✓ 所有已发布的 | ✓ 自己参与的 + 所有已发布的 |
+| POST /api/topics | ✗ | ✓ | ✓ |
+| PUT /api/topics/:id | ✗ | ✗ | ✓ 自己参与的 |
+| PATCH /api/topics/:id/status | ✗ | ✗ | ✓ 自己参与的 |
+| POST /api/topics/:id/files | ✗ | ✗ | ✓ 自己参与的 |
+| POST /api/topics/:id/chat-history | ✗ | ✗ | ✓ 自己参与的 |
+| GET /api/topics/:id/chat-history | ✗ | ✗ | ✓ 自己参与的 |
+| POST /api/topics/:id/publish | ✗ | ✗ | ✓ 自己参与的 |
+| POST /api/topics/:id/share | ✗ | ✗ | ✓ 自己参与的 |
 
 #### AI Agent 权限
 
-| Agent 类型 | 访客 | 学生 | 教师 |
-|------|:----:|:----:|:----:|
-| 学习助手 Agent（learning） | ✗ | ✓ 所有已发布的 | ✓ 所有已发布的 |
-| 专题搭建 Agent（building） | ✗ | ✗ | ✓ 自己创建的 |
+| Agent 类型 | 访客 | 用户（非editor） | 用户（editor） |
+|------|:----:|:----------------:|:--------------:|
+| 学习助手 Agent（learning） | ✗ | ✓ 所有已发布的 | ✓ |
+| 专题搭建 Agent（building） | ✗ | ✗ | ✓ 有编辑权限的专题 |
 
 ### 公开访问规则
 
@@ -206,10 +206,10 @@ POST   /api/ai/chat          - AI 对话（需认证）
 - 健康检查端点（`/health`）对所有服务公开
 
 **需认证的操作：**
-- 使用 AI 学习助手（学生身份）
-- 使用 AI 专题搭建助手（教师身份）
-- 创建专题（教师身份）
-- 管理操作（创建者身份）
+- 使用 AI 学习助手（需登录）
+- 使用 AI 专题搭建助手（需登录且有编辑权限）
+- 创建专题（需登录）
+- 管理操作（editor 身份）
 
 ## 微服务架构
 
@@ -276,8 +276,8 @@ GET http://gateway:3000/health
     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "user": {
       "id": "1",
-      "username": "teacher1",
-      "role": "teacher"
+      "username": "user1",
+      "role": "user"
     }
   }
 }

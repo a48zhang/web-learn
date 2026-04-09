@@ -18,10 +18,14 @@
 ### 设计与规划
 
 **[superpowers/specs/](./superpowers/specs/)** - 设计文档
+- **[用户设置设计](./superpowers/specs/2026-04-07-user-settings-design.md)** - 个人资料、密码修改、主题切换
 - **[网站编辑器设计](./superpowers/specs/2026-04-07-website-editor-design.md)** - VSCode风格三栏编辑器设计
+- **[前端 Agent Runtime 设计](./superpowers/specs/2026-04-08-frontend-agent-runtime-webcontainer-design.md)** - 前端工具循环与 WebContainer 集成
 
 **[superpowers/plans/](./superpowers/plans/)** - 实施计划
+- **[用户设置实施计划](./superpowers/plans/2026-04-07-user-settings.md)** - 用户设置实施计划
 - **[网站编辑器实施计划](./superpowers/plans/2026-04-07-website-editor.md)** - 16步实施计划
+- **[前端 Agent Runtime 实施计划](./superpowers/plans/2026-04-08-frontend-agent-runtime-webcontainer-plan.md)** - WebContainer 工具循环实施
 
 ### 迁移文档
 

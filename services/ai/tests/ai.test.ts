@@ -32,20 +32,11 @@ import jwt from 'jsonwebtoken';
 const mockUserModel = {
   findByPk: jest.fn(),
 };
-const mockTopicModel = {
-  findByPk: jest.fn(),
-};
-const mockPageModel = {
-  findByPk: jest.fn(),
-  findAll: jest.fn(),
-  findOne: jest.fn(),
-  create: jest.fn(),
-};
 
 jest.mock('../src/models', () => ({
   User: mockUserModel,
-  Topic: mockTopicModel,
-  TopicPage: mockPageModel,
+  Topic: { findByPk: jest.fn() },
+  TopicPage: { findByPk: jest.fn() },
 }));
 
 const mockCreate = jest.fn();
@@ -87,28 +78,18 @@ describe('AI API', () => {
   it('rejects unauthenticated chat requests', async () => {
     const response = await request(app).post('/api/ai/chat').send({
       messages: [{ role: 'user', content: 'hi' }],
-      topic_id: 1,
-      agent_type: 'learning',
     });
 
     expect(response.status).toBe(401);
   });
 
-  it('allows learning chat for published topic', async () => {
+  it('allows authenticated chat requests', async () => {
     (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
     mockUserModel.findByPk.mockResolvedValue({
       id: 9,
-      username: 'user',
-      email: 'user@example.com',
-      role: 'user',
-    });
-    mockTopicModel.findByPk.mockResolvedValue({
-      id: 1,
-      title: 'Topic',
-      type: 'knowledge',
-      status: 'published',
-      created_by: 5,
-      editors: ['9'],
+      username: 'student',
+      email: 'student@example.com',
+      role: 'student',
     });
     mockCreate.mockResolvedValue({
       id: 'chatcmpl-1',
@@ -119,14 +100,9 @@ describe('AI API', () => {
 
     const response = await request(app)
       .post('/api/ai/chat')
-      .set('x-user-id', '9')
-      .set('x-user-username', 'user')
-      .set('x-user-email', 'user@example.com')
-      .set('x-user-role', 'user')
+      .set('Authorization', 'Bearer token')
       .send({
         messages: [{ role: 'user', content: 'hello' }],
-        topic_id: 1,
-        agent_type: 'learning',
       });
 
     expect(response.status).toBe(200);
@@ -137,45 +113,35 @@ describe('AI API', () => {
     (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
     mockUserModel.findByPk.mockResolvedValue({
       id: 9,
-      username: 'user',
-      email: 'user@example.com',
-      role: 'user',
+      username: 'student',
+      email: 'student@example.com',
+      role: 'student',
     });
 
     const response = await request(app)
       .post('/api/ai/chat')
-      .set('x-user-id', '9')
-      .set('x-user-username', 'user')
-      .set('x-user-email', 'user@example.com')
-      .set('x-user-role', 'user')
+      .set('Authorization', 'Bearer token')
       .send({
         messages: 'not-array',
-        topic_id: 1,
-        agent_type: 'learning',
       });
 
     expect(response.status).toBe(400);
   });
 
-  it('rejects oversized message list', async () => {
+  it('rejects message list exceeding 100 messages', async () => {
     (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
     mockUserModel.findByPk.mockResolvedValue({
       id: 9,
-      username: 'user',
-      email: 'user@example.com',
-      role: 'user',
+      username: 'student',
+      email: 'student@example.com',
+      role: 'student',
     });
 
     const response = await request(app)
       .post('/api/ai/chat')
-      .set('x-user-id', '9')
-      .set('x-user-username', 'user')
-      .set('x-user-email', 'user@example.com')
-      .set('x-user-role', 'user')
+      .set('Authorization', 'Bearer token')
       .send({
-        messages: Array.from({ length: 51 }).map((_, i) => ({ role: 'user', content: `m-${i}` })),
-        topic_id: 1,
-        agent_type: 'learning',
+        messages: Array.from({ length: 101 }).map((_, i) => ({ role: 'user', content: `m-${i}` })),
       });
 
     expect(response.status).toBe(400);
@@ -185,21 +151,16 @@ describe('AI API', () => {
     (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
     mockUserModel.findByPk.mockResolvedValue({
       id: 9,
-      username: 'user',
-      email: 'user@example.com',
-      role: 'user',
+      username: 'student',
+      email: 'student@example.com',
+      role: 'student',
     });
 
     const response = await request(app)
       .post('/api/ai/chat')
-      .set('x-user-id', '9')
-      .set('x-user-username', 'user')
-      .set('x-user-email', 'user@example.com')
-      .set('x-user-role', 'user')
+      .set('Authorization', 'Bearer token')
       .send({
         messages: [{ role: 'hacker', content: 'hello' }],
-        topic_id: 1,
-        agent_type: 'learning',
       });
 
     expect(response.status).toBe(400);
@@ -209,119 +170,74 @@ describe('AI API', () => {
     (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
     mockUserModel.findByPk.mockResolvedValue({
       id: 9,
-      username: 'user',
-      email: 'user@example.com',
-      role: 'user',
+      username: 'student',
+      email: 'student@example.com',
+      role: 'student',
     });
 
     const response = await request(app)
       .post('/api/ai/chat')
-      .set('x-user-id', '9')
-      .set('x-user-username', 'user')
-      .set('x-user-email', 'user@example.com')
-      .set('x-user-role', 'user')
+      .set('Authorization', 'Bearer token')
       .send({
         messages: [{ role: 'user', content: 'x'.repeat(10001) }],
-        topic_id: 1,
-        agent_type: 'learning',
       });
 
     expect(response.status).toBe(400);
   });
 
-  it('rejects learning chat on unpublished topic', async () => {
+  it('rejects empty messages array', async () => {
     (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
     mockUserModel.findByPk.mockResolvedValue({
       id: 9,
-      username: 'user',
-      email: 'user@example.com',
-      role: 'user',
-    });
-    mockTopicModel.findByPk.mockResolvedValue({
-      id: 1,
-      title: 'Topic',
-      type: 'knowledge',
-      status: 'draft',
-      created_by: 5,
-      editors: ['9'],
+      username: 'student',
+      email: 'student@example.com',
+      role: 'student',
     });
 
     const response = await request(app)
       .post('/api/ai/chat')
-      .set('x-user-id', '9')
-      .set('x-user-username', 'user')
-      .set('x-user-email', 'user@example.com')
-      .set('x-user-role', 'user')
+      .set('Authorization', 'Bearer token')
       .send({
-        messages: [{ role: 'user', content: 'hello' }],
-        topic_id: 1,
-        agent_type: 'learning',
-      });
-
-    expect(response.status).toBe(403);
-  });
-
-  it('rejects building chat for non-editor', async () => {
-    (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
-    mockUserModel.findByPk.mockResolvedValue({
-      id: 9,
-      username: 'user',
-      email: 'user@example.com',
-      role: 'user',
-    });
-    mockTopicModel.findByPk.mockResolvedValue({
-      id: 1,
-      title: 'Topic',
-      type: 'knowledge',
-      status: 'published',
-      created_by: 5,
-      editors: ['5'],
-    });
-
-    const response = await request(app)
-      .post('/api/ai/chat')
-      .set('x-user-id', '9')
-      .set('x-user-username', 'user')
-      .set('x-user-email', 'user@example.com')
-      .set('x-user-role', 'user')
-      .send({
-        messages: [{ role: 'user', content: 'hello' }],
-        topic_id: 1,
-        agent_type: 'building',
-      });
-
-    expect(response.status).toBe(403);
-  });
-
-  it('rejects building chat for website topic', async () => {
-    (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
-    mockUserModel.findByPk.mockResolvedValue({
-      id: 9,
-      username: 'user',
-      email: 'user@example.com',
-      role: 'user',
-    });
-    mockTopicModel.findByPk.mockResolvedValue({
-      id: 1,
-      title: 'Topic',
-      type: 'website',
-      status: 'published',
-      created_by: 9,
-      editors: ['9'],
-    });
-
-    const response = await request(app)
-      .post('/api/ai/chat')
-      .set('x-user-id', '9')
-      .set('x-user-username', 'user')
-      .set('x-user-email', 'user@example.com')
-      .set('x-user-role', 'user')
-      .send({
-        messages: [{ role: 'user', content: 'hello' }],
-        topic_id: 1,
-        agent_type: 'building',
+        messages: [],
       });
 
     expect(response.status).toBe(400);
+  });
+
+  it('forwards tools and tool_choice to LLM', async () => {
+    (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
+    mockUserModel.findByPk.mockResolvedValue({
+      id: 9,
+      username: 'teacher',
+      email: 'teacher@example.com',
+      role: 'teacher',
+    });
+    mockCreate.mockResolvedValue({
+      id: 'chatcmpl-2',
+      object: 'chat.completion',
+      model: 'test-model',
+      choices: [{ index: 0, message: { role: 'assistant', content: null, tool_calls: [] }, finish_reason: 'stop' }],
+    });
+
+    const tools = [
+      {
+        type: 'function',
+        function: { name: 'list_files', description: 'List files', parameters: { type: 'object', properties: {} } },
+      },
+    ];
+
+    const response = await request(app)
+      .post('/api/ai/chat')
+      .set('Authorization', 'Bearer token')
+      .send({
+        messages: [{ role: 'user', content: 'list my files' }],
+        tools,
+        tool_choice: 'auto',
+      });
+
+    expect(response.status).toBe(200);
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ tools, tool_choice: 'auto' })
+    );
   });
 });

@@ -1,31 +1,12 @@
 import { Request, Response } from 'express';
 import { AuthenticatedRequest as AuthRequest } from '@web-learn/shared';
-import { Topic } from '../models';
-import { chatWithTools } from '../services/aiService';
-import { getBuildingTools, getLearningTools } from '../services/agentTools';
-
-const getSystemPrompt = (agentType: 'learning' | 'building', topic: Topic) => {
-  if (agentType === 'building') {
-    return [
-      '你是专题搭建助手。',
-      '目标：帮助用户创建与编辑专题内容。',
-      '你必须优先使用工具读写页面内容。',
-      `当前专题：${topic.title}（ID=${topic.id}，type=${topic.type}，status=${topic.status}）`,
-    ].join('\n');
-  }
-  return [
-    '你是学习助手。',
-    '目标：回答专题相关问题，引用页面内容，避免无依据回答。',
-    '你可以调用工具查询专题、页面与关键词。',
-    `当前专题：${topic.title}（ID=${topic.id}，type=${topic.type}，status=${topic.status}）`,
-  ].join('\n');
-};
+import { chatWithLLM } from '../services/aiService';
 
 const ALLOWED_MESSAGE_ROLES = new Set(['system', 'user', 'assistant', 'tool']);
-const MAX_MESSAGES = 50;
+const MAX_MESSAGES = 100;
 const MAX_MESSAGE_CONTENT_LENGTH = 10000;
 
-const validateMessages = (messages: unknown) => {
+const validateMessages = (messages: unknown): string | null => {
   if (!Array.isArray(messages)) {
     return 'messages must be an array';
   }
@@ -41,79 +22,49 @@ const validateMessages = (messages: unknown) => {
     if (typeof role !== 'string' || !ALLOWED_MESSAGE_ROLES.has(role)) {
       return 'message role is invalid';
     }
-    if (typeof content !== 'string' || !content.trim()) {
-      return 'message content must be a non-empty string';
-    }
-    if (content.length > MAX_MESSAGE_CONTENT_LENGTH) {
-      return `message content too long, max ${MAX_MESSAGE_CONTENT_LENGTH}`;
+    // Tool messages can have null content; assistant messages with tool_calls can also have null content
+    if (role === 'tool' || role === 'assistant') {
+      if (content !== null && content !== undefined && typeof content !== 'string') {
+        return 'message content must be a string or null';
+      }
+      if (typeof content === 'string' && content.length > MAX_MESSAGE_CONTENT_LENGTH) {
+        return `message content too long, max ${MAX_MESSAGE_CONTENT_LENGTH}`;
+      }
+    } else {
+      // user/system messages must have non-empty string content
+      if (typeof content !== 'string' || !content.trim()) {
+        return 'message content must be a non-empty string';
+      }
+      if (content.length > MAX_MESSAGE_CONTENT_LENGTH) {
+        return `message content too long, max ${MAX_MESSAGE_CONTENT_LENGTH}`;
+      }
     }
   }
   return null;
 };
 
-export const chat = async (req: AuthRequest | Request, res: Response) => {
+export const chat = async (req: AuthRequest, res: Response) => {
   try {
-    const authReq = req as AuthRequest;
-    if (!authReq.user) {
+    if (!req.user) {
       return res.status(401).json({ success: false, error: 'Not authorized' });
     }
 
-    const { messages, topic_id, agent_type } = req.body as {
+    const { messages, tools, tool_choice, model } = req.body as {
       messages: any[];
-      topic_id: number;
-      agent_type: 'learning' | 'building';
+      tools?: any[];
+      tool_choice?: string;
+      model?: string;
     };
-    if (!topic_id || !agent_type) {
-      return res.status(400).json({ success: false, error: 'messages, topic_id, agent_type are required' });
-    }
+
     const messagesError = validateMessages(messages);
     if (messagesError) {
       return res.status(400).json({ success: false, error: messagesError });
     }
-    if (!['learning', 'building'].includes(agent_type)) {
-      return res.status(400).json({ success: false, error: 'Invalid agent_type' });
-    }
 
-    const topic = await Topic.findByPk(topic_id);
-    if (!topic) {
-      return res.status(404).json({ success: false, error: 'Topic not found' });
-    }
-
-    if (agent_type === 'learning' && topic.status !== 'published') {
-      return res.status(403).json({ success: false, error: 'Topic is not published' });
-    }
-
-    if (agent_type === 'building') {
-      const editors = (topic.editors as string[]) || [];
-      if (!editors.includes(authReq.user.id.toString()) && authReq.user.role !== 'admin') {
-        return res.status(403).json({ success: false, error: 'Access denied' });
-      }
-      if (topic.type !== 'knowledge') {
-        return res.status(400).json({ success: false, error: 'Building assistant currently supports knowledge topics only' });
-      }
-    }
-
-    const tools = agent_type === 'building' ? getBuildingTools() : getLearningTools();
-    const systemPrompt = getSystemPrompt(agent_type, topic);
-
-    const completion = await chatWithTools({
-      messages: [{ role: 'system', content: systemPrompt }, ...messages],
-      tools,
-      context: {
-        topicId: topic.id,
-        userId: authReq.user.id,
-        userRole: authReq.user.role,
-      },
-      metadata: {
-        topic_id: topic.id,
-        agent_type,
-        user_id: authReq.user.id,
-      },
-    });
-
+    const completion = await chatWithLLM(messages, tools, tool_choice, model);
     return res.json(completion);
   } catch (error: any) {
-    console.error('AI chat error:', error);
+    console.error('LLM proxy error:', error);
     return res.status(500).json({
       success: false,
       error: error?.message || 'Internal server error',

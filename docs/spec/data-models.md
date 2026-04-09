@@ -1,6 +1,6 @@
 # 数据模型
 
-> 最后更新：2026-04-07
+> 最后更新：2026-04-08
 
 ## 概述
 
@@ -30,14 +30,13 @@
 | username | VARCHAR(50) | UNIQUE, NOT NULL | 用户名 |
 | email | VARCHAR(100) | UNIQUE, NOT NULL | 邮箱 |
 | password | CHAR(60) | NOT NULL | 密码（bcrypt加密） |
-| role | ENUM | NOT NULL | 角色：admin, teacher, student |
+| role | ENUM | NOT NULL | 角色：admin, user |
 | created_at | TIMESTAMP | AUTO | 创建时间 |
 | updated_at | TIMESTAMP | AUTO | 更新时间 |
 
 **角色定义：**
 - `admin` - 管理员（保留角色，不通过注册创建）
-- `teacher` - 教师（可创建和管理专题）
-- `student` - 学生（可浏览专题、使用学习助手）
+- `user` - 用户（原 teacher/student 已统一为此角色，可创建和管理专题）
 
 **服务归属：**
 - Auth Service：用户注册、登录、JWT 颁发
@@ -59,7 +58,8 @@
 | chat_history | TEXT | NULLABLE | 对话历史 JSON（与Agent的交互记录） |
 | published_url | VARCHAR(500) | NULLABLE | 发布后的外部访问URL |
 | share_link | VARCHAR(500) | NULLABLE | 分享链接 |
-| created_by | INTEGER | FK → auth_users.id | 创建者（教师） |
+| created_by | INTEGER | FK → auth_users.id | 创建者 |
+| editors | JSON | NOT NULL, DEFAULT [] | 可编辑此专题的用户ID列表 |
 | status | ENUM | NOT NULL | 状态：draft, published, closed |
 | created_at | TIMESTAMP | AUTO | 创建时间 |
 | updated_at | TIMESTAMP | AUTO | 更新时间 |
@@ -69,7 +69,9 @@
 - 仅创建者教师可修改状态
 
 **业务规则：**
-- 只有教师可以创建专题
+- 已注册用户可创建专题，创建者自动成为该专题的 editor
+- `editors` 字段存储可编辑此专题的用户 ID 列表（JSON 数组）
+- 普通用户仅看到 `published` 状态的专题，editors 额外可见自己参与的 `draft` 专题
 - **发布后所有人可见（完全公开，包括访客）**
 - 关闭后标记为已关闭（仍可见）
 - 网站内容通过 AI Agent 对话生成，文件快照存数据库
@@ -92,7 +94,8 @@ erDiagram
 
 ### 一对多关系
 
-- **User → Topic**：一个教师创建多个专题
+- **User → Topic**：一个用户创建多个专题
+- **Topic ↔ User**：多对多编辑权限（通过 `editors` 字段）
 
 ### 微服务数据隔离
 
@@ -110,7 +113,8 @@ erDiagram
 - **已发布的专题对所有人公开可见**（包括未登录访客）
 - 访客可自由浏览专题内容（iframe 预览网站）
 - 无提交、评价等复杂流程
-- 只有创建和管理需要登录（教师身份）
+- 专题创建和编辑需要登录（user 身份）
+- Draft 专题仅对创建者和 editors 可见
 
 ### 生产环境数据库管理
 
@@ -132,7 +136,7 @@ erDiagram
 - ❌ **Resource** - 独立学习资源（不再需要，资源链接直接写在网站中）
 - ❌ **Submission** - 学习成果提交（不再需要）
 - ❌ **Review** - 评价反馈（不再需要）
-- ❌ **TopicMember** - 专题成员（不再需要，专题完全公开）
+- ❌ **TopicMember** - 专题成员（不再需要，改为 `editors` JSON 字段）
 - ❌ **Task** - 任务（不再需要）
 - ❌ **TopicTemplate** - 专题模板（不再需要，采用AI对话生成）
 - ❌ **TopicPage** - 专题页面（知识库型的Markdown页面，已移除）

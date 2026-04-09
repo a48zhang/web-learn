@@ -1,6 +1,6 @@
 # AI Agent 系统
 
-> 最后更新：2026-04-07
+> 最后更新：2026-04-08
 
 ## 概述
 
@@ -149,6 +149,8 @@
 ### 权限控制
 
 - 访客：不可使用学习助手（需登录）。
+- 用户：可使用学习助手访问所有已发布专题。
+- Editor 可在有编辑权限的专题使用搭建助手。
 
 ---
 
@@ -203,7 +205,7 @@
 
 ### LLM API 接口
 
-遵循 OpenAI Chat Completions API 标准格式：
+遵循 OpenAI Chat Completions API 标准格式，由前端通过 OpenAI SDK 直接调用后端代理：
 
 ```
 POST /api/llm/chat/completions
@@ -317,8 +319,8 @@ sequenceDiagram
 
 **认证与权限：**
 - Gateway authMiddleware 验证 JWT 并注入用户信息
-- AI Service authMiddleware 再次验证用户身份和角色
-- 权限检查：学习助手（学生/教师）、搭建助手（教师且为创建者）
+- Topic Space Service 内部 auth 验证
+- 权限检查：学习助手（登录用户）、搭建助手（editor 且有编辑权限）
 
 ---
 

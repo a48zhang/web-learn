@@ -106,31 +106,12 @@ export interface ReorderTopicPagesDto {
 }
 
 // AI chat types
-export type AIChatAgentType = 'learning' | 'building';
-
 export interface AIChatMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
   content: string | null;
   name?: string;
   tool_call_id?: string;
   tool_calls?: unknown[];
-}
-
-export interface AIChatRequestDto {
-  messages: AIChatMessage[];
-  topic_id: number;
-  agent_type: AIChatAgentType;
-}
-
-export interface AIChatResponseDto {
-  id: string;
-  object: string;
-  model: string;
-  choices: Array<{
-    index: number;
-    message: AIChatMessage;
-    finish_reason: string | null;
-  }>;
 }
 
 // Website topic types
@@ -200,3 +181,5 @@ export interface EditorState {
   isWebContainerReady: boolean;
   previewUrl: string | null;
 }
+
+export type { AgentToolDefinition, AgentToolResult, AgentMessage, AgentRunState } from '../agent/types';

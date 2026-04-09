@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import type { Topic, AgentFileOperation } from '@web-learn/shared';
+import type { Topic } from '@web-learn/shared';
 import { topicApi, topicFileApi } from '../services/api';
 import { useAuthStore } from '../stores/useAuthStore';
 import { toast } from '../stores/useToastStore';
@@ -12,11 +12,10 @@ import TopBar from '../components/editor/TopBar';
 import { EditorPanelGroup } from '../components/editor/ResizablePanel';
 import FileTree from '../components/editor/FileTree';
 import CodeEditor from '../components/editor/CodeEditor';
-import AgentChat from '../components/editor/AgentChat';
+import AIChatSidebar from '../components/AIChatSidebar';
 import PreviewPanel from '../components/editor/PreviewPanel';
 import { useWebContainer } from '../hooks/useWebContainer';
 import { useEditorStore } from '../stores/useEditorStore';
-import { useChatStore } from '../stores/useChatStore';
 
 function WebsiteEditorPage() {
   const { id } = useParams<{ id: string }>();
@@ -33,14 +32,15 @@ function WebsiteEditorPage() {
     previewUrl,
     error: wcError,
     init: initWC,
-    writeFile: wcWriteFile,
     deleteFile: deleteFileWC,
   } = useWebContainer();
 
-  const { setFileContent, openFile, getAllFiles, loadSnapshot, deleteFile } = useEditorStore();
-  const { setMessages } = useChatStore();
+  const { openFile, getAllFiles, loadSnapshot, deleteFile } = useEditorStore();
 
-  const canEdit = !!user && !!topic && (user.role === 'admin' || (topic.editors ?? []).includes(user.id));
+  // Editors-based permission: admin, creator, or editor
+  const canEdit =
+    user?.role === 'admin' ||
+    (topic && user?.id && (topic.createdBy === user.id.toString() || topic.editors?.includes(user.id.toString())));
 
   // Load topic and restore snapshot
   useEffect(() => {
@@ -50,13 +50,9 @@ function WebsiteEditorPage() {
         const topicData = await topicApi.getById(id);
         setTopic(topicData);
 
-        // Try to restore files from snapshot
         const snapshot = await topicFileApi.loadSnapshot(id);
         if (snapshot && Object.keys(snapshot).length > 0) {
           loadSnapshot(snapshot);
-        }
-        if (topicData.chatHistory && Array.isArray(topicData.chatHistory)) {
-          setMessages(topicData.chatHistory);
         }
 
         setMeta({
@@ -75,7 +71,7 @@ function WebsiteEditorPage() {
       }
     };
     fetchData();
-  }, [id, setMeta, loadSnapshot, setMessages]);
+  }, [id, setMeta, loadSnapshot]);
 
   // Initialize WebContainer once topic is loaded
   useEffect(() => {
@@ -83,19 +79,6 @@ function WebsiteEditorPage() {
     const currentFiles = getAllFiles();
     initWC(Object.keys(currentFiles).length > 0 ? currentFiles : undefined);
   }, [topic, id, initWC, getAllFiles]);
-
-  // Apply files from Agent response
-  const handleApplyFiles = useCallback(async (operations: AgentFileOperation[]) => {
-    for (const op of operations) {
-      if (op.action === 'create' || op.action === 'update') {
-        if (op.content !== undefined) {
-          setFileContent(op.path, op.content);
-          await wcWriteFile(op.path, op.content);
-        }
-      }
-    }
-    toast.success(`已应用 ${operations.length} 个文件更改`);
-  }, [setFileContent, wcWriteFile]);
 
   const handleOpenFile = useCallback((path: string) => {
     openFile(path);
@@ -142,10 +125,8 @@ function WebsiteEditorPage() {
 
   return (
     <div className="fixed inset-0 flex flex-col bg-zinc-900">
-      {/* Top Bar */}
       <TopBar onRefreshPreview={handleRefreshPreview} />
 
-      {/* Main Editor Area */}
       <div className="flex-1 overflow-hidden">
         <EditorPanelGroup
           panels={[
@@ -175,7 +156,7 @@ function WebsiteEditorPage() {
               defaultSize: 25,
               collapsible: true,
               header: 'Agent 对话',
-              content: <AgentChat onApplyFiles={handleApplyFiles} />,
+              content: <AIChatSidebar topicId={id} />,
             },
             {
               id: 'preview',

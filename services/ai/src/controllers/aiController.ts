@@ -22,11 +22,22 @@ const validateMessages = (messages: unknown): string | null => {
     if (typeof role !== 'string' || !ALLOWED_MESSAGE_ROLES.has(role)) {
       return 'message role is invalid';
     }
-    if (typeof content !== 'string' || !content.trim()) {
-      return 'message content must be a non-empty string';
-    }
-    if (content.length > MAX_MESSAGE_CONTENT_LENGTH) {
-      return `message content too long, max ${MAX_MESSAGE_CONTENT_LENGTH}`;
+    // Tool messages can have null content; assistant messages with tool_calls can also have null content
+    if (role === 'tool' || role === 'assistant') {
+      if (content !== null && content !== undefined && typeof content !== 'string') {
+        return 'message content must be a string or null';
+      }
+      if (typeof content === 'string' && content.length > MAX_MESSAGE_CONTENT_LENGTH) {
+        return `message content too long, max ${MAX_MESSAGE_CONTENT_LENGTH}`;
+      }
+    } else {
+      // user/system messages must have non-empty string content
+      if (typeof content !== 'string' || !content.trim()) {
+        return 'message content must be a non-empty string';
+      }
+      if (content.length > MAX_MESSAGE_CONTENT_LENGTH) {
+        return `message content too long, max ${MAX_MESSAGE_CONTENT_LENGTH}`;
+      }
     }
   }
   return null;
@@ -38,7 +49,6 @@ export const chat = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ success: false, error: 'Not authorized' });
     }
 
-    // Forward the OpenAI-compatible request body as-is
     const { messages, tools, tool_choice, model } = req.body as {
       messages: any[];
       tools?: any[];

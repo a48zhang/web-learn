@@ -3,7 +3,6 @@ import { useParams } from 'react-router-dom';
 import type { Topic } from '@web-learn/shared';
 import { topicApi, topicFileApi } from '../services/api';
 import { useAuthStore } from '../stores/useAuthStore';
-import { useAgentStore } from '../stores/useAgentStore';
 import { toast } from '../stores/useToastStore';
 import { getApiErrorMessage } from '../utils/errors';
 import { LoadingOverlay } from '../components/Loading';
@@ -13,11 +12,10 @@ import TopBar from '../components/editor/TopBar';
 import { EditorPanelGroup } from '../components/editor/ResizablePanel';
 import FileTree from '../components/editor/FileTree';
 import CodeEditor from '../components/editor/CodeEditor';
-import AgentChat from '../components/editor/AgentChat';
+import AIChatSidebar from '../components/AIChatSidebar';
 import PreviewPanel from '../components/editor/PreviewPanel';
 import { useWebContainer } from '../hooks/useWebContainer';
 import { useEditorStore } from '../stores/useEditorStore';
-import '../agent/tools/index';
 
 function WebsiteEditorPage() {
   const { id } = useParams<{ id: string }>();
@@ -38,9 +36,11 @@ function WebsiteEditorPage() {
   } = useWebContainer();
 
   const { openFile, getAllFiles, loadSnapshot, deleteFile } = useEditorStore();
-  const setVisibleMessages = useAgentStore((s) => s.setVisibleMessages);
 
-  const canEdit = user?.role === 'teacher' && topic?.createdBy === user.id;
+  // Editors-based permission: admin, creator, or editor
+  const canEdit =
+    user?.role === 'admin' ||
+    (topic && user?.id && (topic.createdBy === user.id.toString() || topic.editors?.includes(user.id.toString())));
 
   // Load topic and restore snapshot
   useEffect(() => {
@@ -50,17 +50,9 @@ function WebsiteEditorPage() {
         const topicData = await topicApi.getById(id);
         setTopic(topicData);
 
-        // Try to restore files from snapshot
         const snapshot = await topicFileApi.loadSnapshot(id);
         if (snapshot && Object.keys(snapshot).length > 0) {
           loadSnapshot(snapshot);
-        }
-        if (topicData.chatHistory && Array.isArray(topicData.chatHistory)) {
-          setVisibleMessages(
-            topicData.chatHistory
-              .filter((m: any) => m.role === 'user' || m.role === 'assistant')
-              .map((m: any) => ({ role: m.role, content: m.content || '' }))
-          );
         }
 
         setMeta({
@@ -79,7 +71,7 @@ function WebsiteEditorPage() {
       }
     };
     fetchData();
-  }, [id, setMeta, loadSnapshot, setVisibleMessages]);
+  }, [id, setMeta, loadSnapshot]);
 
   // Initialize WebContainer once topic is loaded
   useEffect(() => {
@@ -133,10 +125,8 @@ function WebsiteEditorPage() {
 
   return (
     <div className="fixed inset-0 flex flex-col bg-zinc-900">
-      {/* Top Bar */}
       <TopBar onRefreshPreview={handleRefreshPreview} />
 
-      {/* Main Editor Area */}
       <div className="flex-1 overflow-hidden">
         <EditorPanelGroup
           panels={[
@@ -166,7 +156,7 @@ function WebsiteEditorPage() {
               defaultSize: 25,
               collapsible: true,
               header: 'Agent 对话',
-              content: <AgentChat />,
+              content: <AIChatSidebar topicId={id} />,
             },
             {
               id: 'preview',

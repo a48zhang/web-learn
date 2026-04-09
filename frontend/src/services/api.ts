@@ -15,8 +15,6 @@ import type {
   CreateTopicPageDto,
   UpdateTopicPageDto,
   ReorderTopicPagesDto,
-  AIChatRequestDto,
-  AIChatResponseDto,
   WebsiteStats,
 } from '@web-learn/shared';
 
@@ -169,14 +167,6 @@ export const pageApi = {
       data
     );
     return response.data.data as TopicPageTreeNode[];
-  },
-};
-
-// AI API
-export const aiApi = {
-  chat: async (data: AIChatRequestDto): Promise<AIChatResponseDto> => {
-    const response = await api.post<AIChatResponseDto>('/ai/chat', data);
-    return response.data;
   },
 };
 

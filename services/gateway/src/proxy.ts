@@ -11,6 +11,21 @@ const getServiceUrls = () => {
   return urls;
 };
 
+// Headers injected by authVerificationMiddleware that must be explicitly
+// forwarded to downstream services. http-proxy does not automatically
+// include headers added to req.headers after the request object was
+// created — they must be set on proxyReq via setHeader().
+const USER_CONTEXT_HEADERS = ['x-user-id', 'x-user-username', 'x-user-email', 'x-user-role'];
+
+const forwardUserContextHeaders = (proxyReq: any, req: Request) => {
+  for (const header of USER_CONTEXT_HEADERS) {
+    const value = req.headers[header];
+    if (value !== undefined) {
+      proxyReq.setHeader(header, value);
+    }
+  }
+};
+
 export const createProxies = () => {
   const urls = getServiceUrls();
 
@@ -22,9 +37,9 @@ export const createProxies = () => {
     target: urls.auth,
     changeOrigin: true,
     proxyTimeout: 30000,
+    onProxyReq: (proxyReq, req) => forwardUserContextHeaders(proxyReq, req),
     pathRewrite: (path, req) => {
       const fullPath = (req.baseUrl || '') + path;
-      console.log('[gateway] Auth path rewrite:', path, '->', fullPath);
       return fullPath;
     },
   });
@@ -35,9 +50,9 @@ export const createProxies = () => {
     target: urls.topicSpace,
     changeOrigin: true,
     proxyTimeout: 30000,
+    onProxyReq: (proxyReq, req) => forwardUserContextHeaders(proxyReq, req),
     pathRewrite: (path, req) => {
       const fullPath = (req.baseUrl || '') + path;
-      console.log('[gateway] TopicSpace path rewrite:', path, '->', fullPath);
       return fullPath;
     },
   });
@@ -47,10 +62,9 @@ export const createProxies = () => {
     target: urls.ai,
     changeOrigin: true,
     proxyTimeout: 30000,
+    onProxyReq: (proxyReq, req) => forwardUserContextHeaders(proxyReq, req),
     pathRewrite: (path, req) => {
-      // Restore the full path with mount point
       const fullPath = '/api/ai' + path;
-      console.log('[gateway] AI path rewrite:', path, '->', fullPath);
       return fullPath;
     },
   });
@@ -59,6 +73,7 @@ export const createProxies = () => {
     target: urls.topicSpace,
     changeOrigin: true,
     proxyTimeout: 30000,
+    onProxyReq: (proxyReq, req) => forwardUserContextHeaders(proxyReq, req),
     pathRewrite: (path) => {
       const fullPath = '/api/llm' + path;
       return fullPath;

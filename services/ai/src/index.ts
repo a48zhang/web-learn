@@ -20,7 +20,11 @@ import { sequelize } from './utils/database';
       console.log('[ai] added editors column to topic_topics');
     }
   } catch (error) {
-    console.error('[ai] editors migration failed:', error);
+    const message = error instanceof Error ? error.message : String(error);
+    // Table may not exist yet (managed by topic-space service) — skip silently
+    if (!message.includes('No description found') && !message.includes("doesn't exist")) {
+      console.error('[ai] editors migration failed:', error);
+    }
   }
 
   app.listen(config.port, () => {

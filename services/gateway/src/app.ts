@@ -3,6 +3,7 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { createProxies } from './proxy';
 import { authVerificationMiddleware } from './authVerificationMiddleware';
+import { requestLogger, notFoundHandler } from './devLogger';
 
 const isLocalOrigin = (origin: string) => {
   try {
@@ -45,6 +46,11 @@ const createApp = () => {
   app.use(buildCorsMiddleware());
   app.use(globalLimiter);
 
+  // Dev-only: log all requests and fail unmatched routes immediately
+  if (process.env.NODE_ENV !== 'production') {
+    app.use(requestLogger);
+  }
+
   app.get('/health', (_req, res) => {
     res.json({ success: true, service: 'gateway', timestamp: new Date().toISOString() });
   });
@@ -61,6 +67,11 @@ const createApp = () => {
   app.use('/api/pages', proxies.topicSpace);
   app.use('/api/llm', proxies.llm);
   app.use('/api/ai', proxies.ai);
+
+  // Dev-only: 404 catch-all for unmatched routes
+  if (process.env.NODE_ENV !== 'production') {
+    app.use(notFoundHandler);
+  }
 
   return app;
 };

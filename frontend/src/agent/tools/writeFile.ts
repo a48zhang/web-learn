@@ -1,6 +1,5 @@
 import { registerTool } from '../toolRegistry';
 import { wcWriteFile } from '../webcontainer';
-import { useEditorStore } from '../../stores/useEditorStore';
 
 registerTool('write_file', {
   name: 'write_file',
@@ -23,6 +22,5 @@ registerTool('write_file', {
     return { content: 'content is required and must be a string', isError: true };
   }
   await wcWriteFile(path, content);
-  useEditorStore.getState().setFileContent(path, content);
   return { content: `Successfully wrote ${content.length} bytes to ${path}` };
 });

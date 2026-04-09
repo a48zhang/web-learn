@@ -1,6 +1,5 @@
 import { registerTool } from '../toolRegistry';
 import { wcMoveFile } from '../webcontainer';
-import { useEditorStore } from '../../stores/useEditorStore';
 
 registerTool('move_file', {
   name: 'move_file',
@@ -20,6 +19,5 @@ registerTool('move_file', {
     return { content: 'oldPath and newPath are required and must be strings', isError: true };
   }
   await wcMoveFile(oldPath, newPath);
-  useEditorStore.getState().renameFile(oldPath, newPath);
   return { content: `Successfully moved ${oldPath} to ${newPath}` };
 });

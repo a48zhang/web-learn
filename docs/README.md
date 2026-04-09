@@ -25,11 +25,12 @@
 **[superpowers/plans/](./superpowers/plans/)** - 实施计划
 - **[用户设置实施计划](./superpowers/plans/2026-04-07-user-settings.md)** - 用户设置实施计划
 - **[网站编辑器实施计划](./superpowers/plans/2026-04-07-website-editor.md)** - 16步实施计划
-- **[前端 Agent Runtime 实施计划](./superpowers/plans/2026-04-08-frontend-agent-runtime-webcontainer-plan.md)** - WebContainer 工具循环实施
+- **[前端 Agent Runtime 实施计划](./superpowers/plans/2026-04-08-frontend-agent-runtime-webcontainer-plan.md)** - WebContainer 工具循环
 
-### 迁移文档
+## 迁移文档
 
 **[migrations/](./migrations/)** - 数据库迁移文档
+- **[移除外键约束](./migrations/2026-04-06-remove-obsolete-user-foreign-key.md)** - 移除废弃的 user 外键约束实施
 
 ## 文档归档
 

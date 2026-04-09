@@ -71,7 +71,7 @@ graph TD
 共享包：
 
 - **packages/utils** - 共享工具（config、database、logger）
-- **packages/shared** - 共享类型定义（预留）
+- **shared** - 共享类型和认证中间件（types + auth），作为独立 npm 包使用
 
 ## 部署架构
 
@@ -142,11 +142,13 @@ AI Service：http://localhost:3003（内部）
 web-learn/
 ├── frontend/               # React 前端应用
 │   ├── src/
-│   │   ├── components/    # UI 组件
+│   │   ├── components/    # UI 组件（AIChatSidebar、editor/、layout/、settings/）
 │   │   ├── pages/         # 页面组件
 │   │   ├── services/      # API 调用
 │   │   ├── stores/        # 状态管理
-│   │   └── types/         # TypeScript 类型
+│   │   ├── agent/         # Agent 运行时（tools、useAgentRuntime、WebContainer）
+│   │   ├── hooks/         # 自定义 Hooks
+│   │   └── utils/         # 工具函数
 │   └── package.json
 │
 ├── services/               # 微服务（pnpm workspace packages）
@@ -208,14 +210,13 @@ web-learn/
 │       │   └── utils/
 │       └── package.json
 │
-├── packages/               # 共享包
-│   ├── utils/             # 共享工具
-│   │   ├── src/
-│   │   │   ├── config.ts         # DOTENV_CONFIG_PATH支持
-│   │   │   └── ...
-│   │   └── package.json
-│   └── shared/            # 共享类型（预留）
-│       └── package.json
+├── packages/               # 旧共享包（packages/utils 仍在使用）
+│   └── utils/             # 共享工具（config、database、logger）
+│
+├── shared/                 # 共享包（独立 npm 包）
+│   └── src/
+│       ├── types/          # 共享类型定义（Topic, User 等）
+│       └── auth/           # 认证中间件
 │
 ├── backend/                # 已移除（原单体应用，已迁移到微服务）
 │   # 所有功能已迁移到 services/ 微服务

@@ -111,6 +111,29 @@ POST   /api/topics/:id/share              - 生成分享链接（需认证）
 POST   /api/ai/chat          - AI 对话（需认证）
 ```
 
+### LLM 代理（专题搭建 Agent）
+
+前端搭建 Agent 通过 OpenAI SDK 直接调用后端 LLM 代理端点，用于在网站编辑器中生成和修改网站代码：
+
+```
+POST   /api/llm/chat/completions    - LLM 对话（需认证，支持流式响应）
+```
+
+**请求参数：**
+```json
+{
+  "model": "gpt-4o",
+  "messages": [
+    { "role": "system", "content": "你是一名专业的前端开发者..." },
+    { "role": "user", "content": "帮我做一个课程网站，风格简约" }
+  ],
+  "response_format": { "type": "json_object" },
+  "stream": true
+}
+```
+
+**实现位置：** `services/topic-space/src/routes/llmRoutes.ts`、`services/topic-space/src/services/llmProvider.ts`
+
 **请求参数（OpenAI API 格式）：**
 ```json
 {

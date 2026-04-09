@@ -151,14 +151,13 @@ server: {
 
 ### 已移除的页面
 
-根据新的统一网站模型，以下页面已被移除：
+以下页面在旧版路由中已不再使用，但文件仍保留在代码中（`TopicDetailPage` 的 type 分流仍引用 `KnowledgeTopicPage` 和 `WebsiteTopicPage`）：
 
-- ❌ `KnowledgeTopicPage` - 知识库浏览页面
-- ❌ `KnowledgeEditorPage` - 知识库编辑页面
-- ❌ `WebsiteTopicPage` - 旧版网站预览页面
-- ❌ `WebsiteEditorPage` - 旧版 ZIP 上传页面
-- ❌ `PageTreeNav` - 知识库页面树导航
-- ❌ `PageTreeEditor` - 知识库页面树编辑器
+- ⚠️ `KnowledgeTopicPage` - 知识库浏览页面（仍被 `TopicDetailPage` type=knowledge 分流引用）
+- ⚠️ `KnowledgeEditorPage` - 知识库编辑页面（文件保留但无路由引用）
+- ⚠️ `WebsiteTopicPage` - 旧版网站预览页面（仍被 `TopicDetailPage` type=website 分流引用）
+- ❌ `PageTreeNav` - 知识库页面树导航（仅被 `KnowledgeTopicPage` 引用）
+- ❌ `PageTreeEditor` - 知识库页面树编辑器（仅被 `KnowledgeEditorPage` 引用）
 
 ### 新增/重构的页面
 

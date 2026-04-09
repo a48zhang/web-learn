@@ -7,9 +7,19 @@ const publicPaths = [
   '/health'
 ];
 
+const publicReadPaths = [
+  '/api/topics'
+];
+
 export async function authVerificationMiddleware(req: Request, res: Response, next: NextFunction) {
   // Skip authentication for public paths
   if (publicPaths.some(path => req.path.startsWith(path))) {
+    return next();
+  }
+
+  // Skip authentication for read-only topic access
+  const isRead = req.method === 'GET';
+  if (isRead && publicReadPaths.some(path => req.path.startsWith(path))) {
     return next();
   }
 

@@ -8,22 +8,17 @@ import { runMigrations } from './utils/migrate';
   await sequelize.authenticate();
   await runMigrations();
 
-  // Check if tables already exist before running sync({ alter: true })
-  // to avoid MySQL's 64-index limit being hit by repeated UNIQUE index recreation
-  let tableExists = false;
-  try {
-    const queryInterface = sequelize.getQueryInterface();
-    await queryInterface.describeTable('topic_topics');
-    tableExists = true;
-  } catch {
-    // Tables don't exist yet
-  }
+  const isProd = process.env.NODE_ENV === 'production';
 
-  if (tableExists) {
-    console.log('[topic-space] tables exist, skipping sync');
+  if (!isProd) {
+    // Drop and recreate tables on every dev startup.
+    // This avoids MySQL's 64-index limit that sync({ alter: true }) can hit
+    // after repeated restarts, and always brings the schema to the latest state.
+    await sequelize.sync({ force: true });
+    console.log('[topic-space] database reset and synced (dev mode)');
   } else {
-    await sequelize.sync(process.env.NODE_ENV === 'production' ? {} : { alter: true });
-    console.log('[topic-space] database synced');
+    await sequelize.sync();
+    console.log('[topic-space] database synced (production mode)');
   }
 
   // Initialize storage service with null implementation for now

@@ -6,9 +6,27 @@ import { sequelize } from './utils/database';
 (async () => {
   await sequelize.authenticate();
 
+  const queryInterface = sequelize.getQueryInterface();
+  let tableExists = false;
+  try {
+    await queryInterface.describeTable('auth_users');
+    tableExists = true;
+  } catch {
+    // Table doesn't exist yet
+  }
+
+  if (tableExists) {
+    // Table already exists — run manual migrations only, skip sync({ alter: true })
+    // to avoid MySQL's 64-index limit being hit by repeated UNIQUE index recreation
+    console.log('[auth] auth_users table exists, skipping sync');
+  } else {
+    // First run — create tables
+    await sequelize.sync();
+    console.log('[auth] database synced');
+  }
+
   // Migrate role enum from ('admin','teacher','student') to ('admin','user')
   try {
-    const queryInterface = sequelize.getQueryInterface();
     const tableInfo = await queryInterface.describeTable('auth_users');
     if (tableInfo.role && tableInfo.role.type === 'enum') {
       await sequelize.query(
@@ -25,9 +43,6 @@ import { sequelize } from './utils/database';
       console.error('[auth] role migration failed:', error);
     }
   }
-
-  await sequelize.sync(process.env.NODE_ENV === 'production' ? {} : { alter: true });
-  console.log('[auth] database synced');
   app.listen(config.port, () => {
     console.log(`[auth] listening on port ${config.port}`);
   });

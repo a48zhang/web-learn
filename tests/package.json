@@ -1,0 +1,21 @@
+{
+  "name": "@web-learn/tests",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test:integration": "npx jest --config jest.integration.config.ts",
+    "test:e2e": "npx playwright test --config=playwright.config.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0",
+    "@types/jest": "^30.0.0",
+    "@types/supertest": "^6.0.3",
+    "axios": "^1.7.0",
+    "bcryptjs": "^2.4.3",
+    "jest": "^30.0.0",
+    "mysql2": "^3.14.0",
+    "supertest": "^7.1.0",
+    "ts-jest": "^29.4.0",
+    "typescript": "^5.8.0"
+  }
+}

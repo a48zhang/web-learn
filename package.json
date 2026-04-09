@@ -12,7 +12,10 @@
     "build:frontend": "pnpm --filter @web-learn/shared build && pnpm --filter @web-learn/frontend build",
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "test:integration": "cd tests && npx jest --config jest.integration.config.ts",
+    "test:e2e": "npx playwright test --config=tests/playwright.config.ts",
+    "test:all": "pnpm test:integration && pnpm test:e2e"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",

@@ -151,4 +151,60 @@ describe('Auth Service', () => {
       expect(res.body).toEqual({ success: false, error: 'No token, authorization denied' });
     });
   });
+
+  describe('POST /internal/verify', () => {
+    it('returns user info for a valid token', async () => {
+      (jwt.verify as jest.Mock).mockReturnValue({ id: 7 });
+      mockUserModel.findByPk.mockResolvedValue({
+        id: 7, username: 'eve', email: 'eve@example.com', role: 'user',
+      });
+
+      const res = await request(app).post('/internal/verify').send({ token: 'valid-jwt' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.user).toEqual({
+        id: 7, username: 'eve', email: 'eve@example.com', role: 'user',
+      });
+    });
+
+    it('returns 400 when token field is missing', async () => {
+      const res = await request(app).post('/internal/verify').send({});
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error).toBe('Token required');
+    });
+
+    it('returns 401 when token is expired', async () => {
+      (jwt.verify as jest.Mock).mockImplementation(() => {
+        throw new jwt.TokenExpiredError('jwt expired', new Date());
+      });
+
+      const res = await request(app).post('/internal/verify').send({ token: 'expired-jwt' });
+      expect(res.status).toBe(401);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error).toBe('Token expired');
+    });
+
+    it('returns 401 when token signature is invalid', async () => {
+      (jwt.verify as jest.Mock).mockImplementation(() => {
+        throw new jwt.JsonWebTokenError('invalid signature');
+      });
+
+      const res = await request(app).post('/internal/verify').send({ token: 'bad-jwt' });
+      expect(res.status).toBe(401);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error).toBe('Invalid token');
+    });
+
+    it('returns 401 when the user referenced by the token no longer exists', async () => {
+      (jwt.verify as jest.Mock).mockReturnValue({ id: 99 });
+      mockUserModel.findByPk.mockResolvedValue(null);
+
+      const res = await request(app).post('/internal/verify').send({ token: 'ghost-user-jwt' });
+      expect(res.status).toBe(401);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error).toBe('User not found');
+    });
+  });
 });

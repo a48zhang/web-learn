@@ -7,9 +7,21 @@ const publicPaths = [
   '/health'
 ];
 
+// Paths that allow unauthenticated GET access (exact match or sub-path).
+// The topic-space service uses optionalAuthMiddleware on these routes, so
+// the gateway must let them through; the service itself enforces visibility
+// rules (e.g. only published topics are returned to anonymous users).
 const publicReadPaths = [
-  '/api/topics'
+  '/api/topics',
+  '/api/pages',
 ];
+
+/** Returns true when the request is an unauthenticated-safe GET. */
+const isPublicReadRequest = (path: string, method: string) =>
+  method === 'GET' &&
+  publicReadPaths.some(
+    (prefix) => path === prefix || path.startsWith(prefix + '/')
+  );
 
 export async function authVerificationMiddleware(req: Request, res: Response, next: NextFunction) {
   // Always skip authentication for fully public paths
@@ -32,7 +44,7 @@ export async function authVerificationMiddleware(req: Request, res: Response, ne
         req.headers['x-user-username'] = verifyResult.user.username;
         req.headers['x-user-email'] = verifyResult.user.email;
         req.headers['x-user-role'] = verifyResult.user.role;
-      } else if (!publicReadPaths.some(path => req.path === path && req.method === 'GET')) {
+      } else if (!isPublicReadRequest(req.path, req.method)) {
         // Invalid token on non-public path → reject
         return res.status(401).json({
           success: false,
@@ -40,7 +52,7 @@ export async function authVerificationMiddleware(req: Request, res: Response, ne
         });
       }
     } catch (error) {
-      if (!publicReadPaths.some(path => req.path === path && req.method === 'GET')) {
+      if (!isPublicReadRequest(req.path, req.method)) {
         return res.status(503).json({
           success: false,
           error: 'Auth service unavailable'
@@ -49,8 +61,7 @@ export async function authVerificationMiddleware(req: Request, res: Response, ne
     }
   } else {
     // No token → reject unless it's a public read path
-    const isPublicRead = publicReadPaths.some(path => req.path === path && req.method === 'GET');
-    if (!isPublicRead) {
+    if (!isPublicReadRequest(req.path, req.method)) {
       return res.status(401).json({
         success: false,
         error: 'No token provided'

@@ -3,6 +3,7 @@ jest.mock('../src/proxy', () => ({
     auth: (_req: any, _res: any, next: any) => next(),
     topicSpace: (_req: any, _res: any, next: any) => next(),
     ai: (_req: any, _res: any, next: any) => next(),
+    llm: (_req: any, _res: any, next: any) => next(),
   }),
 }));
 

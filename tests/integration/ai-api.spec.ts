@@ -27,12 +27,6 @@ describe('AI API', () => {
       expect(res.status).toBe(401);
     });
 
-    it('denies LLM chat without authentication', async () => {
-      const res = await api.post('/api/llm/chat/completions', {
-        messages: [{ role: 'user', content: 'hello' }],
-      });
-      expect(res.status).toBe(401);
-    });
   });
 
   describe('Chat endpoint', () => {
@@ -53,19 +47,4 @@ describe('AI API', () => {
     });
   });
 
-  describe('LLM proxy endpoint', () => {
-    it('forwards LLM request to topic-space with valid token', async () => {
-      const res = await api.post(
-        '/api/llm/chat/completions',
-        {
-          messages: [{ role: 'user', content: 'hello' }],
-          model: 'gpt-4.1-mini',
-        },
-        { headers: headersWithAuth(adminToken) }
-      );
-      // Either succeeds or fails at the LLM level, but not at auth level
-      expect([200, 400, 500, 502, 503]).toContain(res.status);
-      expect(res.status).not.toBe(401);
-    });
-  });
 });

@@ -30,10 +30,4 @@ export const config = {
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
   },
-  llm: {
-    provider: process.env.LLM_PROVIDER || 'openai',
-    apiKey: process.env.LLM_API_KEY || '',
-    model: process.env.LLM_MODEL || 'gpt-4o',
-    baseUrl: process.env.LLM_BASE_URL || undefined,
-  },
 };

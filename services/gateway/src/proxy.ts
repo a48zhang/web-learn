@@ -69,21 +69,9 @@ export const createProxies = () => {
     },
   });
 
-  const llmProxy = createProxyMiddleware({
-    target: urls.topicSpace,
-    changeOrigin: true,
-    proxyTimeout: 30000,
-    onProxyReq: (proxyReq, req) => forwardUserContextHeaders(proxyReq, req),
-    pathRewrite: (path) => {
-      const fullPath = '/api/llm' + path;
-      return fullPath;
-    },
-  });
-
   return {
     auth: authProxy,
     topicSpace: topicSpaceProxy,
     ai: aiProxy,
-    llm: llmProxy,
   };
 };

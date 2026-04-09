@@ -3,7 +3,6 @@ import cors from 'cors';
 import { config } from './utils/config';
 import topicRoutes from './routes/topicRoutes';
 import pageRoutes from './routes/pageRoutes';
-import llmRoutes from './routes/llmRoutes';
 
 const isLocalOrigin = (origin: string) => {
   try {
@@ -29,6 +28,4 @@ app.get('/health', (_req, res) => {
 
 app.use('/api/topics', topicRoutes);
 app.use('/api', pageRoutes);
-app.use('/api/llm', llmRoutes);
-
 export default app;

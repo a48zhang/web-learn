@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { Op } from 'sequelize';
+import { v4 as uuidv4 } from 'uuid';
 import { User } from '../models';
 import { config } from '../utils/config';
 
@@ -24,7 +25,7 @@ export const register = async (req: Request, res: Response) => {
     if (existing) {
       return res.status(400).json({ success: false, error: 'Username or email already exists' });
     }
-    const user = await User.create({ username, email, password, role });
+    const user = await User.create({ id: uuidv4(), username, email, password, role });
     const token = jwt.sign(
       { id: user.id, username: user.username, email: user.email, role: user.role },
       config.jwt.secret as jwt.Secret,

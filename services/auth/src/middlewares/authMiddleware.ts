@@ -4,7 +4,7 @@ import { config } from '../utils/config';
 import { User } from '../models';
 
 export interface AuthRequest extends Request {
-  user?: { id: number; username: string; email: string; role: string };
+  user?: { id: string; username: string; email: string; role: string };
 }
 
 export const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -17,7 +17,7 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
     const decoded = jwt.verify(token, config.jwt.secret, {
       algorithms: ['HS256'],
     }) as {
-      id: number; username: string; email: string; role: string;
+      id: string; username: string; email: string; role: string;
     };
     const user = await User.findByPk(decoded.id, {
       attributes: ['id', 'username', 'email', 'role'],

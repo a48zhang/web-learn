@@ -11,7 +11,7 @@ export function extractUserFromHeaders(headers: Partial<AuthHeaders>): InternalU
   }
 
   return {
-    id: parseInt(id, 10),
+    id,
     username,
     email,
     role: role as InternalUser['role'],

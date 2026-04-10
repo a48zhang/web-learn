@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useAgentRuntime } from '../agent/useAgentRuntime';
 import { useAgentStore } from '../stores/useAgentStore';
-import { topicApi, topicFileApi } from '../services/api';
+import { topicApi } from '../services/api';
 import { getApiErrorMessage } from '../utils/errors';
 import type { AgentMessage } from '@web-learn/shared';
 
@@ -38,13 +38,13 @@ function AIChatSidebar({ topicId, title = 'AI 助手' }: AIChatSidebarProps) {
     fetchTopic();
   }, [topicId, setVisibleMessages]);
 
-  // Debounced save function — only visible messages
+  // Debounced save chat history to localStorage
   const debouncedSave = useCallback(
     (msgs: AgentMessage[]) => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = setTimeout(async () => {
+      saveTimerRef.current = setTimeout(() => {
         try {
-          await topicFileApi.saveChatHistory(topicId, msgs);
+          localStorage.setItem(`chat-history-${topicId}`, JSON.stringify(msgs));
         } catch {
           // Silently fail — will retry on next message
         }
@@ -74,10 +74,10 @@ function AIChatSidebar({ topicId, title = 'AI 助手' }: AIChatSidebarProps) {
     await runAgentLoop(content);
   };
 
-  const handleClearChat = async () => {
+  const handleClearChat = () => {
     setVisibleMessages([]);
     try {
-      await topicFileApi.saveChatHistory(topicId, []);
+      localStorage.setItem(`chat-history-${topicId}`, JSON.stringify([]));
     } catch {
       // Silently fail
     }

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useEditorStore } from '../../stores/useEditorStore';
-import { topicFileApi } from '../../services/api';
 
 interface SaveIndicatorProps {
   topicId: string;
@@ -10,14 +9,14 @@ function SaveIndicator({ topicId }: SaveIndicatorProps) {
   const { hasUnsavedChanges, lastSavedAt, markSaved, getAllFiles } = useEditorStore();
   const [, setTick] = useState(0);
 
-  // Auto-save when changes are made (debounced)
+  // Auto-save to localStorage when changes are made (debounced)
   useEffect(() => {
     if (!hasUnsavedChanges) return;
 
-    const timer = setTimeout(async () => {
+    const timer = setTimeout(() => {
       const files = getAllFiles();
       try {
-        await topicFileApi.saveSnapshot(topicId, files);
+        localStorage.setItem(`snapshot-${topicId}`, JSON.stringify(files));
         markSaved();
       } catch {
         // Auto-save failed silently — user can retry manually

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { topicFileApi } from '../../services/api';
 import { useEditorStore } from '../../stores/useEditorStore';
 import { useAgentStore } from '../../stores/useAgentStore';
 import { toast } from '../../stores/useToastStore';
@@ -22,10 +21,11 @@ export default function TopBar({ onRefreshPreview, onPublish, onShare }: TopBarP
     if (!id) return;
     setSaving(true);
     try {
+      // Save files and chat history to localStorage
       const files = getAllFiles();
-      await topicFileApi.saveSnapshot(id, files);
+      localStorage.setItem(`snapshot-${id}`, JSON.stringify(files));
+      localStorage.setItem(`chat-history-${id}`, JSON.stringify(visibleMessages));
       markSaved();
-      await topicFileApi.saveChatHistory(id, visibleMessages);
       toast.success('保存成功');
     } catch {
       toast.error('保存失败，请检查网络连接');

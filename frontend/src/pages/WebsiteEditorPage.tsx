@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import type { Topic } from '@web-learn/shared';
-import { topicApi, topicFileApi } from '../services/api';
+import { topicApi } from '../services/api';
 import { useAuthStore } from '../stores/useAuthStore';
 import { toast } from '../stores/useToastStore';
 import { getApiErrorMessage } from '../utils/errors';
@@ -42,7 +42,7 @@ function WebsiteEditorPage() {
     user?.role === 'admin' ||
     (topic && user?.id && (topic.createdBy === user.id.toString() || topic.editors?.includes(user.id.toString())));
 
-  // Load topic and restore snapshot
+  // Load topic and restore snapshot from localStorage
   useEffect(() => {
     const fetchData = async () => {
       if (!id) return;
@@ -50,9 +50,12 @@ function WebsiteEditorPage() {
         const topicData = await topicApi.getById(id);
         setTopic(topicData);
 
-        const snapshot = await topicFileApi.loadSnapshot(id);
-        if (snapshot && Object.keys(snapshot).length > 0) {
-          loadSnapshot(snapshot);
+        const raw = localStorage.getItem(`snapshot-${id}`);
+        if (raw) {
+          const snapshot = JSON.parse(raw);
+          if (snapshot && Object.keys(snapshot).length > 0) {
+            loadSnapshot(snapshot);
+          }
         }
 
         setMeta({

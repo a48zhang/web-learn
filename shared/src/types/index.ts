@@ -40,8 +40,6 @@ export interface Topic {
   websiteUrl?: string | null;
   createdBy: string;
   status: TopicStatusType;
-  filesSnapshot?: Record<string, string> | null;
-  chatHistory?: AIChatMessage[] | null;
   publishedUrl?: string | null;
   shareLink?: string | null;
   editors: string[];
@@ -69,42 +67,6 @@ export interface DeleteTopicResponse {
   id: string;
 }
 
-// Topic page types
-export interface TopicPage {
-  id: string;
-  topicId: string;
-  title: string;
-  content: string;
-  parentPageId?: string | null;
-  order: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface TopicPageTreeNode extends TopicPage {
-  children: TopicPageTreeNode[];
-}
-
-export interface CreateTopicPageDto {
-  title: string;
-  content?: string;
-  parent_page_id?: string | null;
-}
-
-export interface UpdateTopicPageDto {
-  title?: string;
-  content?: string;
-  parent_page_id?: string | null;
-}
-
-export interface ReorderTopicPagesDto {
-  pages: Array<{
-    id: string;
-    order: number;
-    parent_page_id?: string | null;
-  }>;
-}
-
 // AI chat types
 export interface AIChatMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
@@ -112,12 +74,6 @@ export interface AIChatMessage {
   name?: string;
   tool_call_id?: string;
   tool_calls?: unknown[];
-}
-
-// Website topic types
-export interface WebsiteStats {
-  fileCount: number;
-  totalSize: number;
 }
 
 // API response types

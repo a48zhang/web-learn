@@ -9,7 +9,7 @@ export interface VerifyRequest {
 export interface VerifyResponse {
   success: boolean;
   user?: {
-    id: number;
+    id: string;
     username: string;
     email: string;
     role: string;

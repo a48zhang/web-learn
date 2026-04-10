@@ -28,7 +28,7 @@ export async function authVerificationMiddleware(req: Request, res: Response, ne
       const verifyResult = await verifyToken(token);
 
       if (verifyResult.success && verifyResult.user) {
-        req.headers['x-user-id'] = verifyResult.user.id.toString();
+        req.headers['x-user-id'] = verifyResult.user.id;
         req.headers['x-user-username'] = verifyResult.user.username;
         req.headers['x-user-email'] = verifyResult.user.email;
         req.headers['x-user-role'] = verifyResult.user.role;

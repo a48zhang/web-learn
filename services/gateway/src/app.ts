@@ -64,7 +64,6 @@ const createApp = () => {
   app.use('/api/auth', proxies.auth);
   app.use('/api/users', proxies.auth);
   app.use('/api/topics', proxies.topicSpace);
-  app.use('/api/pages', proxies.topicSpace);
   app.use('/api/ai', proxies.ai);
 
   // Dev-only: 404 catch-all for unmatched routes

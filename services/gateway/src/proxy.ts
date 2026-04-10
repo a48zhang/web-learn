@@ -38,7 +38,7 @@ export const createProxies = () => {
     changeOrigin: true,
     proxyTimeout: 30000,
     onProxyReq: (proxyReq, req) => forwardUserContextHeaders(proxyReq, req),
-    pathRewrite: (path, _req) => {
+    pathRewrite: (path, req) => {
       const fullPath = (req.baseUrl || '') + path;
       return fullPath;
     },
@@ -51,7 +51,7 @@ export const createProxies = () => {
     changeOrigin: true,
     proxyTimeout: 30000,
     onProxyReq: (proxyReq, req) => forwardUserContextHeaders(proxyReq, req),
-    pathRewrite: (path, _req) => {
+    pathRewrite: (path, req) => {
       const fullPath = (req.baseUrl || '') + path;
       return fullPath;
     },
@@ -68,7 +68,6 @@ export const createProxies = () => {
       return fullPath;
     },
   });
-
 
   return {
     auth: authProxy,

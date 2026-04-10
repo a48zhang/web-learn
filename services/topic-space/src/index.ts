@@ -1,7 +1,9 @@
 import app from './app';
 import { config } from './utils/config';
 import { sequelize } from './utils/database';
-import { initStorageService, createNullStorageService } from './services/storageService';
+import { initStorageService } from './services/storageService';
+import { createAzureBlobStorageService } from './services/azureBlobStorageService';
+import { createNullStorageService } from './services/nullStorageService';
 import { runMigrations } from './utils/migrate';
 
 (async () => {
@@ -23,10 +25,18 @@ import { runMigrations } from './utils/migrate';
   // Run manual migrations (e.g. add editors column) after tables are created
   await runMigrations();
 
-  // Initialize storage service with null implementation for now
-  // In production, this should be replaced with actual storage provider (OSS/S3/Azure)
-  initStorageService(createNullStorageService());
-  console.log('[topic-space] storage service initialized (null implementation)');
+  // Initialize storage service based on configuration
+  if (config.storage.provider === 'azure') {
+    initStorageService(
+      createAzureBlobStorageService(
+        config.storage.azure.connectionString,
+        config.storage.azure.containerName,
+      ),
+    );
+  } else {
+    initStorageService(createNullStorageService());
+  }
+  console.log(`[topic-space] storage service initialized (${config.storage.provider})`);
 
   app.listen(config.port, () => {
     console.log(`[topic-space] listening on port ${config.port}`);

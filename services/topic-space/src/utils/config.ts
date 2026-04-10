@@ -30,4 +30,12 @@ export const config = {
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
   },
+  storage: {
+    provider: process.env.STORAGE_PROVIDER || 'null',
+    azure: {
+      connectionString: process.env.AZURE_STORAGE_CONNECTION_STRING || '',
+      containerName: process.env.AZURE_STORAGE_CONTAINER_NAME || 'web-learn-files',
+      sasExpiryHours: parseInt(process.env.AZURE_SAS_EXPIRY_HOURS || '1', 10),
+    },
+  },
 };

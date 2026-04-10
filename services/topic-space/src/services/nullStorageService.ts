@@ -26,6 +26,18 @@ export class NullStorageService implements StorageService {
   async listFiles(): Promise<string[]> {
     throw new Error('Storage not configured');
   }
+  async getPresignedUrl(
+    ossKey: string,
+    method: 'GET' | 'PUT',
+    _contentType?: string,
+  ): Promise<{ url: string; method: string }> {
+    // Dev fallback: return a local URL. Frontend uploads will fail but the route works.
+    const base = 'http://localhost:3002/storage/dev';
+    return {
+      url: `${base}/${encodeURIComponent(ossKey)}`,
+      method,
+    };
+  }
 }
 
 export function createNullStorageService(): StorageService {

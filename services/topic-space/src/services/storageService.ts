@@ -7,6 +7,12 @@ export interface StorageService {
   getUrl(ossKey: string): string;
   getSize(ossKey: string): Promise<number>;
   listFiles(prefix: string): Promise<string[]>;
+  getPresignedUrl(
+    ossKey: string,
+    method: 'GET' | 'PUT',
+    contentType?: string,
+    expiresIn?: number,
+  ): Promise<{ url: string; method: string }>;
 }
 
 let storageService: StorageService | null = null;

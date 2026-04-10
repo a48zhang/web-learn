@@ -2,7 +2,6 @@ import express, { Express } from 'express';
 import cors from 'cors';
 import { config } from './utils/config';
 import topicRoutes from './routes/topicRoutes';
-import pageRoutes from './routes/pageRoutes';
 
 const isLocalOrigin = (origin: string) => {
   try {
@@ -27,5 +26,4 @@ app.get('/health', (_req, res) => {
 });
 
 app.use('/api/topics', topicRoutes);
-app.use('/api', pageRoutes);
 export default app;

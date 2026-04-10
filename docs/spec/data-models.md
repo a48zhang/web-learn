@@ -1,6 +1,6 @@
 # 数据模型
 
-> 最后更新：2026-04-08
+> 最后更新：2026-04-10
 
 ## 概述
 
@@ -26,7 +26,7 @@
 
 | 字段 | 类型 | 约束 | 说明 |
 |------|------|------|------|
-| id | INTEGER | PRIMARY KEY | 用户ID |
+| id | VARCHAR(36) | PRIMARY KEY, UUID | 用户ID（UUID） |
 | username | VARCHAR(50) | UNIQUE, NOT NULL | 用户名 |
 | email | VARCHAR(100) | UNIQUE, NOT NULL | 邮箱 |
 | password | CHAR(60) | NOT NULL | 密码（bcrypt加密） |
@@ -49,17 +49,14 @@
 
 | 字段 | 类型 | 约束 | 说明 |
 |------|------|------|------|
-| id | INTEGER | PRIMARY KEY | 专题ID |
+| id | VARCHAR(36) | PRIMARY KEY, UUID | 专题ID（UUID） |
 | title | VARCHAR(200) | NOT NULL | 专题标题 |
 | description | TEXT | NULLABLE | 专题描述 |
 | type | ENUM | NOT NULL, DEFAULT 'website' | 固定为 'website' |
-| website_url | VARCHAR(500) | NULLABLE | 网站访问URL（已废弃，由WebContainer动态生成） |
-| files_snapshot | TEXT | NULLABLE | 文件快照 JSON（编辑器中的网站文件） |
-| chat_history | TEXT | NULLABLE | 对话历史 JSON（与Agent的交互记录） |
 | published_url | VARCHAR(500) | NULLABLE | 发布后的外部访问URL |
 | share_link | VARCHAR(500) | NULLABLE | 分享链接 |
-| created_by | INTEGER | FK → auth_users.id | 创建者 |
-| editors | JSON | NOT NULL, DEFAULT [] | 可编辑此专题的用户ID列表 |
+| created_by | VARCHAR(36) | FK → auth_users.id | 创建者 UUID |
+| editors | JSON | NOT NULL, DEFAULT [] | 可编辑此专题的用户 UUID 列表 |
 | status | ENUM | NOT NULL | 状态：draft, published, closed |
 | created_at | TIMESTAMP | AUTO | 创建时间 |
 | updated_at | TIMESTAMP | AUTO | 更新时间 |
@@ -141,6 +138,9 @@ erDiagram
 - ❌ **TopicTemplate** - 专题模板（不再需要，采用AI对话生成）
 - ❌ **TopicPage** - 专题页面（知识库型的Markdown页面，已移除）
 - ❌ **Block-based 结构** - 复杂的 blocks JSON（改为AI生成网站代码）
+- ❌ **files_snapshot** - 数据库存储文件快照（改为 Git-on-OSS tarball）
+- ❌ **chat_history** - 数据库存储对话历史（改为前端 localStorage）
+- ❌ **website_url** - 静态网站URL（改为 WebContainer 动态生成）
 
 ### 设计改进
 

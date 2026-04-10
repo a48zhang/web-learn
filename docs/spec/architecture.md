@@ -1,6 +1,6 @@
 # 技术架构
 
-> 最后更新：2026-04-06
+> 最后更新：2026-04-10
 
 ## 系统架构
 
@@ -16,7 +16,7 @@ graph TD
     GW -->|路由转发| AI[AI Service<br/>端口 3003]
 
     AUTH -->|ORM| C[(MySQL auth_users)]
-    TOPIC -->|ORM| D[(MySQL topic_topics<br/>topic_topic_pages)]
+    TOPIC -->|ORM| D[(MySQL topic_topics)]
     AI -->|ORM| C
     AI -->|ORM| D
     TOPIC -->|文件操作| OSS[对象存储<br/>OSS/S3/Azure]
@@ -177,20 +177,19 @@ web-learn/
 │   │   │       └── database.ts   # Sequelize连接
 │   │   └── package.json
 │   │
-│   ├── topic-space/       # Topic + Page Service
+│   ├── topic-space/       # Topic Space Service
 │   │   ├── src/
 │   │   │   ├── index.ts
 │   │   │   ├── app.ts            # Express app + /health
 │   │   │   ├── routes/
-│   │   │   │   ├── topicRoutes.ts # 专题管理
-│   │   │   │   └── pageRoutes.ts  # 页面管理
+│   │   │   │   └── topicRoutes.ts # 专题管理 + Git预签名
 │   │   │   ├── models/
-│   │   │   │   ├── User.ts       # topic_users表（共享auth_users）
 │   │   │   │   ├── Topic.ts      # topic_topics表
-│   │   │   │   └── TopicPage.ts  # topic_topic_pages表
+│   │   │   │   └── index.ts
 │   │   │   ├── services/
 │   │   │   │   ├── storageService.ts      # OSS/S3接口
-│   │   │   │   └── nullStorageService.ts  # Null Object模式
+│   │   │   │   ├── nullStorageService.ts  # Null Object模式
+│   │   │   │   └── azureBlobStorageService.ts # Azure Blob Storage实现
 │   │   │   └── utils/
 │   │   └── package.json
 │   │
@@ -204,9 +203,8 @@ web-learn/
 │       │   │   ├── agentService.ts     # Agent编排
 │       │   │   └── agentTools.ts       # 工具定义（带limit/offset）
 │       │   ├── models/
-│       │   │   ├── User.ts       # auth_users表
 │       │   │   ├── Topic.ts      # topic_topics表
-│       │   │   └── TopicPage.ts  # topic_topic_pages表
+│       │   │   └── index.ts
 │       │   └── utils/
 │       └── package.json
 │

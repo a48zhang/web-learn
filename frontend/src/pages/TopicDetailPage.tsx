@@ -1,14 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import type { Topic } from '@web-learn/shared';
 import { topicApi } from '../services/api';
 import { LoadingOverlay } from '../components/Loading';
-import KnowledgeTopicPage from './KnowledgeTopicPage';
 import WebsiteTopicPage from './WebsiteTopicPage';
 
 function TopicDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const [topic, setTopic] = useState<Topic | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -16,8 +13,7 @@ function TopicDetailPage() {
     const fetchTopic = async () => {
       if (!id) return;
       try {
-        const data = await topicApi.getById(id);
-        setTopic(data);
+        await topicApi.getById(id);
       } catch {
         setError('获取专题详情失败');
       } finally {
@@ -29,18 +25,16 @@ function TopicDetailPage() {
 
   if (loading) return <LoadingOverlay message="加载中..." />;
 
-  if (error || !topic) {
+  if (error) {
     return (
       <div className="flex items-center justify-center p-12">
-        <div className="bg-white rounded-lg shadow p-6 text-gray-700">{error || '专题不存在'}</div>
+        <div className="bg-white rounded-lg shadow p-6 text-gray-700">{error}</div>
       </div>
     );
   }
 
-  if (topic.type === 'website') {
-    return <WebsiteTopicPage />;
-  }
-  return <KnowledgeTopicPage />;
+  // All topics are now 'website' type — use WebsiteTopicPage
+  return <WebsiteTopicPage />;
 }
 
 export default TopicDetailPage;

@@ -3,8 +3,6 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useAgentRuntime } from '../agent/useAgentRuntime';
 import { useAgentStore } from '../stores/useAgentStore';
-import { topicApi } from '../services/api';
-import { getApiErrorMessage } from '../utils/errors';
 import type { AgentMessage } from '@web-learn/shared';
 
 interface AIChatSidebarProps {
@@ -20,22 +18,19 @@ function AIChatSidebar({ topicId, title = 'AI 助手' }: AIChatSidebarProps) {
   const setVisibleMessages = useAgentStore((s) => s.setVisibleMessages);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Load chat history on mount
+  // Load chat history on mount — read from localStorage cache
   useEffect(() => {
-    const fetchTopic = async () => {
+    const raw = localStorage.getItem(`chat-history-${topicId}`);
+    if (raw) {
       try {
-        const data = await topicApi.getById(topicId);
-        if (data.chatHistory && Array.isArray(data.chatHistory)) {
-          const visible: AgentMessage[] = data.chatHistory
-            .filter((m: any) => m.role === 'user' || m.role === 'assistant')
-            .map((m: any) => ({ role: m.role as 'user' | 'assistant', content: m.content || '' }));
-          setVisibleMessages(visible);
+        const msgs: AgentMessage[] = JSON.parse(raw);
+        if (Array.isArray(msgs)) {
+          setVisibleMessages(msgs);
         }
       } catch {
-        // Silently fail — start with empty chat
+        // corrupted — start fresh
       }
-    };
-    fetchTopic();
+    }
   }, [topicId, setVisibleMessages]);
 
   // Debounced save chat history to localStorage

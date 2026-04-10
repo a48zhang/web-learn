@@ -33,9 +33,27 @@ export const config = {
   storage: {
     provider: process.env.STORAGE_PROVIDER || 'null',
     azure: {
-      connectionString: process.env.AZURE_STORAGE_CONNECTION_STRING || '',
-      containerName: process.env.AZURE_STORAGE_CONTAINER_NAME || 'web-learn-files',
+      connectionString:
+        process.env.AZURE_STORAGE_CONNECTION_STRING ??
+        buildAzureConnectionString(
+          process.env.STORAGE_ACCOUNT_NAME || '',
+          process.env.STORAGE_ACCOUNT_KEY || '',
+          process.env.STORAGE_REGION || 'core.windows.net',
+        ),
+      containerName:
+        process.env.AZURE_STORAGE_CONTAINER_NAME ||
+        process.env.STORAGE_BUCKET ||
+        'web-learn-files',
       sasExpiryHours: parseInt(process.env.AZURE_SAS_EXPIRY_HOURS || '1', 10),
     },
   },
 };
+
+function buildAzureConnectionString(
+  accountName: string,
+  accountKey: string,
+  regionSuffix: string,
+): string {
+  if (!accountName || !accountKey) return '';
+  return `DefaultEndpointsProtocol=https;AccountName=${accountName};AccountKey=${accountKey};EndpointSuffix=${regionSuffix}`;
+}

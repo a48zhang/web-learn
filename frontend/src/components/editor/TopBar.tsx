@@ -3,6 +3,8 @@ import { useParams } from 'react-router-dom';
 import { useEditorStore } from '../../stores/useEditorStore';
 import { useAgentStore } from '../../stores/useAgentStore';
 import { toast } from '../../stores/useToastStore';
+import { topicGitApi } from '../../services/api';
+import { createTarball } from '../../utils/tarUtils';
 import SaveIndicator from './SaveIndicator';
 
 interface TopBarProps {
@@ -21,14 +23,25 @@ export default function TopBar({ onRefreshPreview, onPublish, onShare }: TopBarP
     if (!id) return;
     setSaving(true);
     try {
-      // Save files and chat history to localStorage
       const files = getAllFiles();
+      const tarball = createTarball(files);
+      const { url } = await topicGitApi.getPresign(id, 'upload');
+
+      const response = await fetch(url, {
+        method: 'PUT',
+        body: new Blob([tarball], { type: 'application/gzip' }),
+      });
+
+      if (!response.ok) throw new Error(`Upload failed: ${response.status}`);
+
+      // Cache locally for fast restore without re-downloading
       localStorage.setItem(`snapshot-${id}`, JSON.stringify(files));
       localStorage.setItem(`chat-history-${id}`, JSON.stringify(visibleMessages));
+
       markSaved();
       toast.success('保存成功');
     } catch {
-      toast.error('保存失败，请检查网络连接');
+      toast.error('保存失败，文件未同步到云端');
     } finally {
       setSaving(false);
     }

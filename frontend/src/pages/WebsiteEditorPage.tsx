@@ -1,7 +1,8 @@
 import { useEffect, useCallback, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import type { Topic } from '@web-learn/shared';
-import { topicApi } from '../services/api';
+import { topicApi, topicGitApi } from '../services/api';
+import { extractTarball } from '../utils/tarUtils';
 import { useAuthStore } from '../stores/useAuthStore';
 import { toast } from '../stores/useToastStore';
 import { getApiErrorMessage } from '../utils/errors';
@@ -42,7 +43,7 @@ function WebsiteEditorPage() {
     user?.role === 'admin' ||
     (topic && user?.id && (topic.createdBy === user.id.toString() || topic.editors?.includes(user.id.toString())));
 
-  // Load topic and restore snapshot from localStorage
+  // Load topic — try OSS first, then localStorage cache fallback
   useEffect(() => {
     const fetchData = async () => {
       if (!id) return;
@@ -50,11 +51,31 @@ function WebsiteEditorPage() {
         const topicData = await topicApi.getById(id);
         setTopic(topicData);
 
-        const raw = localStorage.getItem(`snapshot-${id}`);
-        if (raw) {
-          const snapshot = JSON.parse(raw);
-          if (snapshot && Object.keys(snapshot).length > 0) {
-            loadSnapshot(snapshot);
+        // Try loading from OSS first
+        let loaded = false;
+        try {
+          const { url } = await topicGitApi.getPresign(id, 'download');
+          const response = await fetch(url);
+          if (response.ok) {
+            const buffer = await response.arrayBuffer();
+            const files = await extractTarball(buffer);
+            if (Object.keys(files).length > 0) {
+              loadSnapshot(files);
+              loaded = true;
+            }
+          }
+        } catch {
+          // OSS unavailable — try localStorage cache
+        }
+
+        // Fallback to localStorage cache
+        if (!loaded) {
+          const raw = localStorage.getItem(`snapshot-${id}`);
+          if (raw) {
+            const snapshot = JSON.parse(raw);
+            if (snapshot && Object.keys(snapshot).length > 0) {
+              loadSnapshot(snapshot);
+            }
           }
         }
 
@@ -159,7 +180,7 @@ function WebsiteEditorPage() {
               defaultSize: 25,
               collapsible: true,
               header: 'Agent 对话',
-              content: <AIChatSidebar topicId={id} />,
+              content: <AIChatSidebar topicId={id ?? ''} />,
             },
             {
               id: 'preview',

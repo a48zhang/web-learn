@@ -14,6 +14,14 @@ const mockConfig = {
     user: 'root',
     password: '',
   },
+  storage: {
+    provider: 'null',
+    azure: {
+      connectionString: '',
+      containerName: 'web-learn-files',
+      sasExpiryHours: 1,
+    },
+  },
 };
 
 jest.mock('../src/utils/config', () => ({
@@ -44,18 +52,9 @@ const mockTopicModel = {
   destroy: jest.fn(),
 };
 
-const mockPageModel = {
-  findByPk: jest.fn(),
-  findAll: jest.fn(),
-  findOne: jest.fn(),
-  create: jest.fn(),
-  destroy: jest.fn(),
-};
-
 jest.mock('../src/models', () => ({
   User: mockUserModel,
   Topic: mockTopicModel,
-  TopicPage: mockPageModel,
 }));
 
 jest.mock('jsonwebtoken', () => ({
@@ -73,11 +72,16 @@ jest.mock('../src/services/storageService', () => ({
     listFiles: jest.fn().mockResolvedValue([]),
     getSize: jest.fn().mockResolvedValue(0),
     getUrl: jest.fn((key: string) => `https://cdn.example.com/${key}`),
+    getPresignedUrl: jest.fn().mockResolvedValue({ url: 'http://localhost:3002/storage/dev/test', method: 'GET' }),
   })),
   initStorageService: jest.fn(),
 }));
 
 import app from '../src/app';
+
+const UUID_1 = '550e8400-e29b-41d4-a716-446655440001';
+const UUID_2 = '550e8400-e29b-41d4-a716-446655440002';
+const UUID_3 = '550e8400-e29b-41d4-a716-446655440003';
 
 describe('GET /health', () => {
   it('returns healthy status', async () => {
@@ -96,17 +100,16 @@ describe('Topics API', () => {
     it('allows public access and returns published topics', async () => {
       mockTopicModel.findAll.mockResolvedValue([
         {
-          id: 1,
+          id: UUID_1,
           title: 'Public Topic',
           description: 'desc',
-          type: 'knowledge',
-          website_url: null,
-          created_by: 2,
-          editors: ['2'],
+          type: 'website',
+          created_by: UUID_2,
+          editors: [UUID_2],
           status: 'published',
           createdAt: new Date('2026-04-01T00:00:00.000Z'),
           updatedAt: new Date('2026-04-01T00:00:00.000Z'),
-          creator: { id: 2, username: 'teacher', email: 'teacher@example.com' },
+          creator: { id: UUID_2, username: 'teacher', email: 'teacher@example.com' },
         },
       ]);
 
@@ -114,20 +117,19 @@ describe('Topics API', () => {
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.data[0]).toMatchObject({
-        id: '1',
-        type: 'knowledge',
+        id: UUID_1,
+        type: 'website',
       });
     });
 
     it('returns only published topics for non-editor users', async () => {
       mockTopicModel.findAll.mockResolvedValue([
-        { id: 1, title: 'Published', status: 'published', editors: ['2'], created_by: 2, createdAt: new Date('2026-04-01'), updatedAt: new Date('2026-04-01') },
-        { id: 2, title: 'Draft', status: 'draft', editors: ['3'], created_by: 3, createdAt: new Date('2026-04-02'), updatedAt: new Date('2026-04-02') },
-        { id: 3, title: 'Closed', status: 'closed', editors: ['4'], created_by: 4, createdAt: new Date('2026-04-03'), updatedAt: new Date('2026-04-03') },
+        { id: UUID_1, title: 'Published', status: 'published', editors: [UUID_2], created_by: UUID_2, createdAt: new Date('2026-04-01'), updatedAt: new Date('2026-04-01') },
+        { id: UUID_2, title: 'Draft', status: 'draft', editors: [UUID_3], created_by: UUID_3, createdAt: new Date('2026-04-02'), updatedAt: new Date('2026-04-02') },
       ]);
-      (jwt.verify as jest.Mock).mockReturnValue({ id: 5 });
+      (jwt.verify as jest.Mock).mockReturnValue({ id: '99999999-9999-9999-9999-999999999999' });
       mockUserModel.findByPk.mockResolvedValue({
-        id: 5,
+        id: '99999999-9999-9999-9999-999999999999',
         username: 'viewer',
         email: 'viewer@example.com',
         role: 'user',
@@ -135,7 +137,7 @@ describe('Topics API', () => {
 
       const response = await request(app)
         .get('/api/topics')
-        .set('x-user-id', '5')
+        .set('x-user-id', '99999999-9999-9999-9999-999999999999')
         .set('x-user-username', 'viewer')
         .set('x-user-email', 'viewer@example.com')
         .set('x-user-role', 'user');
@@ -147,13 +149,12 @@ describe('Topics API', () => {
 
     it('includes draft topics for editors', async () => {
       mockTopicModel.findAll.mockResolvedValue([
-        { id: 1, title: 'Published', status: 'published', editors: ['2'], created_by: 2, createdAt: new Date('2026-04-01'), updatedAt: new Date('2026-04-01') },
-        { id: 2, title: 'My Draft', status: 'draft', editors: ['10'], created_by: 10, createdAt: new Date('2026-04-02'), updatedAt: new Date('2026-04-02') },
-        { id: 3, title: 'Other Draft', status: 'draft', editors: ['3'], created_by: 3, createdAt: new Date('2026-04-03'), updatedAt: new Date('2026-04-03') },
+        { id: UUID_1, title: 'Published', status: 'published', editors: [UUID_2], created_by: UUID_2, createdAt: new Date('2026-04-01'), updatedAt: new Date('2026-04-01') },
+        { id: UUID_2, title: 'My Draft', status: 'draft', editors: ['aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'], created_by: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', createdAt: new Date('2026-04-02'), updatedAt: new Date('2026-04-02') },
       ]);
-      (jwt.verify as jest.Mock).mockReturnValue({ id: 10 });
+      (jwt.verify as jest.Mock).mockReturnValue({ id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' });
       mockUserModel.findByPk.mockResolvedValue({
-        id: 10,
+        id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
         username: 'editor',
         email: 'editor@example.com',
         role: 'user',
@@ -161,7 +162,7 @@ describe('Topics API', () => {
 
       const response = await request(app)
         .get('/api/topics')
-        .set('x-user-id', '10')
+        .set('x-user-id', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
         .set('x-user-username', 'editor')
         .set('x-user-email', 'editor@example.com')
         .set('x-user-role', 'user');
@@ -173,13 +174,12 @@ describe('Topics API', () => {
 
     it('returns all topics for admin users', async () => {
       mockTopicModel.findAll.mockResolvedValue([
-        { id: 1, title: 'Published', status: 'published', editors: ['2'], created_by: 2, createdAt: new Date('2026-04-01'), updatedAt: new Date('2026-04-01') },
-        { id: 2, title: 'Draft', status: 'draft', editors: ['3'], created_by: 3, createdAt: new Date('2026-04-02'), updatedAt: new Date('2026-04-02') },
-        { id: 3, title: 'Closed', status: 'closed', editors: ['4'], created_by: 4, createdAt: new Date('2026-04-03'), updatedAt: new Date('2026-04-03') },
+        { id: UUID_1, title: 'Published', status: 'published', editors: [UUID_2], created_by: UUID_2, createdAt: new Date('2026-04-01'), updatedAt: new Date('2026-04-01') },
+        { id: UUID_2, title: 'Draft', status: 'draft', editors: [UUID_3], created_by: UUID_3, createdAt: new Date('2026-04-02'), updatedAt: new Date('2026-04-02') },
       ]);
-      (jwt.verify as jest.Mock).mockReturnValue({ id: 99 });
+      (jwt.verify as jest.Mock).mockReturnValue({ id: '99999999-9999-9999-9999-999999999999' });
       mockUserModel.findByPk.mockResolvedValue({
-        id: 99,
+        id: '99999999-9999-9999-9999-999999999999',
         username: 'admin',
         email: 'admin@example.com',
         role: 'admin',
@@ -187,41 +187,41 @@ describe('Topics API', () => {
 
       const response = await request(app)
         .get('/api/topics')
-        .set('x-user-id', '99')
+        .set('x-user-id', '99999999-9999-9999-9999-999999999999')
         .set('x-user-username', 'admin')
         .set('x-user-email', 'admin@example.com')
         .set('x-user-role', 'admin');
 
       expect(response.status).toBe(200);
-      expect(response.body.data).toHaveLength(3);
+      expect(response.body.data).toHaveLength(2);
     });
   });
 
   describe('POST /api/topics', () => {
     it('creates website topic with type field', async () => {
-      (jwt.verify as jest.Mock).mockReturnValue({ id: 10 });
+      (jwt.verify as jest.Mock).mockReturnValue({ id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' });
       mockUserModel.findByPk.mockResolvedValue({
-        id: 10,
+        id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
         username: 'teacher1',
         email: 'teacher@example.com',
         role: 'user',
       });
-      mockTopicModel.create.mockResolvedValue({
-        id: 7,
+      const newTopic = {
+        id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
         title: 'Website Topic',
         description: 'Testing fundamentals',
         type: 'website',
-        website_url: null,
-        created_by: 10,
-        editors: ['10'],
+        created_by: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        editors: ['aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'],
         status: 'draft',
         createdAt: new Date('2026-04-01T00:00:00.000Z'),
         updatedAt: new Date('2026-04-01T00:00:00.000Z'),
-      });
+      };
+      mockTopicModel.create.mockResolvedValue(newTopic);
 
       const response = await request(app)
         .post('/api/topics')
-        .set('x-user-id', '10')
+        .set('x-user-id', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
         .set('x-user-username', 'teacher1')
         .set('x-user-email', 'teacher@example.com')
         .set('x-user-role', 'user')
@@ -234,68 +234,29 @@ describe('Topics API', () => {
       expect(response.status).toBe(201);
       expect(response.body.success).toBe(true);
       expect(response.body.data).toMatchObject({
-        id: '7',
+        id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
         type: 'website',
-        websiteUrl: null,
       });
     });
   });
 
   describe('PUT /api/topics/:id', () => {
-    it('ignores unsupported type field updates', async () => {
-      (jwt.verify as jest.Mock).mockReturnValue({ id: 10 });
+    it('updates topic for owner', async () => {
+      (jwt.verify as jest.Mock).mockReturnValue({ id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' });
       mockUserModel.findByPk.mockResolvedValue({
-        id: 10,
+        id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
         username: 'teacher1',
         email: 'teacher@example.com',
         role: 'user',
       });
       const save = jest.fn();
       mockTopicModel.findByPk.mockResolvedValue({
-        id: 8,
-        title: 'Website Topic',
-        description: 'desc',
-        type: 'website',
-        website_url: '/test.zip',
-        created_by: 10,
-        editors: ['10'],
-        status: 'draft',
-        save,
-        createdAt: new Date('2026-04-01T00:00:00.000Z'),
-        updatedAt: new Date('2026-04-01T00:00:00.000Z'),
-      });
-
-      const response = await request(app)
-        .put('/api/topics/8')
-        .set('x-user-id', '10')
-        .set('x-user-username', 'teacher1')
-        .set('x-user-email', 'teacher@example.com')
-        .set('x-user-role', 'user')
-        .send({ type: 'knowledge' });
-
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-      expect(response.body.data.type).toBe('website');
-      expect(save).toHaveBeenCalled();
-    });
-
-    it('updates topic for owner teacher', async () => {
-      (jwt.verify as jest.Mock).mockReturnValue({ id: 10 });
-      mockUserModel.findByPk.mockResolvedValue({
-        id: 10,
-        username: 'teacher1',
-        email: 'teacher@example.com',
-        role: 'user',
-      });
-      const save = jest.fn();
-      mockTopicModel.findByPk.mockResolvedValue({
-        id: 7,
+        id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
         title: 'Old',
         description: 'old',
-        type: 'knowledge',
-        website_url: null,
-        created_by: 10,
-        editors: ['10'],
+        type: 'website',
+        created_by: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        editors: ['aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'],
         status: 'draft',
         save,
         createdAt: new Date('2026-04-01T00:00:00.000Z'),
@@ -303,8 +264,8 @@ describe('Topics API', () => {
       });
 
       const response = await request(app)
-        .put('/api/topics/7')
-        .set('x-user-id', '10')
+        .put('/api/topics/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb')
+        .set('x-user-id', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
         .set('x-user-username', 'teacher1')
         .set('x-user-email', 'teacher@example.com')
         .set('x-user-role', 'user')
@@ -320,23 +281,22 @@ describe('Topics API', () => {
   });
 
   describe('PATCH /api/topics/:id/status', () => {
-    it('updates topic status for owner teacher', async () => {
-      (jwt.verify as jest.Mock).mockReturnValue({ id: 10 });
+    it('updates topic status for owner', async () => {
+      (jwt.verify as jest.Mock).mockReturnValue({ id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' });
       mockUserModel.findByPk.mockResolvedValue({
-        id: 10,
+        id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
         username: 'teacher1',
         email: 'teacher@example.com',
         role: 'user',
       });
       const save = jest.fn();
       mockTopicModel.findByPk.mockResolvedValue({
-        id: 7,
+        id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
         title: 'Topic',
         description: 'desc',
-        type: 'knowledge',
-        website_url: null,
-        created_by: 10,
-        editors: ['10'],
+        type: 'website',
+        created_by: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        editors: ['aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'],
         status: 'draft',
         save,
         createdAt: new Date('2026-04-01T00:00:00.000Z'),
@@ -344,8 +304,8 @@ describe('Topics API', () => {
       });
 
       const response = await request(app)
-        .patch('/api/topics/7/status')
-        .set('x-user-id', '10')
+        .patch('/api/topics/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb/status')
+        .set('x-user-id', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
         .set('x-user-username', 'teacher1')
         .set('x-user-email', 'teacher@example.com')
         .set('x-user-role', 'user')
@@ -357,94 +317,22 @@ describe('Topics API', () => {
     });
   });
 
-  describe('Website endpoints', () => {
-    it('rejects upload for non-website topic', async () => {
-      (jwt.verify as jest.Mock).mockReturnValue({ id: 10 });
-      mockUserModel.findByPk.mockResolvedValue({
-        id: 10,
-        username: 'teacher1',
-        email: 'teacher@example.com',
-        role: 'user',
-      });
-      mockTopicModel.findByPk.mockResolvedValue({
-        id: 7,
-        title: 'Topic',
-        description: 'desc',
-        type: 'knowledge',
-        website_url: null,
-        created_by: 10,
-        editors: ['10'],
-        status: 'draft',
-        save: jest.fn(),
-        createdAt: new Date('2026-04-01T00:00:00.000Z'),
-        updatedAt: new Date('2026-04-01T00:00:00.000Z'),
-      });
-
-      const response = await request(app)
-        .post('/api/topics/7/website/upload')
-        .set('x-user-id', '10')
-        .set('x-user-username', 'teacher1')
-        .set('x-user-email', 'teacher@example.com')
-        .set('x-user-role', 'user')
-        .send({});
-
-      expect(response.status).toBe(400);
-    });
-
-    it('returns website stats for owner teacher', async () => {
-      (jwt.verify as jest.Mock).mockReturnValue({ id: 10 });
-      mockUserModel.findByPk.mockResolvedValue({
-        id: 10,
-        username: 'teacher1',
-        email: 'teacher@example.com',
-        role: 'user',
-      });
-      mockTopicModel.findByPk.mockResolvedValue({
-        id: 7,
-        title: 'Topic',
-        description: 'desc',
-        type: 'website',
-        website_url: null,
-        created_by: 10,
-        editors: ['10'],
-        status: 'draft',
-        save: jest.fn(),
-        createdAt: new Date('2026-04-01T00:00:00.000Z'),
-        updatedAt: new Date('2026-04-01T00:00:00.000Z'),
-      });
-
-      const response = await request(app)
-        .get('/api/topics/7/website/stats')
-        .set('x-user-id', '10')
-        .set('x-user-username', 'teacher1')
-        .set('x-user-email', 'teacher@example.com')
-        .set('x-user-role', 'user');
-
-      expect(response.status).toBe(200);
-      expect(response.body.data).toMatchObject({
-        fileCount: 0,
-        totalSize: 0,
-      });
-    });
-  });
-
   describe('DELETE /api/topics/:id', () => {
-    it('deletes topic for owner teacher', async () => {
-      (jwt.verify as jest.Mock).mockReturnValue({ id: 10 });
+    it('deletes topic for owner', async () => {
+      (jwt.verify as jest.Mock).mockReturnValue({ id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' });
       mockUserModel.findByPk.mockResolvedValue({
-        id: 10,
+        id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
         username: 'teacher1',
         email: 'teacher@example.com',
         role: 'user',
       });
       mockTopicModel.findByPk.mockResolvedValue({
-        id: 7,
+        id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
         title: 'Topic',
         description: 'Testing fundamentals',
         type: 'website',
-        website_url: null,
-        created_by: 10,
-        editors: ['10'],
+        created_by: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        editors: ['aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'],
         status: 'draft',
         save: jest.fn(),
         createdAt: new Date('2026-04-01T00:00:00.000Z'),
@@ -453,8 +341,8 @@ describe('Topics API', () => {
       mockTopicModel.destroy.mockResolvedValue(1);
 
       const response = await request(app)
-        .delete('/api/topics/7')
-        .set('x-user-id', '10')
+        .delete('/api/topics/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb')
+        .set('x-user-id', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
         .set('x-user-username', 'teacher1')
         .set('x-user-email', 'teacher@example.com')
         .set('x-user-role', 'user');

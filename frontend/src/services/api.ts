@@ -10,12 +10,6 @@ import type {
   UpdateTopicDto,
   UpdateTopicStatusDto,
   DeleteTopicResponse,
-  TopicPage,
-  TopicPageTreeNode,
-  CreateTopicPageDto,
-  UpdateTopicPageDto,
-  ReorderTopicPagesDto,
-  WebsiteStats,
 } from '@web-learn/shared';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
@@ -48,7 +42,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       const method = error.config?.method?.toUpperCase() ?? 'GET';
       const url: string = error.config?.url || '';
-      const isPublicGet = method === 'GET' && (url.startsWith('/topics') || url.startsWith('/pages/'));
+      const isPublicGet = method === 'GET' && url.startsWith('/topics');
       if (!isPublicGet) {
         localStorage.removeItem('auth_token');
         window.location.href = '/login';
@@ -107,83 +101,20 @@ export const topicApi = {
     return response.data.data as Topic;
   },
 
-  uploadWebsite: async (id: string, file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    const response = await api.post<ApiResponse<string>>(`/topics/${id}/website/upload`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data.data as string;
-  },
-
-  deleteWebsite: async (id: string): Promise<Topic> => {
-    const response = await api.delete<ApiResponse<Topic>>(`/topics/${id}/website`);
-    return response.data.data as Topic;
-  },
-
-  getWebsiteStats: async (id: string): Promise<WebsiteStats> => {
-    const response = await api.get<ApiResponse<WebsiteStats>>(`/topics/${id}/website/stats`);
-    return response.data.data as WebsiteStats;
-  },
-
   delete: async (id: string): Promise<DeleteTopicResponse> => {
     const response = await api.delete<ApiResponse<DeleteTopicResponse>>(`/topics/${id}`);
     return response.data.data as DeleteTopicResponse;
   },
 };
 
-// Topic pages API
-export const pageApi = {
-  create: async (topicId: string, data: CreateTopicPageDto): Promise<TopicPage> => {
-    const response = await api.post<ApiResponse<TopicPage>>(`/topics/${topicId}/pages`, data);
-    return response.data.data as TopicPage;
-  },
-
-  getByTopic: async (topicId: string): Promise<TopicPageTreeNode[]> => {
-    const response = await api.get<ApiResponse<TopicPageTreeNode[]>>(`/topics/${topicId}/pages`);
-    return response.data.data as TopicPageTreeNode[];
-  },
-
-  getById: async (id: string): Promise<TopicPage> => {
-    const response = await api.get<ApiResponse<TopicPage>>(`/pages/${id}`);
-    return response.data.data as TopicPage;
-  },
-
-  update: async (id: string, data: UpdateTopicPageDto): Promise<TopicPage> => {
-    const response = await api.put<ApiResponse<TopicPage>>(`/pages/${id}`, data);
-    return response.data.data as TopicPage;
-  },
-
-  delete: async (id: string): Promise<{ deleted: string[] }> => {
-    const response = await api.delete<ApiResponse<{ deleted: string[] }>>(`/pages/${id}`);
-    return response.data.data as { deleted: string[] };
-  },
-
-  reorder: async (topicId: string, data: ReorderTopicPagesDto): Promise<TopicPageTreeNode[]> => {
-    const response = await api.patch<ApiResponse<TopicPageTreeNode[]>>(
-      `/topics/${topicId}/pages/reorder`,
-      data
+// Topic git operations (clone/push via OSS presigned URLs)
+export const topicGitApi = {
+  getPresign: async (topicId: string, op: 'upload' | 'download'): Promise<{ url: string; method: string; contentType?: string }> => {
+    const response = await api.get<ApiResponse<{ url: string; method: string; contentType?: string }>>(
+      `/topics/${topicId}/git/presign`,
+      { params: { op } }
     );
-    return response.data.data as TopicPageTreeNode[];
-  },
-};
-
-// Topic file operations (editor)
-export const topicFileApi = {
-  saveSnapshot: async (topicId: string, files: Record<string, string>): Promise<void> => {
-    await api.put(`/topics/${topicId}/files`, { files });
-  },
-
-  loadSnapshot: async (topicId: string): Promise<Record<string, string> | null> => {
-    const response = await api.get<ApiResponse<any>>(`/topics/${topicId}`);
-    const data = response.data.data;
-    return data?.filesSnapshot ?? null;
-  },
-
-  saveChatHistory: async (topicId: string, messages: any[]): Promise<void> => {
-    await api.put(`/topics/${topicId}/chat-history`, { messages });
+    return response.data.data!;
   },
 };
 

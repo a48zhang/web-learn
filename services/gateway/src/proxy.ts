@@ -38,7 +38,7 @@ export const createProxies = () => {
     changeOrigin: true,
     proxyTimeout: 30000,
     onProxyReq: (proxyReq, req) => forwardUserContextHeaders(proxyReq, req),
-    pathRewrite: (path, req) => {
+    pathRewrite: (path, _req) => {
       const fullPath = (req.baseUrl || '') + path;
       return fullPath;
     },
@@ -51,7 +51,7 @@ export const createProxies = () => {
     changeOrigin: true,
     proxyTimeout: 30000,
     onProxyReq: (proxyReq, req) => forwardUserContextHeaders(proxyReq, req),
-    pathRewrite: (path, req) => {
+    pathRewrite: (path, _req) => {
       const fullPath = (req.baseUrl || '') + path;
       return fullPath;
     },
@@ -63,27 +63,16 @@ export const createProxies = () => {
     changeOrigin: true,
     proxyTimeout: 30000,
     onProxyReq: (proxyReq, req) => forwardUserContextHeaders(proxyReq, req),
-    pathRewrite: (path, req) => {
+    pathRewrite: (path, _req) => {
       const fullPath = '/api/ai' + path;
       return fullPath;
     },
   });
 
-  const llmProxy = createProxyMiddleware({
-    target: urls.topicSpace,
-    changeOrigin: true,
-    proxyTimeout: 30000,
-    onProxyReq: (proxyReq, req) => forwardUserContextHeaders(proxyReq, req),
-    pathRewrite: (path) => {
-      const fullPath = '/api/llm' + path;
-      return fullPath;
-    },
-  });
 
   return {
     auth: authProxy,
     topicSpace: topicSpaceProxy,
     ai: aiProxy,
-    llm: llmProxy,
   };
 };

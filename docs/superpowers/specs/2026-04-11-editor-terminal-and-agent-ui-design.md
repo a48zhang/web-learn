@@ -280,9 +280,7 @@ Agent 输出 tool_call: run_command({ command: 'npm install' })
 
 ### 8.1 WebContainer 不可用
 
-- 终端面板显示："WebContainer 未初始化，请等待项目加载完成"
-- 禁止输入命令
-- `run_command` tool 在 WebContainer 未就绪时不注册到 toolRegistry，Agent 不会看到该工具选项
+`WebsiteEditorPage` 在 WebContainer 未就绪时显示 `LoadingOverlay`，Agent 组件不会渲染。当 Agent 和 Terminal 可见时，WebContainer 一定已初始化完成。`run_command` tool 可直接注册，无需额外的条件检查。
 
 ### 8.2 命令执行失败
 

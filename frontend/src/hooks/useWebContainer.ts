@@ -90,5 +90,6 @@ export function useWebContainer() {
     writeFile,
     deleteFile: deleteFileWC,
     syncFile,
+    getInstance: () => webcontainerInstance,
   };
 }

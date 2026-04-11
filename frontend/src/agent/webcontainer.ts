@@ -76,3 +76,55 @@ export async function wcListFiles(rootPath = '.'): Promise<string[]> {
   await walk(rootPath);
   return files;
 }
+
+export interface SpawnResult {
+  output: string;
+  exitCode: number | null;
+}
+
+export const SAFE_COMMANDS = new Set([
+  'npm', 'npx', 'node', 'ls', 'cat', 'mkdir', 'rm', 'echo', 'cp', 'mv',
+]);
+
+export async function wcSpawnCommand(
+  command: string,
+  args: string[] = [],
+  options?: { timeout?: number; onOutput?: (data: string) => void }
+): Promise<SpawnResult> {
+  const wc = await getWebContainer();
+
+  const output: string[] = [];
+  const timeout = options?.timeout ?? 30000;
+
+  if (!SAFE_COMMANDS.has(command)) {
+    throw new Error(`Command "${command}" is not in the allowed command list`);
+  }
+
+  const process = await wc.spawn(command, args);
+
+  process.output.pipeTo(
+    new WritableStream({
+      write: (data) => {
+        output.push(data);
+        if (options?.onOutput) {
+          options.onOutput(data);
+        }
+      },
+    })
+  );
+
+  const exitPromise = process.exit;
+  const timeoutPromise = new Promise<never>((_resolve, reject) => {
+    setTimeout(() => {
+      process.kill();
+      reject(new Error(`Command timed out after ${timeout}ms`));
+    }, timeout);
+  });
+
+  await Promise.race([exitPromise, timeoutPromise]);
+
+  return {
+    output: output.join(''),
+    exitCode: 0,
+  };
+}

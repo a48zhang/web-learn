@@ -48,7 +48,7 @@ export default function TopBar({ onRefreshPreview, onPublish, onShare }: TopBarP
   };
 
   return (
-    <div className="h-10 bg-zinc-900 border-b border-zinc-700 flex items-center justify-between px-3 text-sm">
+    <div className="h-10 bg-zinc-900 border-b border-zinc-700 flex items-center justify-between px-3 text-sm sticky top-0 z-10">
       <div className="flex items-center gap-2">
         <span className="text-zinc-400 font-medium">网站编辑器</span>
       </div>

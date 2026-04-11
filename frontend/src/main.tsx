@@ -11,6 +11,7 @@ import './agent/tools/writeFile';
 import './agent/tools/createFile';
 import './agent/tools/deleteFile';
 import './agent/tools/moveFile';
+import './agent/tools/runCommand';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

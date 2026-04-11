@@ -23,6 +23,6 @@ router.get('/:id', readLimiter, optionalAuthMiddleware, getTopicById);
 router.put('/:id', writeLimiter, internalAuthMiddleware, updateTopic);
 router.patch('/:id/status', writeLimiter, internalAuthMiddleware, updateTopicStatus);
 router.delete('/:id', writeLimiter, internalAuthMiddleware, deleteTopic);
-router.get('/:id/git/presign', writeLimiter, internalAuthMiddleware, getGitPresign);
+router.get('/:id/git/presign', writeLimiter, optionalAuthMiddleware, getGitPresign);
 
 export default router;

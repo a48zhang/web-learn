@@ -10,13 +10,7 @@ const formatTopic = (topic: any) => ({
   title: topic.title,
   description: topic.description,
   type: topic.type,
-  createdBy: topic.creator
-    ? {
-      id: topic.creator.id,
-      username: topic.creator.username,
-      email: topic.creator.email,
-    }
-    : undefined,
+  createdBy: topic.created_by,
   status: topic.status,
   publishedUrl: topic.published_url ?? null,
   shareLink: topic.share_link ?? null,
@@ -43,7 +37,7 @@ export const createTopic = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ success: false, error: 'Title is required' });
     }
 
-    const userId = String(req.user.id);
+    const userId = req.user.id;
     const topic = await Topic.create({
       id: uuidv4(),
       title,

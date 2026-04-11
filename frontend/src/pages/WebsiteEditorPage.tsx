@@ -63,9 +63,11 @@ function WebsiteEditorPage() {
               loadSnapshot(files);
               loaded = true;
             }
+          } else {
+            console.warn('[OSS download] Response not OK:', response.status, response.statusText);
           }
-        } catch {
-          // OSS unavailable — try localStorage cache
+        } catch (ossError) {
+          console.error('[OSS download] Failed to load files from OSS:', ossError);
         }
 
         // Fallback to localStorage cache
@@ -75,7 +77,12 @@ function WebsiteEditorPage() {
             const snapshot = JSON.parse(raw);
             if (snapshot && Object.keys(snapshot).length > 0) {
               loadSnapshot(snapshot);
+              console.log('[localStorage] Loaded snapshot from cache');
+            } else {
+              console.warn('[localStorage] Cache is empty — editor will start with no files');
             }
+          } else {
+            console.warn('[localStorage] No cached snapshot found — editor will start with no files');
           }
         }
 

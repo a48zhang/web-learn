@@ -114,17 +114,17 @@ export async function wcSpawnCommand(
   );
 
   const exitPromise = process.exit;
-  const timeoutPromise = new Promise<never>((_resolve, reject) => {
+  const timeoutPromise = new Promise<never>((_, reject) => {
     setTimeout(() => {
       process.kill();
       reject(new Error(`Command timed out after ${timeout}ms`));
     }, timeout);
   });
 
-  await Promise.race([exitPromise, timeoutPromise]);
+  const exitCode = await Promise.race([exitPromise, timeoutPromise]);
 
   return {
     output: output.join(''),
-    exitCode: 0,
+    exitCode,
   };
 }

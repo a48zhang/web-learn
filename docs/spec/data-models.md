@@ -55,7 +55,7 @@
 | type | ENUM | NOT NULL, DEFAULT 'website' | 固定为 'website' |
 | published_url | VARCHAR(500) | NULLABLE | 发布后的外部访问URL |
 | share_link | VARCHAR(500) | NULLABLE | 分享链接 |
-| created_by | VARCHAR(36) | FK → auth_users.id | 创建者 UUID |
+| created_by | VARCHAR(100) | FK → auth_users.id | 创建者 ID |
 | editors | JSON | NOT NULL, DEFAULT [] | 可编辑此专题的用户 UUID 列表 |
 | status | ENUM | NOT NULL | 状态：draft, published, closed |
 | created_at | TIMESTAMP | AUTO | 创建时间 |

@@ -35,7 +35,7 @@ Topic.init(
     title: { type: DataTypes.STRING(200), allowNull: false },
     description: { type: DataTypes.TEXT, allowNull: true },
     type: { type: DataTypes.ENUM('website'), allowNull: false, defaultValue: 'website' },
-    created_by: { type: DataTypes.STRING(36), allowNull: false },
+    created_by: { type: DataTypes.STRING(100), allowNull: false },
     status: {
       type: DataTypes.ENUM('draft', 'published', 'closed'),
       allowNull: false,

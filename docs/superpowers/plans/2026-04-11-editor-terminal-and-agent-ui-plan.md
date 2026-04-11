@@ -1,16 +1,182 @@
-# Editor Terminal & Agent UI Fix Implementation Plan
+# Topic Editor Layout Fix, Terminal & Agent UI Integration
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Fix Agent panel empty box (caused by fixed-position overlay) and add a VSCode-style bottom terminal panel with WebContainer integration and `run_command` agent tool.
+**Goal:** Fix editor layout to integrate with AppShell, fix Agent panel empty box, add VSCode-style bottom terminal, and add `run_command` agent tool.
 
-**Architecture:** Extract `AIChatSidebar` chat logic into a layout-agnostic `AgentChatContent` component used inside the editor panel. Add `xterm.js`-based terminal as a fixed-bottom overlay toggled by a status-bar button. Register `run_command` tool for Agent command execution.
+**Architecture:** (1) Remove `fixed inset-0` wrapper from WebsiteEditorPage so it fills AppShell main area with sticky TopBar. (2) Extract Agent chat into layout-agnostic component. (3) Add xterm.js terminal as fixed-bottom overlay. (4) Add run_command tool via WebContainer spawn.
 
-**Tech Stack:** xterm, xterm-addon-fit, xterm-addon-web-links, React, Tailwind CSS, WebContainer API
+**Tech Stack:** xterm, xterm-addon-fit, xterm-addon-web-links, React, Tailwind CSS, WebContainer API, react-resizable-panels
 
 ---
 
-### Task 0: Install xterm dependencies
+### Task 1: Fix WebsiteEditorPage layout — integrate with AppShell
+
+**Files:**
+- Modify: `frontend/src/pages/WebsiteEditorPage.tsx:158`
+- Modify: `frontend/src/components/editor/TopBar.tsx:51`
+
+**Rationale:** The current wrapper `<div className="fixed inset-0 ...">` covers the entire viewport, hiding the AppShell's TopNav, breadcrumbs, and side nav. Replace with `min-h-0` flex column so it fills the AppShell `<main>` content area. Make TopBar sticky so it stays visible when scrolling.
+
+- [ ] **Step 1: Fix wrapper layout**
+
+In `frontend/src/pages/WebsiteEditorPage.tsx`, the return statement (line 158) currently is:
+
+```tsx
+return (
+  <div className="fixed inset-0 flex flex-col bg-zinc-900">
+    <TopBar onRefreshPreview={handleRefreshPreview} />
+
+    <div className="flex-1 overflow-hidden">
+      <EditorPanelGroup
+        panels={[
+          {
+            id: 'file-tree',
+            minSize: 15,
+            defaultSize: 20,
+            collapsible: true,
+            header: (
+              <div className="flex items-center justify-between w-full">
+                <span>{showEditor ? '代码编辑器' : '文件树'}</span>
+                {showEditor && (
+                  <button
+                    onClick={handleCloseEditor}
+                    className="text-zinc-400 hover:text-white text-xs"
+                  >
+                    返回文件树
+                  </button>
+                )}
+              </div>
+            ),
+            content: showEditor ? <CodeEditor /> : <FileTree onOpenFile={handleOpenFile} onDeleteFile={handleDeleteFile} />,
+          },
+          {
+            id: 'agent-chat',
+            minSize: 20,
+            defaultSize: 25,
+            collapsible: true,
+            header: 'Agent 对话',
+            content: <AIChatSidebar topicId={id ?? ''} />,
+          },
+          {
+            id: 'preview',
+            minSize: 30,
+            defaultSize: 55,
+            collapsible: false,
+            header: '应用预览',
+            content: (
+              <PreviewPanel
+                previewUrl={previewUrl}
+                isReady={isReady}
+                error={wcError}
+                onRefresh={handleRefreshPreview}
+                externalReloadKey={previewReloadKey}
+              />
+            ),
+          },
+        ]}
+      />
+    </div>
+  </div>
+);
+```
+
+Change the outermost div from `fixed inset-0` to `min-h-0`:
+
+```tsx
+return (
+  <div className="min-h-0 flex flex-col bg-zinc-900">
+    <TopBar onRefreshPreview={handleRefreshPreview} />
+
+    <div className="flex-1 overflow-hidden">
+      <EditorPanelGroup
+        panels={[
+          {
+            id: 'file-tree',
+            minSize: 15,
+            defaultSize: 20,
+            collapsible: true,
+            header: (
+              <div className="flex items-center justify-between w-full">
+                <span>{showEditor ? '代码编辑器' : '文件树'}</span>
+                {showEditor && (
+                  <button
+                    onClick={handleCloseEditor}
+                    className="text-zinc-400 hover:text-white text-xs"
+                  >
+                    返回文件树
+                  </button>
+                )}
+              </div>
+            ),
+            content: showEditor ? <CodeEditor /> : <FileTree onOpenFile={handleOpenFile} onDeleteFile={handleDeleteFile} />,
+          },
+          {
+            id: 'agent-chat',
+            minSize: 20,
+            defaultSize: 25,
+            collapsible: true,
+            header: 'Agent 对话',
+            content: <AIChatSidebar topicId={id ?? ''} />,
+          },
+          {
+            id: 'preview',
+            minSize: 30,
+            defaultSize: 55,
+            collapsible: false,
+            header: '应用预览',
+            content: (
+              <PreviewPanel
+                previewUrl={previewUrl}
+                isReady={isReady}
+                error={wcError}
+                onRefresh={handleRefreshPreview}
+                externalReloadKey={previewReloadKey}
+              />
+            ),
+          },
+        ]}
+      />
+    </div>
+  </div>
+);
+```
+
+**Why `min-h-0`:** AppShell's `<main>` has `flex-1 min-w-0` in a `flex-col` layout, so it already computes the correct remaining height. `min-h-0` allows the flex child to shrink below its content height, preventing overflow. No magic numbers needed.
+
+- [ ] **Step 2: Add sticky positioning to TopBar**
+
+In `frontend/src/components/editor/TopBar.tsx`, line 51, change:
+
+```tsx
+<div className="h-10 bg-zinc-900 border-b border-zinc-700 flex items-center justify-between px-3 text-sm">
+```
+
+To:
+
+```tsx
+<div className="h-10 bg-zinc-900 border-b border-zinc-700 flex items-center justify-between px-3 text-sm sticky top-0 z-10">
+```
+
+- [ ] **Step 3: Build and verify no TypeScript errors**
+
+Run:
+```bash
+cd /home/ccnuacm/work/web-learn/frontend && pnpm tsc --noEmit
+```
+
+Expected: No errors
+
+- [ ] **Step 4: Commit**
+
+```bash
+cd /home/ccnuacm/work/web-learn && git add frontend/src/pages/WebsiteEditorPage.tsx frontend/src/components/editor/TopBar.tsx
+git commit -m "fix(frontend): integrate editor layout with AppShell, make TopBar sticky"
+```
+
+---
+
+### Task 2: Install xterm dependencies
 
 **Files:**
 - Modify: `frontend/package.json`
@@ -29,7 +195,7 @@ Run:
 cd /home/ccnuacm/work/web-learn/frontend && grep xterm package.json
 ```
 
-Expected output:
+Expected output contains:
 ```
 "xterm": "^5.3.0",
 "xterm-addon-fit": "^0.8.0",
@@ -45,15 +211,16 @@ git commit -m "chore(frontend): add xterm.js dependencies for terminal panel"
 
 ---
 
-### Task 1: Create AgentChatContent component
+### Task 3: Extract AgentChatContent, fix empty Agent panel
 
 **Files:**
 - Create: `frontend/src/components/AgentChatContent.tsx`
 - Modify: `frontend/src/components/AIChatSidebar.tsx`
+- Modify: `frontend/src/pages/WebsiteEditorPage.tsx`
 
-**Rationale:** `AIChatSidebar` uses `fixed` positioning, which causes it to render outside the panel container in `EditorPanelGroup`, resulting in an empty box. By extracting the chat UI (message list, input, send logic, localStorage persistence) into a pure content component with no layout chrome, we can use it directly inside the `EditorPanelGroup` panel while keeping `AIChatSidebar` for the floating button toggle.
+**Rationale:** `AIChatSidebar` uses `fixed` positioning and renders as a floating overlay. When embedded in `EditorPanelGroup`, the panel body is empty. Extract the chat UI into a layout-agnostic `AgentChatContent` component for the panel, while keeping `AIChatSidebar` as a floating overlay for non-editor pages.
 
-- [ ] **Step 1: Write AgentChatContent component**
+- [ ] **Step 1: Create AgentChatContent component**
 
 Create `frontend/src/components/AgentChatContent.tsx`:
 
@@ -77,7 +244,7 @@ export default function AgentChatContent({ topicId, title = 'AI 助手' }: Agent
   const setVisibleMessages = useAgentStore((s) => s.setVisibleMessages);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Load chat history on mount — read from localStorage cache
+  // Load chat history on mount
   useEffect(() => {
     const raw = localStorage.getItem(`chat-history-${topicId}`);
     if (raw) {
@@ -92,7 +259,7 @@ export default function AgentChatContent({ topicId, title = 'AI 助手' }: Agent
     }
   }, [topicId, setVisibleMessages]);
 
-  // Debounced save chat history to localStorage
+  // Debounced save to localStorage
   const debouncedSave = useCallback(
     (msgs: AgentMessage[]) => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -107,14 +274,12 @@ export default function AgentChatContent({ topicId, title = 'AI 助手' }: Agent
     [topicId]
   );
 
-  // Cleanup timer on unmount
   useEffect(() => {
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
   }, []);
 
-  // Save on visible message changes
   useEffect(() => {
     if (visibleMessages.length > 0) {
       debouncedSave(visibleMessages);
@@ -241,12 +406,12 @@ export default function AgentChatContent({ topicId, title = 'AI 助手' }: Agent
 }
 ```
 
-- [ ] **Step 2: Refactor AIChatSidebar to use AgentChatContent**
+- [ ] **Step 2: Refactor AIChatSidebar to delegate to AgentChatContent**
 
-Modify `frontend/src/components/AIChatSidebar.tsx`:
+Replace the entire content of `frontend/src/components/AIChatSidebar.tsx`:
 
 ```tsx
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import AgentChatContent from './AgentChatContent';
 
 interface AIChatSidebarProps {
@@ -278,27 +443,25 @@ function AIChatSidebar({ topicId, title = 'AI 助手' }: AIChatSidebarProps) {
 export default AIChatSidebar;
 ```
 
-- [ ] **Step 3: Update WebsiteEditorPage to use AgentChatContent in panel**
+- [ ] **Step 3: Update WebsiteEditorPage to use AgentChatContent**
 
-Modify `frontend/src/pages/WebsiteEditorPage.tsx` — change the agent-chat panel content from `AIChatSidebar` to `AgentChatContent`:
+In `frontend/src/pages/WebsiteEditorPage.tsx`:
 
-Replace:
+1. Add import:
+```tsx
+import AgentChatContent from '../components/AgentChatContent';
+```
+
+2. Replace the agent-chat panel content from:
 ```tsx
 content: <AIChatSidebar topicId={id ?? ''} />,
 ```
-
-With:
+To:
 ```tsx
 content: <AgentChatContent topicId={id ?? ''} />,
 ```
 
-And update the import at the top — keep both imports:
-```tsx
-import AIChatSidebar from '../components/AIChatSidebar';
-import AgentChatContent from '../components/AgentChatContent';
-```
-
-- [ ] **Step 4: Run lint to verify no issues**
+- [ ] **Step 4: Run lint**
 
 Run:
 ```bash
@@ -314,17 +477,17 @@ git commit -m "feat(frontend): extract AgentChatContent to fix empty Agent panel
 
 ---
 
-### Task 2: Create useTerminal hook
+### Task 4: Create useTerminal hook
 
 **Files:**
 - Create: `frontend/src/hooks/useTerminal.ts`
 - Modify: `frontend/src/hooks/useWebContainer.ts`
 
-**Rationale:** Encapsulate Terminal lifecycle (xterm init, WebContainer spawn, resize, cleanup) in a reusable hook. First expose the WebContainer instance from `useWebContainer`, then build the hook on top of it.
+**Rationale:** Encapsulate Terminal lifecycle (xterm init, WebContainer spawn, resize, cleanup) in a reusable hook. First expose the WebContainer instance from `useWebContainer`, then build the hook on top.
 
 - [ ] **Step 1: Expose WebContainer instance from useWebContainer**
 
-Modify `frontend/src/hooks/useWebContainer.ts` — the return statement at the bottom currently is:
+In `frontend/src/hooks/useWebContainer.ts`, change the return statement from:
 ```typescript
   return {
     isReady,
@@ -337,7 +500,7 @@ Modify `frontend/src/hooks/useWebContainer.ts` — the return statement at the b
   };
 ```
 
-Change to:
+To:
 ```typescript
   return {
     isReady,
@@ -488,14 +651,13 @@ git commit -m "feat(frontend): add useTerminal hook with WebContainer shell inte
 
 ---
 
-### Task 3: Create TerminalPanel and TerminalToggle components
+### Task 5: Create TerminalPanel, TerminalToggle, and store
 
 **Files:**
 - Create: `frontend/src/components/TerminalPanel.tsx`
 - Create: `frontend/src/components/TerminalToggle.tsx`
 - Create: `frontend/src/stores/useTerminalStore.ts`
-
-**Rationale:** Need state management for terminal visibility and a store for shared state between the toggle button, panel, and WebsiteEditorPage.
+- Modify: `frontend/src/pages/WebsiteEditorPage.tsx`
 
 - [ ] **Step 1: Create terminal store**
 
@@ -519,7 +681,7 @@ export const useTerminalStore = create<TerminalState>((set) => ({
 }));
 ```
 
-- [ ] **Step 2: Create TerminalToggle component**
+- [ ] **Step 2: Create TerminalToggle**
 
 Create `frontend/src/components/TerminalToggle.tsx`:
 
@@ -546,7 +708,7 @@ export default function TerminalToggle() {
 }
 ```
 
-- [ ] **Step 3: Create TerminalPanel component**
+- [ ] **Step 3: Create TerminalPanel**
 
 Create `frontend/src/components/TerminalPanel.tsx`:
 
@@ -563,7 +725,6 @@ export default function TerminalPanel() {
     containerRef,
   });
 
-  // Open/close terminal when store changes
   useEffect(() => {
     if (isOpen) {
       openTerminal();
@@ -572,7 +733,6 @@ export default function TerminalPanel() {
     }
   }, [isOpen, openTerminal, close]);
 
-  // Resize when dimensions change
   useEffect(() => {
     if (isOpen) {
       resize();
@@ -629,26 +789,19 @@ export default function TerminalPanel() {
 
 - [ ] **Step 4: Integrate into WebsiteEditorPage**
 
-Modify `frontend/src/pages/WebsiteEditorPage.tsx`:
+In `frontend/src/pages/WebsiteEditorPage.tsx`:
 
-Add imports:
+1. Add imports:
 ```tsx
 import TerminalPanel from '../components/TerminalPanel';
 import TerminalToggle from '../components/TerminalToggle';
 ```
 
-Add components before closing `</div>`:
-```tsx
-      <TerminalToggle />
-      <TerminalPanel />
-    </div>
-  );
-```
+2. Add components before the closing `</div>` of the return statement. The full return becomes:
 
-Full return section becomes:
 ```tsx
   return (
-    <div className="fixed inset-0 flex flex-col bg-zinc-900">
+    <div className="min-h-0 flex flex-col bg-zinc-900">
       <TopBar onRefreshPreview={handleRefreshPreview} />
 
       <div className="flex-1 overflow-hidden">
@@ -715,7 +868,7 @@ Run:
 cd /home/ccnuacm/work/web-learn/frontend && pnpm dev
 ```
 
-Expected: App compiles and runs. Terminal toggle button appears at bottom-right. Clicking it opens terminal panel.
+Expected: App compiles. Terminal toggle visible at bottom-right. Clicking opens terminal panel with interactive shell.
 
 - [ ] **Step 6: Commit**
 
@@ -726,14 +879,15 @@ git commit -m "feat(frontend): add TerminalPanel and TerminalToggle components"
 
 ---
 
-### Task 4: Create run_command agent tool
+### Task 6: Create run_command agent tool
 
 **Files:**
 - Create: `frontend/src/agent/tools/runCommand.ts`
 - Modify: `frontend/src/agent/webcontainer.ts`
 - Modify: `frontend/src/main.tsx`
+- Modify: `frontend/src/agent/useAgentRuntime.ts`
 
-**Rationale:** Add command execution capability for the Agent, using WebContainer `spawn` to run commands and capture output. Output is also displayed in the Terminal panel if open.
+**Rationale:** Add command execution capability for Agent. WebContainer `spawn` runs commands, captures output. Output is also visible in Terminal panel if open.
 
 - [ ] **Step 1: Add spawn utility to webcontainer.ts**
 
@@ -831,12 +985,10 @@ registerTool('run_command', {
   }
 });
 ```
-});
-```
 
 - [ ] **Step 3: Register the tool in main.tsx**
 
-Add to `frontend/src/main.tsx` alongside other tool imports:
+Add to `frontend/src/main.tsx` alongside existing tool imports:
 
 ```typescript
 import './agent/tools/runCommand';
@@ -844,14 +996,14 @@ import './agent/tools/runCommand';
 
 - [ ] **Step 4: Update Agent system prompt**
 
-Modify `frontend/src/agent/useAgentRuntime.ts` — add `run_command` to the SYSTEM_PROMPT tool list:
+In `frontend/src/agent/useAgentRuntime.ts`, in `SYSTEM_PROMPT`, add `run_command` to the tool list. Change:
 
-Change the tool list in SYSTEM_PROMPT from:
 ```
 - move_file: 移动或重命名文件
 ```
 
 To:
+
 ```
 - move_file: 移动或重命名文件
 - run_command: 执行终端命令（npm, npx, node, ls, cat, mkdir, rm, echo 等）
@@ -866,7 +1018,7 @@ git commit -m "feat(frontend): add run_command agent tool with WebContainer spaw
 
 ---
 
-### Task 5: End-to-end verification
+### Task 7: End-to-end verification
 
 - [ ] **Step 1: Build and lint**
 
@@ -886,14 +1038,14 @@ cd /home/ccnuacm/work/web-learn/frontend && pnpm test
 
 - [ ] **Step 3: Visual verification checklist**
 
-Open the dev server and verify:
-- [ ] Agent panel in editor is no longer empty — shows chat UI with message list and input
-- [ ] Terminal toggle button visible at bottom-right of editor
-- [ ] Clicking toggle opens Terminal panel at bottom of editor
-- [ ] Terminal shows shell prompt and accepts input
+Open dev server and verify:
+- [ ] TopNav and breadcrumbs visible above editor (not covered by fixed overlay)
+- [ ] Agent panel shows chat UI with messages and input (not empty box)
+- [ ] Terminal toggle button at bottom-right
+- [ ] Clicking toggle opens terminal with interactive shell
 - [ ] Drag-resizing terminal header adjusts height
-- [ ] Closing terminal and reopening works
-- [ ] AIChatSidebar floating button still works as before (opens side panel overlay)
+- [ ] AIChatSidebar floating button still works on non-editor pages
+- [ ] Agent can call run_command tool and see output
 
 - [ ] **Step 4: Final commit if any issues found**
 
@@ -907,16 +1059,17 @@ cd /home/ccnuacm/work/web-learn && git add -A && git commit -m "fix(frontend): a
 
 | File | Action | Purpose |
 |------|--------|---------|
-| `frontend/package.json` | Modify | Add xterm dependencies |
-| `frontend/src/components/AgentChatContent.tsx` | **Create** | Pure chat UI component (no fixed positioning) |
-| `frontend/src/components/AIChatSidebar.tsx` | Modify | Delegate to AgentChatContent, keep toggle/floating panel |
-| `frontend/src/components/TerminalPanel.tsx` | **Create** | VSCode-style bottom terminal overlay |
-| `frontend/src/components/TerminalToggle.tsx` | **Create** | Bottom-right toggle button |
-| `frontend/src/stores/useTerminalStore.ts` | **Create** | Zustand store for terminal visibility/height |
-| `frontend/src/hooks/useTerminal.ts` | **Create** | xterm lifecycle + WebContainer shell connection |
-| `frontend/src/hooks/useWebContainer.ts` | Modify | Expose `getInstance()` for terminal |
-| `frontend/src/agent/tools/runCommand.ts` | **Create** | run_command agent tool |
-| `frontend/src/agent/webcontainer.ts` | Modify | Add `wcSpawnCommand` utility |
-| `frontend/src/main.tsx` | Modify | Import runCommand tool |
-| `frontend/src/agent/useAgentRuntime.ts` | Modify | Update SYSTEM_PROMPT |
-| `frontend/src/pages/WebsiteEditorPage.tsx` | Modify | Use AgentChatContent + add Terminal components |
+| `frontend/package.json` | Modify (Task 2) | Add xterm dependencies |
+| `frontend/src/pages/WebsiteEditorPage.tsx` | Modify (Tasks 1, 3, 5) | Layout fix + AgentChatContent + Terminal integration |
+| `frontend/src/components/editor/TopBar.tsx` | Modify (Task 1) | Sticky positioning |
+| `frontend/src/components/AgentChatContent.tsx` | **Create** (Task 3) | Pure chat UI, no fixed positioning |
+| `frontend/src/components/AIChatSidebar.tsx` | Modify (Task 3) | Delegate to AgentChatContent |
+| `frontend/src/components/TerminalPanel.tsx` | **Create** (Task 5) | VSCode-style bottom terminal |
+| `frontend/src/components/TerminalToggle.tsx` | **Create** (Task 5) | Bottom-right toggle button |
+| `frontend/src/stores/useTerminalStore.ts` | **Create** (Task 5) | Terminal visibility/height state |
+| `frontend/src/hooks/useTerminal.ts` | **Create** (Task 4) | xterm lifecycle + WebContainer shell |
+| `frontend/src/hooks/useWebContainer.ts` | Modify (Task 4) | Expose `getInstance()` |
+| `frontend/src/agent/tools/runCommand.ts` | **Create** (Task 6) | run_command tool |
+| `frontend/src/agent/webcontainer.ts` | Modify (Task 6) | Add `wcSpawnCommand` utility |
+| `frontend/src/main.tsx` | Modify (Task 6) | Register runCommand tool |
+| `frontend/src/agent/useAgentRuntime.ts` | Modify (Task 6) | Update SYSTEM_PROMPT |

@@ -75,5 +75,7 @@ describe('Cross-service public-read chain via gateway', () => {
     });
 
     expect(res.status).toBe(401);
+    expect(res.data.success).toBe(false);
+    expect(typeof res.data.error).toBe('string');
   });
 });

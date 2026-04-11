@@ -282,7 +282,7 @@ Agent 输出 tool_call: run_command({ command: 'npm install' })
 
 - 终端面板显示："WebContainer 未初始化，请等待项目加载完成"
 - 禁止输入命令
-- `run_command` tool 返回错误："Terminal not available"
+- `run_command` tool 在 WebContainer 未就绪时不注册到 toolRegistry，Agent 不会看到该工具选项
 
 ### 8.2 命令执行失败
 

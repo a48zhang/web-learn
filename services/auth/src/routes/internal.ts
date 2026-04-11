@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { User } from '../models';
 import { config } from '../utils/config';
 
-const router = Router();
+const router: Router = Router();
 
 router.post('/verify', async (req, res) => {
   const { token } = req.body;

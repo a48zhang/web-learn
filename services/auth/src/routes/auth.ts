@@ -2,7 +2,7 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { register, login } from '../controllers/authController';
 
-const router = Router();
+const router: Router = Router();
 
 // Strict rate limiting for auth endpoints
 const loginLimiter = rateLimit({

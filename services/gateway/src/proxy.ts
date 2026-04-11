@@ -1,4 +1,5 @@
 import { createProxyMiddleware } from 'http-proxy-middleware';
+import type * as http from 'http';
 import type { Request } from 'express';
 
 const getServiceUrls = () => {
@@ -17,7 +18,7 @@ const getServiceUrls = () => {
 // created — they must be set on proxyReq via setHeader().
 const USER_CONTEXT_HEADERS = ['x-user-id', 'x-user-username', 'x-user-email', 'x-user-role'];
 
-const forwardUserContextHeaders = (proxyReq: any, req: Request) => {
+const forwardUserContextHeaders = (proxyReq: http.ClientRequest, req: Request) => {
   for (const header of USER_CONTEXT_HEADERS) {
     const value = req.headers[header];
     if (value !== undefined) {
@@ -37,9 +38,11 @@ export const createProxies = () => {
     target: urls.auth,
     changeOrigin: true,
     proxyTimeout: 30000,
-    onProxyReq: (proxyReq, req) => forwardUserContextHeaders(proxyReq, req),
+    on: {
+      proxyReq: (proxyReq, req) => forwardUserContextHeaders(proxyReq, req as Request),
+    },
     pathRewrite: (path, req) => {
-      const fullPath = (req.baseUrl || '') + path;
+      const fullPath = ((req as Request).baseUrl || '') + path;
       return fullPath;
     },
   });
@@ -50,9 +53,11 @@ export const createProxies = () => {
     target: urls.topicSpace,
     changeOrigin: true,
     proxyTimeout: 30000,
-    onProxyReq: (proxyReq, req) => forwardUserContextHeaders(proxyReq, req),
+    on: {
+      proxyReq: (proxyReq, req) => forwardUserContextHeaders(proxyReq, req as Request),
+    },
     pathRewrite: (path, req) => {
-      const fullPath = (req.baseUrl || '') + path;
+      const fullPath = ((req as Request).baseUrl || '') + path;
       return fullPath;
     },
   });
@@ -62,10 +67,11 @@ export const createProxies = () => {
     target: urls.ai,
     changeOrigin: true,
     proxyTimeout: 30000,
-    onProxyReq: (proxyReq, req) => forwardUserContextHeaders(proxyReq, req),
-    pathRewrite: (path, req) => {
-      const fullPath = '/api/ai' + path;
-      return fullPath;
+    on: {
+      proxyReq: (proxyReq, req) => forwardUserContextHeaders(proxyReq, req as Request),
+    },
+    pathRewrite: (path) => {
+      return '/api/ai' + path;
     },
   });
 

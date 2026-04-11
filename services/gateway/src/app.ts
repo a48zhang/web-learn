@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Application } from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { createProxies } from './proxy';
@@ -42,7 +42,7 @@ const globalLimiter = rateLimit({
 });
 
 const createApp = () => {
-  const app = express();
+  const app: Application = express();
   app.use(buildCorsMiddleware());
   app.use(globalLimiter);
 

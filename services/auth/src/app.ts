@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Application } from 'express';
 import cors from 'cors';
 import { config } from './utils/config';
 import internalRoutes from './routes/internal';
@@ -14,7 +14,7 @@ const isLocalOrigin = (origin: string) => {
   }
 };
 
-const app = express();
+const app: Application = express();
 app.use(express.json());
 app.use(cors({
   origin: (origin, cb) => {

@@ -45,3 +45,6 @@ shared/package-lock.json
 
 .superpowers
 .playwright-mcp
+
+# Thesis
+paper/

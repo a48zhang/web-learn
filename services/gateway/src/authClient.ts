@@ -29,8 +29,8 @@ export async function verifyToken(token: string): Promise<VerifyResponse> {
       { timeout: 5000, headers: { 'Content-Type': 'application/json' } }
     );
     return response.data;
-  } catch (error: any) {
-    if (error.response) {
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error) && error.response) {
       return error.response.data;
     }
     return { success: false, error: 'Auth service unavailable' };

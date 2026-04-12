@@ -22,14 +22,23 @@ export const waitForRegistry = async (): Promise<void> => {
 
 export const initServiceDiscovery = (app: Application): void => {
   (async () => {
-    try {
-      const services = await fetchServices();
-      console.log(`[gateway] Discovered ${services.length} services from registry`);
-      mountProxies(app, services);
-    } catch (err) {
-      console.error('[gateway] Failed to discover services:', err);
+    for (let attempt = 0; attempt < 10; attempt++) {
+      try {
+        const services = await fetchServices();
+        if (services.length > 0) {
+          console.log(`[gateway] Discovered ${services.length} services from registry`);
+          mountProxies(app, services);
+          return;
+        }
+        console.log(`[gateway] No services registered yet (attempt ${attempt + 1}/10)...`);
+        await new Promise((r) => setTimeout(r, 2000));
+      } catch (err) {
+        console.error('[gateway] Failed to discover services:', err);
+        await new Promise((r) => setTimeout(r, 2000));
+      }
     }
-  })();
+    console.warn('[gateway] No services discovered after retries');
+  })().catch(() => {});
 
   setInterval(async () => {
     try {
@@ -40,5 +49,3 @@ export const initServiceDiscovery = (app: Application): void => {
     }
   }, 10000);
 };
-
-export const REGISTRY_URL = process.env.REGISTRY_URL || 'http://localhost:3010';

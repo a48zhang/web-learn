@@ -49,7 +49,7 @@ export class ServiceRegistry {
     return Array.from(this.services.values());
   }
 
-  startCleanup(intervalMs = 10000, timeoutMs = 15000): void {
+  startCleanup(intervalMs = 10000, timeoutMs = 30000): void {
     if (this.cleanupInterval) return;
     this.cleanupInterval = setInterval(() => {
       const now = Date.now();

@@ -145,9 +145,7 @@ services:
     environment:
       NODE_ENV: production
       GATEWAY_PORT: 3000
-      AUTH_SERVICE_URL: http://auth:3001
-      TOPIC_SPACE_SERVICE_URL: http://topic-space:3002
-      AI_SERVICE_URL: http://ai:3003
+      REGISTRY_URL: http://registry:3010
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
     ports:
       - "3000:3000"

@@ -1,6 +1,7 @@
 import app from './app';
 import { config } from './utils/config';
 import { sequelize } from './utils/database';
+import { registerService, startHeartbeat } from '@web-learn/shared';
 
 (async () => {
   await sequelize.authenticate();
@@ -12,5 +13,13 @@ import { sequelize } from './utils/database';
 
   app.listen(config.port, () => {
     console.log(`[ai] listening on port ${config.port}`);
+    const serviceHost = process.env.SERVICE_HOST || 'localhost';
+    registerService({
+      name: 'ai',
+      url: `http://${serviceHost}:${config.port}`,
+      routes: ['/api/ai'],
+      metadata: { description: 'AI service' },
+    }).catch((err) => console.error('[ai] Failed to register:', err.message));
+    startHeartbeat('ai');
   });
 })();

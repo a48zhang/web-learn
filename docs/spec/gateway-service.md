@@ -4,37 +4,32 @@
 
 ## 概述
 
-API Gateway 是系统的唯一入口，负责路由转发、JWT 验证、用户信息注入、CORS 处理和全局限流。
+API Gateway 是系统的唯一入口，通过 Service Registry 动态发现下游服务。
+负责路由转发、JWT 验证、用户信息注入、CORS 处理和全局限流。
 
 **端口：** 3000
 **代码路径：** `services/gateway`
 
-## 路由映射
+## 服务发现
 
-| Gateway 路由 | 目标服务 | 目标端口 |
-|---|---|---|
-| `/api/auth/*` | Auth Service | 3001 |
-| `/api/users/*` | Auth Service | 3001 |
-| `/api/topics/*` | Topic Space Service | 3002 |
-| `/api/ai/*` | AI Service | 3003 |
+Gateway 通过 Service Registry 动态发现下游服务，不使用硬编码路由。
 
-**转发配置：**
-```typescript
-app.use('/api/auth', proxy('http://auth:3001'))
-app.use('/api/users', proxy('http://auth:3001'))
-app.use('/api/topics', proxy('http://topic-space:3002'))
-app.use('/api/ai', proxy('http://ai:3003'))
-```
+**注册表：** 独立 Registry 服务（`:3010`），各服务启动时自动注册并发送心跳。
 
-每个代理使用 `http-proxy-middleware`，通过 `pathRewrite` 恢复被 Express 移除的 mount point：
-```typescript
-pathRewrite: (path, req) => {
-  const fullPath = (req.baseUrl || '') + path;
-  return fullPath;
-}
-```
+**启动流程：**
+1. 连接 Registry (`REGISTRY_URL`)，最多等待 30 秒
+2. 获取已注册服务列表，为每个服务的路由前缀创建代理
+3. 每 10 秒轮询 Registry，更新代理组
 
-## 认证与用户上下文注入
+**负载均衡：** 同一服务的多个实例自动按 round-robin 分发请求。
+
+**配置：**
+| 环境变量 | 说明 | 默认值 |
+|---------|------|--------|
+| `REGISTRY_URL` | Registry 服务地址 | `http://localhost:3010` |
+| `GATEWAY_PORT` | Gateway 监听端口 | `3000` |
+
+**认证与用户上下文注入**
 
 **JWT 验证：**
 - Gateway `authMiddleware` 验证 JWT Bearer Token

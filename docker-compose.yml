@@ -38,6 +38,7 @@ services:
       DB_USER: ${DB_USER:-root}
       DB_PASSWORD: ${DB_PASSWORD}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      REGISTRY_URL: http://registry:3010
     ports:
       - "3001:3001"
     healthcheck:
@@ -72,6 +73,7 @@ services:
       STORAGE_ACCESS_KEY_ID: ${STORAGE_ACCESS_KEY_ID:-}
       STORAGE_ACCESS_KEY_SECRET: ${STORAGE_ACCESS_KEY_SECRET:-}
       STORAGE_CDN_BASE: ${STORAGE_CDN_BASE:-}
+      REGISTRY_URL: http://registry:3010
     ports:
       - "3002:3002"
     healthcheck:
@@ -103,6 +105,7 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+      REGISTRY_URL: http://registry:3010
     ports:
       - "3003:3003"
     healthcheck:
@@ -114,6 +117,24 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+
+  registry:
+    build:
+      context: .
+      dockerfile: services/registry/Dockerfile
+    container_name: web-learn-registry
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      REGISTRY_PORT: 3010
+    ports:
+      - "3010:3010"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3010/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   gateway:
     build:
@@ -137,6 +158,8 @@ services:
       retries: 3
       start_period: 40s
     depends_on:
+      registry:
+        condition: service_healthy
       auth:
         condition: service_healthy
       topic-space:

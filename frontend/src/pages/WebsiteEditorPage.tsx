@@ -13,7 +13,9 @@ import TopBar from '../components/editor/TopBar';
 import { EditorPanelGroup } from '../components/editor/ResizablePanel';
 import FileTree from '../components/editor/FileTree';
 import CodeEditor from '../components/editor/CodeEditor';
-import AIChatSidebar from '../components/AIChatSidebar';
+import AgentChatContent from '../components/AgentChatContent';
+import TerminalPanel from '../components/TerminalPanel';
+import TerminalToggle from '../components/TerminalToggle';
 import PreviewPanel from '../components/editor/PreviewPanel';
 import { useWebContainer } from '../hooks/useWebContainer';
 import { useEditorStore } from '../stores/useEditorStore';
@@ -155,7 +157,7 @@ function WebsiteEditorPage() {
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-zinc-900">
+    <div className="min-h-0 flex flex-col bg-zinc-900">
       <TopBar onRefreshPreview={handleRefreshPreview} />
 
       <div className="flex-1 overflow-hidden">
@@ -187,7 +189,7 @@ function WebsiteEditorPage() {
               defaultSize: 25,
               collapsible: true,
               header: 'Agent 对话',
-              content: <AIChatSidebar topicId={id ?? ''} />,
+              content: <AgentChatContent topicId={id ?? ''} />,
             },
             {
               id: 'preview',
@@ -208,6 +210,9 @@ function WebsiteEditorPage() {
           ]}
         />
       </div>
+
+      <TerminalToggle />
+      <TerminalPanel />
     </div>
   );
 }

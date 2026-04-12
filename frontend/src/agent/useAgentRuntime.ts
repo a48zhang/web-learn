@@ -16,6 +16,7 @@ const SYSTEM_PROMPT: AIChatMessage = {
 - create_file: 创建新文件
 - delete_file: 删除文件
 - move_file: 移动或重命名文件
+- run_command: 执行终端命令（npm, npx, node, ls, cat, mkdir, rm, echo 等）
 
 你的工作流程：
 1. 先用 list_files 了解当前项目结构

@@ -20,7 +20,7 @@ export function EditorPanelGroup({ panels, direction = 'horizontal' }: EditorPan
   return (
     <PanelGroup
       orientation={direction}
-      className="h-full"
+      className="h-full min-h-0"
     >
       {panels.map((panel, index) => (
         <>

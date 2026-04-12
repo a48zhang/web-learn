@@ -157,7 +157,7 @@ function WebsiteEditorPage() {
   }
 
   return (
-    <div className="min-h-0 flex flex-col bg-zinc-900">
+    <div className="min-h-0 h-full flex flex-col bg-zinc-900">
       <TopBar onRefreshPreview={handleRefreshPreview} />
 
       <div className="flex-1 overflow-hidden">

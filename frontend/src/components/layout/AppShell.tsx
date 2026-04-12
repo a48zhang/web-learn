@@ -32,11 +32,11 @@ export default function AppShell({ children }: AppShellProps) {
           </div>
         )}
       </div>
-      <div className="flex flex-1">
+      <div className="flex flex-1 min-h-0">
         <LeftNav isOpen={drawerOpen} onClose={() => setDrawerOpen(false)}>
           {meta.sideNavSlot}
         </LeftNav>
-        <main className="flex-1 min-w-0">
+        <main className="flex-1 min-w-0 min-h-0">
           {children}
         </main>
       </div>

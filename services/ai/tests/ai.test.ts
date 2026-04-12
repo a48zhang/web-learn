@@ -36,7 +36,6 @@ const mockUserModel = {
 jest.mock('../src/models', () => ({
   User: mockUserModel,
   Topic: { findByPk: jest.fn() },
-  TopicPage: { findByPk: jest.fn() },
 }));
 
 const mockCreate = jest.fn();

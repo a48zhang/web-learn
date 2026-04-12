@@ -52,7 +52,7 @@
 > - 助手具有查询当前专题内容的能力，提供上下文相关的学习支持
 > - **仅注册用户可用**：学生和教师可使用 AI 助手，访客需注册登录
 > - **只读型 Agent**：不修改业务数据，专注于理解与查询
-> - 详细设计见 [AI Agent 系统](./agents.md)
+> - 详细设计见 [AI Service](./ai-service.md)
 
 | 功能点 | 输入/触发 | 输出/结果 | 交互流程 | 错误处理 |
 |--------|----------|----------|---------|---------|
@@ -63,7 +63,7 @@
 - 学生：概念解释、内容定位、进度查询
 - 教师：专题回顾、学习跟踪、课堂准备
 
-> **详细实现：** 学习助手 Agent 的工具定义（OpenAI Function Calling 格式）、交互流程详见 [AI Agent 系统](./agents.md#1-学习助手-agent)
+> **详细实现：** 学习助手 Agent 的工具定义（OpenAI Function Calling 格式）、交互流程详见 [AI Service](./ai-service.md)
 
 ---
 
@@ -73,7 +73,7 @@
 > - 入口在网站编辑器的中间面板对话区
 > - **主动协作模式**：Agent先询问偏好（风格、布局、颜色等），再生成网站代码
 > - 通过 WebContainer FS API 直接写入文件，即时预览验证
-> - 详细设计见 [AI Agent 系统](./agents.md)
+> - 详细设计见 [AI Service](./ai-service.md)
 
 | 功能点 | 输入/触发 | 输出/结果 | 交互流程 | 错误处理 |
 |--------|----------|----------|---------|---------|
@@ -89,7 +89,7 @@
 
 > **角色说明：** 此前的教师/学生角色已统一为 `user`，专题级别的编辑权限通过 `editors` 字段控制。
 
-> **详细实现：** 专题搭建 Agent 的 Prompt 结构、LLM API 接口、文件操作流程详见 [AI Agent 系统](./agents.md#2-专题搭建-agent)
+> **详细实现：** 专题搭建 Agent 的 Prompt 结构、LLM API 接口、文件操作流程详见 [AI Service](./ai-service.md)
 
 ## 设计理念
 
@@ -112,4 +112,4 @@
 - [产品概述](./overview.md)
 - [用户角色与权限](./user-roles.md)
 - [数据模型](./data-models.md)
-- [API 设计](./api-design.md)
+- [Gateway Service](./gateway-service.md)

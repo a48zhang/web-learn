@@ -47,7 +47,7 @@ export const createProxies = () => {
     },
   });
 
-  // topicSpace proxy is shared between /api/topics and /api/pages mounts, so use req.baseUrl
+  // topicSpace proxy serves /api/topics
   console.log('[gateway] Creating topicSpace proxy with target:', urls.topicSpace);
   const topicSpaceProxy = createProxyMiddleware({
     target: urls.topicSpace,

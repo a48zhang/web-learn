@@ -97,4 +97,6 @@
 - [产品概述](./overview.md)
 - [功能清单](./features.md)
 - [数据模型](./data-models.md)
-- [API 设计](./api-design.md)
+- [Auth Service](./auth-service.md)
+- [Topic Space Service](./topic-space-service.md)
+- [AI Service](./ai-service.md)

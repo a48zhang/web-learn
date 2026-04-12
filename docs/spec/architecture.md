@@ -1,6 +1,6 @@
 # 技术架构
 
-> 最后更新：2026-04-10
+> 最后更新：2026-04-12
 
 ## 系统架构
 
@@ -43,7 +43,7 @@ graph TD
 - **Express 4** - Web 框架
 - **TypeScript** - 类型安全
 - **Sequelize 6** - ORM
-- **JWT (HS256)** - 身份认证，强制算法
+- **JWT (HS256)** - 身份认证
 - **bcrypt** - 密码加密
 - **OpenAI SDK** - AI 对话与 Function Calling
 - **express-rate-limit** - 请求限流
@@ -55,23 +55,22 @@ graph TD
 
 ### 开发工具
 
-- **pnpm workspace** - Monorepo 管理（services/ + packages/）
+- **pnpm workspace** - Monorepo 管理
 - **Docker Compose** - 本地开发环境，生产部署
 - **Jest** - 测试框架
 
-### 微服务架构
+## 微服务概览
 
-采用 pnpm workspace monorepo 结构，每个服务独立 package：
+| 服务 | 端口 | 职责 | 详情 |
+|------|------|------|------|
+| Gateway | 3000 | 路由转发、JWT 验证、限流 | [Gateway Service](./gateway-service.md) |
+| Auth | 3001 | 用户注册/登录/JWT | [Auth Service](./auth-service.md) |
+| Topic Space | 3002 | 专题 CRUD、Git 预签名 | [Topic Space Service](./topic-space-service.md) |
+| AI | 3003 | AI 对话、Agent 编排 | [AI Service](./ai-service.md) |
 
-- **Gateway** (`services/gateway`) - 路由转发、限流、CORS
-- **Auth** (`services/auth`) - 用户注册/登录/JWT 颁发、认证中间件
-- **Topic Space** (`services/topic-space`) - 专题 + 页面 CRUD + 网站上传
-- **AI** (`services/ai`) - AI 对话 + 工具执行
-
-共享包：
-
-- **packages/utils** - 共享工具（config、database、logger）
-- **shared** - 共享类型和认证中间件（types + auth），作为独立 npm 包使用
+**共享包：**
+- **packages/utils** — 共享工具（config、database、logger）
+- **shared** — 共享类型和认证中间件
 
 ## 部署架构
 
@@ -90,51 +89,17 @@ services:
 - 所有服务配置 `NODE_ENV=production`
 - 健康检查通过 `/health` 端点实现
 - Gateway 等待下游服务健康后才启动
-- `.dockerignore` 排除敏感文件和构建产物
-- 数据库通过表前缀实现服务间数据隔离
 
 ### 开发环境
 
 ```
 前端：http://localhost:5173
-Gateway：http://localhost:3000（前端通过 proxy 访问）
+Gateway：http://localhost:3000
 Auth Service：http://localhost:3001（内部）
 Topic Space Service：http://localhost:3002（内部）
 AI Service：http://localhost:3003（内部）
 数据库：Docker MySQL 容器（端口 3306）
 ```
-
-**本地开发：**
-- 可单独启动服务：`pnpm --filter @web-learn/<service> dev`
-- Docker Compose 全流程测试：`docker-compose up`
-- 前端通过 Vite proxy 将 `/api` 请求转发到 Gateway（3000）
-
-### 生产环境建议
-
-**前端：**
-- 静态文件托管（Nginx/CDN）
-- HTTPS SSL 证书
-
-**后端（微服务）：**
-- 容器编排（Kubernetes / Docker Swarm）
-- 服务发现和负载均衡
-- 环境变量配置（JWT_SECRET、DB_*、OPENAI_API_KEY）
-
-**数据库：**
-- 云数据库（如阿里云 RDS）
-- 自动备份
-- 生产环境使用 sequelize-cli/umzug 迁移工具
-
-**文件存储：**
-- 对象存储（OSS/S3/Azure Blob）
-- CDN 加速
-
-**安全加固：**
-- HTTPS 加密传输
-- JWT 强制 HS256 算法
-- 认证端点 rate limiting
-- 防火墙规则
-- 定期安全审计
 
 ## 目录结构
 
@@ -142,95 +107,31 @@ AI Service：http://localhost:3003（内部）
 web-learn/
 ├── frontend/               # React 前端应用
 │   ├── src/
-│   │   ├── components/    # UI 组件（AIChatSidebar、editor/、layout/、settings/）
+│   │   ├── components/    # UI 组件
 │   │   ├── pages/         # 页面组件
 │   │   ├── services/      # API 调用
 │   │   ├── stores/        # 状态管理
-│   │   ├── agent/         # Agent 运行时（tools、useAgentRuntime、WebContainer）
+│   │   ├── agent/         # Agent 运行时
 │   │   ├── hooks/         # 自定义 Hooks
 │   │   └── utils/         # 工具函数
 │   └── package.json
 │
-├── services/               # 微服务（pnpm workspace packages）
+├── services/               # 微服务
 │   ├── gateway/           # API Gateway
-│   │   ├── src/
-│   │   │   ├── index.ts          # 启动入口
-│   │   │   ├── app.ts            # Express app + /health
-│   │   │   ├── proxy.ts          # 路由转发配置
-│   │   │   └── proxyMiddleware.ts # JWT验证 + 转发
-│   │   └── package.json
-│   │
-│   ├── auth/              # Auth Service（用户注册/登录/JWT）
-│   │   ├── src/
-│   │   │   ├── index.ts
-│   │   │   ├── app.ts            # Express app + /health
-│   │   │   ├── routes/
-│   │   │   │   ├── auth.ts       # 注册/登录（带rate limit）
-│   │   │   │   └── users.ts      # 用户信息
-│   │   │   ├── controllers/
-│   │   │   ├── middlewares/
-│   │   │   │   └── authMiddleware.ts # JWT验证（HS256强制）
-│   │   │   ├── models/
-│   │   │   │   └── User.ts       # auth_users表
-│   │   │   └── utils/
-│   │   │       ├── config.ts     # DOTENV_CONFIG_PATH支持
-│   │   │       └── database.ts   # Sequelize连接
-│   │   └── package.json
-│   │
+│   ├── auth/              # Auth Service
 │   ├── topic-space/       # Topic Space Service
-│   │   ├── src/
-│   │   │   ├── index.ts
-│   │   │   ├── app.ts            # Express app + /health
-│   │   │   ├── routes/
-│   │   │   │   └── topicRoutes.ts # 专题管理 + Git预签名
-│   │   │   ├── models/
-│   │   │   │   ├── Topic.ts      # topic_topics表
-│   │   │   │   └── index.ts
-│   │   │   ├── services/
-│   │   │   │   ├── storageService.ts      # OSS/S3接口
-│   │   │   │   ├── nullStorageService.ts  # Null Object模式
-│   │   │   │   └── azureBlobStorageService.ts # Azure Blob Storage实现
-│   │   │   └── utils/
-│   │   └── package.json
-│   │
 │   └── ai/                # AI Service
-│       ├── src/
-│       │   ├── index.ts
-│       │   ├── app.ts            # Express app + /health
-│       │   ├── routes/
-│       │   │   └── aiRoutes.ts   # AI对话端点
-│       │   ├── services/
-│       │   │   ├── agentService.ts     # Agent编排
-│       │   │   └── agentTools.ts       # 工具定义（带limit/offset）
-│       │   ├── models/
-│       │   │   ├── Topic.ts      # topic_topics表
-│       │   │   └── index.ts
-│       │   └── utils/
-│       └── package.json
 │
-├── packages/               # 旧共享包（packages/utils 仍在使用）
-│   └── utils/             # 共享工具（config、database、logger）
-│
-├── shared/                 # 共享包（独立 npm 包）
-│   └── src/
-│       ├── types/          # 共享类型定义（Topic, User 等）
-│       └── auth/           # 认证中间件
-│
-├── backend/                # 已移除（原单体应用，已迁移到微服务）
-│   # 所有功能已迁移到 services/ 微服务
-│
+├── packages/               # 旧共享包
+│   └── utils/
+├── shared/                 # 共享类型和认证中间件
 ├── docs/                   # 文档
-│   ├── spec/              # 产品规格文档
-│   ├── superpowers/       # 设计和实施计划文档
-│   │   ├── specs/         # 设计文档
-│   │   └── plans/         # 实施计划
+│   ├── spec/              # 产品规格
+│   ├── superpowers/       # 设计和实施计划
 │   └── archive/           # 已完成项目归档
-│       └── implementation-status-microservices-refactoring-2026-04-06.md
-│
-├── docker-compose.yml      # Docker编排配置
-├── .dockerignore           # Docker构建排除文件
-├── package.json           # Monorepo 根配置
-└── pnpm-workspace.yaml    # pnpm workspace 配置
+├── docker-compose.yml
+├── package.json
+└── pnpm-workspace.yaml
 ```
 
 ## 核心流程
@@ -276,7 +177,7 @@ sequenceDiagram
     end
     前端->>后端: POST /api/ai/chat<br/>Authorization: Bearer <token>
     后端->>后端: 验证 Token + 权限
-    后端->>数据库: 查询 Topic/TopicPage 上下文
+    后端->>数据库: 查询 Topic 上下文
     后端->>后端: 执行工具调用循环
     后端->>后端: 调用 OpenAI API
     后端-->>前端: 返回 AI 响应
@@ -286,5 +187,8 @@ sequenceDiagram
 ## 相关文档
 
 - [产品概述](./overview.md)
-- [API 设计](./api-design.md)
 - [数据模型](./data-models.md)
+- [Gateway Service](./gateway-service.md)
+- [Auth Service](./auth-service.md)
+- [Topic Space Service](./topic-space-service.md)
+- [AI Service](./ai-service.md)

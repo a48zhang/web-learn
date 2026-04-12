@@ -44,7 +44,7 @@
 - `LoadingOverlay`
   - 统一加载状态展示样式
 - `frontend/src/utils/treeUtils.ts`
-  - 提供文件树操作工具
+  - 文件树操作工具（知识库模型废弃后已移除）
 - `frontend/src/utils/errors.ts`
   - 提供统一 API 错误信息提取
 - `frontend/src/stores/themeStore.ts`
@@ -151,13 +151,15 @@ server: {
 
 ### 已移除的页面
 
-以下页面在旧版路由中已不再使用，但文件仍保留在代码中（`TopicDetailPage` 的 type 分流仍引用 `KnowledgeTopicPage` 和 `WebsiteTopicPage`）：
+以下页面在旧版路由中已移除（知识库模型废弃）：
 
-- ⚠️ `KnowledgeTopicPage` - 知识库浏览页面（仍被 `TopicDetailPage` type=knowledge 分流引用）
-- ⚠️ `KnowledgeEditorPage` - 知识库编辑页面（文件保留但无路由引用）
-- ⚠️ `WebsiteTopicPage` - 旧版网站预览页面（仍被 `TopicDetailPage` type=website 分流引用）
-- ❌ `PageTreeNav` - 知识库页面树导航（仅被 `KnowledgeTopicPage` 引用）
-- ❌ `PageTreeEditor` - 知识库页面树编辑器（仅被 `KnowledgeEditorPage` 引用）
+- ❌ `KnowledgeTopicPage` - 知识库浏览页面
+- ❌ `KnowledgeEditorPage` - 知识库编辑页面
+- ❌ `WebsiteTopicPage` - 旧版网站预览页面（已由 `TopicDetailPage` 替代）
+- ❌ `PageTreeNav` - 知识库页面树导航
+- ❌ `PageTreeEditor` - 知识库页面树编辑器
+
+> 完整废弃记录见 [archive/page-endpoint-deprecation.md](../archive/page-endpoint-deprecation.md)
 
 ### 新增/重构的页面
 
@@ -172,5 +174,6 @@ server: {
 
 - [产品概述](./overview.md)
 - [功能清单](./features.md)
-- [API 设计](./api-design.md)
+- [Gateway Service](./gateway-service.md)
+- [AI Service](./ai-service.md)
 - [技术架构](./architecture.md)

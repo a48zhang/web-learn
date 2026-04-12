@@ -1,5 +1,5 @@
 import app from './app';
-import { registerService, startHeartbeat } from '@web-learn/shared';
+import { startHeartbeat } from '@web-learn/shared';
 import { config } from './utils/config';
 import { sequelize } from './utils/database';
 import { initStorageService } from './services/storageService';
@@ -42,12 +42,11 @@ import { runMigrations } from './utils/migrate';
   app.listen(config.port, () => {
     console.log(`[topic-space] listening on port ${config.port}`);
     const serviceHost = process.env.SERVICE_HOST || 'localhost';
-    registerService({
+    startHeartbeat({
       name: 'topic-space',
       url: `http://${serviceHost}:${config.port}`,
       routes: ['/api/topics'],
       metadata: { description: 'Topic space service' },
-    }).catch((err) => console.error('[topic-space] Failed to register:', err.message));
-    startHeartbeat('topic-space');
+    });
   });
 })();

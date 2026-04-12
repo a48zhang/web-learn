@@ -2,7 +2,7 @@ import { DataTypes } from 'sequelize';
 import app from './app';
 import { config } from './utils/config';
 import { sequelize } from './utils/database';
-import { registerService, startHeartbeat } from '@web-learn/shared';
+import { startHeartbeat } from '@web-learn/shared';
 
 (async () => {
   await sequelize.authenticate();
@@ -43,12 +43,11 @@ import { registerService, startHeartbeat } from '@web-learn/shared';
   app.listen(config.port, () => {
     console.log(`[auth] listening on port ${config.port}`);
     const serviceHost = process.env.SERVICE_HOST || 'localhost';
-    registerService({
+    startHeartbeat({
       name: 'auth',
       url: `http://${serviceHost}:${config.port}`,
       routes: ['/api/auth', '/api/users'],
       metadata: { description: 'Authentication service' },
-    }).catch((err) => console.error('[auth] Failed to register with registry:', err.message));
-    startHeartbeat('auth');
+    });
   });
 })();

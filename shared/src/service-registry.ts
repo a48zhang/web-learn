@@ -37,14 +37,36 @@ export async function sendHeartbeat(name: string): Promise<void> {
 }
 
 let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+let registered = false;
+let heartbeatConfig: RegisterRequest | null = null;
 
-export function startHeartbeat(name: string, intervalMs = 5000): void {
+const doRegister = async (config: RegisterRequest): Promise<boolean> => {
+  try {
+    await registerService(config);
+    registered = true;
+    console.log(`[${config.name}] registered with service registry`);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export function startHeartbeat(config: RegisterRequest, intervalMs = 5000): void {
   if (heartbeatInterval) return;
+  heartbeatConfig = config;
+  registered = false;
+
   heartbeatInterval = setInterval(async () => {
+    if (!registered) {
+      if (!await doRegister(config)) return;
+    }
     try {
-      await sendHeartbeat(name);
-    } catch {
-      // Silently ignore heartbeat errors — next interval will retry
+      await sendHeartbeat(config.name);
+    } catch (err) {
+      // Registry unreachable — mark unregistered so we re-register next time
+      if (axios.isAxiosError(err) && err.response?.status === 404) {
+        registered = false;
+      }
     }
   }, intervalMs);
 }
@@ -54,4 +76,6 @@ export function stopHeartbeat(): void {
     clearInterval(heartbeatInterval);
     heartbeatInterval = null;
   }
+  registered = false;
+  heartbeatConfig = null;
 }

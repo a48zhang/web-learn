@@ -38,6 +38,7 @@ export async function sendHeartbeat(name: string): Promise<void> {
 
 let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 let registered = false;
+// @ts-ignore: used occasionally for debugging or extended use
 let heartbeatConfig: RegisterRequest | null = null;
 
 const doRegister = async (config: RegisterRequest): Promise<boolean> => {
@@ -53,7 +54,7 @@ const doRegister = async (config: RegisterRequest): Promise<boolean> => {
 
 export function startHeartbeat(config: RegisterRequest, intervalMs = 5000): void {
   if (heartbeatInterval) return;
-  heartbeatConfig = config;
+  heartbeatConfig = config; // Set the heartbeat config reference
   registered = false;
 
   heartbeatInterval = setInterval(async () => {
@@ -77,5 +78,5 @@ export function stopHeartbeat(): void {
     heartbeatInterval = null;
   }
   registered = false;
-  heartbeatConfig = null;
+  heartbeatConfig = null; // Clear the reference on stop
 }

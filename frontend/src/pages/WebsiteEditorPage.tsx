@@ -9,14 +9,16 @@ import { getApiErrorMessage } from '../utils/errors';
 import { LoadingOverlay } from '../components/Loading';
 import { useLayoutMeta } from '../components/layout/LayoutMetaContext';
 import { getBaseBreadcrumbs } from '../utils/breadcrumbs';
-import TopBar from '../components/editor/TopBar';
+import EditorActions from '../components/editor/EditorActions';
 import { EditorPanelGroup } from '../components/editor/ResizablePanel';
 import FileTree from '../components/editor/FileTree';
 import CodeEditor from '../components/editor/CodeEditor';
 import AgentChatContent from '../components/AgentChatContent';
+import AgentPanelHeaderRight from '../components/editor/AgentPanelHeaderRight';
 import TerminalPanel from '../components/TerminalPanel';
 import TerminalToggle from '../components/TerminalToggle';
 import PreviewPanel from '../components/editor/PreviewPanel';
+import PreviewPanelHeaderRight from '../components/editor/PreviewPanelHeaderRight';
 import { useWebContainer } from '../hooks/useWebContainer';
 import { useEditorStore } from '../stores/useEditorStore';
 
@@ -39,6 +41,10 @@ function WebsiteEditorPage() {
   } = useWebContainer();
 
   const { openFile, getAllFiles, loadSnapshot, deleteFile } = useEditorStore();
+
+  const handleRefreshPreview = useCallback(() => {
+    setPreviewReloadKey((prev) => prev + 1);
+  }, []);
 
   // Editors-based permission: admin, creator, or editor
   const canEdit =
@@ -96,6 +102,7 @@ function WebsiteEditorPage() {
             { label: '编辑' },
           ],
           sideNavSlot: null,
+          topBarRightSlot: <EditorActions topicId={id} onRefreshPreview={handleRefreshPreview} />,
         });
       } catch (err: unknown) {
         setError(getApiErrorMessage(err, '加载编辑器失败'));
@@ -104,7 +111,12 @@ function WebsiteEditorPage() {
       }
     };
     fetchData();
-  }, [id, setMeta, loadSnapshot]);
+
+    // Cleanup topBarRightSlot when component unmounts
+    return () => {
+      setMeta({ topBarRightSlot: undefined });
+    };
+  }, [id, setMeta, loadSnapshot, handleRefreshPreview]);
 
   // Initialize WebContainer once topic is loaded
   useEffect(() => {
@@ -120,10 +132,6 @@ function WebsiteEditorPage() {
 
   const handleCloseEditor = useCallback(() => {
     setShowEditor(false);
-  }, []);
-
-  const handleRefreshPreview = useCallback(() => {
-    setPreviewReloadKey((prev) => prev + 1);
   }, []);
 
   const handleDeleteFile = useCallback(async (path: string) => {
@@ -157,9 +165,7 @@ function WebsiteEditorPage() {
   }
 
   return (
-    <div className="min-h-0 h-full flex flex-col bg-zinc-900">
-      <TopBar onRefreshPreview={handleRefreshPreview} />
-
+    <div className="min-h-0 h-full flex flex-col bg-[#1e1e1e]">
       <div className="flex-1 overflow-hidden">
         <EditorPanelGroup
           panels={[
@@ -189,6 +195,7 @@ function WebsiteEditorPage() {
               defaultSize: 25,
               collapsible: true,
               header: 'Agent 对话',
+              headerRight: <AgentPanelHeaderRight />,
               content: <AgentChatContent topicId={id ?? ''} />,
             },
             {
@@ -197,6 +204,7 @@ function WebsiteEditorPage() {
               defaultSize: 55,
               collapsible: false,
               header: '应用预览',
+              headerRight: <PreviewPanelHeaderRight previewUrl={previewUrl} onRefresh={handleRefreshPreview} />,
               content: (
                 <PreviewPanel
                   previewUrl={previewUrl}

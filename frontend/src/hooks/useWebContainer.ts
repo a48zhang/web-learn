@@ -32,7 +32,7 @@ async function startDevServerInternal(): Promise<void> {
   devServerStarted = true;
 
   try {
-    const installProcess = await webcontainerInstance.spawn('npm', ['install']);
+    const installProcess = await webcontainerInstance.spawn('npm', ['install'], { cwd: '/home/project' });
     installProcess.output.pipeTo(
       new WritableStream({ write: (data) => console.log('[npm]', data) })
     );
@@ -42,7 +42,7 @@ async function startDevServerInternal(): Promise<void> {
   }
 
   try {
-    const devProcess = await webcontainerInstance.spawn('npm', ['run', 'dev', '--', '--host', 'localhost', '--port', '5173']);
+    const devProcess = await webcontainerInstance.spawn('npm', ['run', 'dev', '--', '--host', 'localhost', '--port', '5173'], { cwd: '/home/project' });
     devProcess.output.pipeTo(
       new WritableStream({ write: (data) => console.log('[dev]', data) })
     );
@@ -116,11 +116,12 @@ export function useWebContainer() {
 
   const writeFile = useCallback(async (path: string, content: string) => {
     if (!webcontainerInstance) return;
-    const dir = path.substring(0, path.lastIndexOf('/'));
+    const resolved = path.startsWith('/') ? path : `/home/project/${path}`;
+    const dir = resolved.substring(0, resolved.lastIndexOf('/'));
     if (dir) {
       await webcontainerInstance.fs.mkdir(dir, { recursive: true });
     }
-    await webcontainerInstance.fs.writeFile(path, content);
+    await webcontainerInstance.fs.writeFile(resolved, content);
   }, []);
 
   const deleteFileWC = useCallback(async (path: string) => {

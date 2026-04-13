@@ -2,6 +2,13 @@ import { WebContainer } from '@webcontainer/api';
 
 let wcInstance: WebContainer | null = null;
 
+const WC_PROJECT_DIR = '/home/project';
+
+function wcPath(path: string): string {
+  if (path.startsWith('/')) return path;
+  return `${WC_PROJECT_DIR}/${path}`;
+}
+
 export async function getWebContainer(): Promise<WebContainer> {
   if (!wcInstance) {
     throw new Error('WebContainer is not initialized');
@@ -15,8 +22,9 @@ export function setWebContainerInstance(wc: WebContainer): void {
 
 export async function wcReadFile(path: string): Promise<string> {
   const wc = await getWebContainer();
+  const resolved = wcPath(path);
   try {
-    const content = await wc.fs.readFile(path, 'utf-8');
+    const content = await wc.fs.readFile(resolved, 'utf-8');
     return content;
   } catch {
     throw new Error(`File not found: ${path}`);
@@ -25,55 +33,60 @@ export async function wcReadFile(path: string): Promise<string> {
 
 export async function wcWriteFile(path: string, content: string): Promise<void> {
   const wc = await getWebContainer();
-  const dir = path.substring(0, path.lastIndexOf('/'));
+  const resolved = wcPath(path);
+  const dir = resolved.substring(0, resolved.lastIndexOf('/'));
   if (dir) {
     await wc.fs.mkdir(dir, { recursive: true });
   }
-  await wc.fs.writeFile(path, content);
+  await wc.fs.writeFile(resolved, content);
 }
 
 export async function wcCreateFile(path: string, content = ''): Promise<void> {
   const wc = await getWebContainer();
-  const dir = path.substring(0, path.lastIndexOf('/'));
+  const resolved = wcPath(path);
+  const dir = resolved.substring(0, resolved.lastIndexOf('/'));
   if (dir) {
     await wc.fs.mkdir(dir, { recursive: true });
   }
-  await wc.fs.writeFile(path, content);
+  await wc.fs.writeFile(resolved, content);
 }
 
 export async function wcDeleteFile(path: string): Promise<void> {
   const wc = await getWebContainer();
-  await wc.fs.rm(path, { recursive: true, force: true });
+  await wc.fs.rm(wcPath(path), { recursive: true, force: true });
 }
 
 export async function wcMoveFile(oldPath: string, newPath: string): Promise<void> {
   const wc = await getWebContainer();
-  const dir = newPath.substring(0, newPath.lastIndexOf('/'));
+  const newResolved = wcPath(newPath);
+  const dir = newResolved.substring(0, newResolved.lastIndexOf('/'));
   if (dir) {
     await wc.fs.mkdir(dir, { recursive: true });
   }
-  await wc.fs.rename(oldPath, newPath);
+  await wc.fs.rename(wcPath(oldPath), newResolved);
 }
 
 export async function wcListFiles(rootPath = '.'): Promise<string[]> {
   const wc = await getWebContainer();
   const files: string[] = [];
+  const base = rootPath === '.' ? WC_PROJECT_DIR : wcPath(rootPath);
 
   async function walk(dir: string) {
     const entries = await wc.fs.readdir(dir, { withFileTypes: true });
     for (const entry of entries) {
-      const fullPath = dir === '.' ? entry.name : `${dir}/${entry.name}`;
+      const fullPath = dir === WC_PROJECT_DIR ? entry.name : `${dir}/${entry.name}`;
       if (entry.isDirectory()) {
         if (entry.name !== 'node_modules') {
           await walk(fullPath);
         }
       } else {
-        files.push(fullPath);
+        // Return relative paths
+        files.push(fullPath.replace(WC_PROJECT_DIR + '/', ''));
       }
     }
   }
 
-  await walk(rootPath);
+  await walk(base);
   return files;
 }
 

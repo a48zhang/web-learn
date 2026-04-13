@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useEditorStore } from '../../stores/useEditorStore';
 import { useAgentStore } from '../../stores/useAgentStore';
 import { toast } from '../../stores/useToastStore';
@@ -15,6 +15,7 @@ interface TopBarProps {
 
 export default function TopBar({ onRefreshPreview, onPublish, onShare }: TopBarProps) {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { getAllFiles, markSaved } = useEditorStore();
   const visibleMessages = useAgentStore((s) => s.visibleMessages);
   const [saving, setSaving] = useState(false);
@@ -48,47 +49,72 @@ export default function TopBar({ onRefreshPreview, onPublish, onShare }: TopBarP
   };
 
   return (
-    <div className="h-10 bg-zinc-900 border-b border-zinc-700 flex items-center justify-between px-3 text-sm sticky top-0 z-10">
-      <div className="flex items-center gap-2">
-        <span className="text-zinc-400 font-medium">网站编辑器</span>
+    <div className="h-9 bg-[#2d2d2d] sm:bg-[#181818] border-b border-[#2b2b2b] flex items-center justify-between px-3 text-sm sticky top-0 z-10 shrink-0 select-none">
+
+      {/* MAC / VSCODE TITLE BAR LEFT */}
+      <div className="flex items-center justify-center gap-1.5 flex-row group">
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="flex items-center justify-center w-6 h-6 rounded-md hover:bg-[#333333] transition-colors text-[#cccccc] cursor-pointer outline-none"
+          title="Back to Dashboard"
+        >
+          <svg className="w-[14px] h-[14px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+        </button>
+        <span className="text-[#cccccc] text-[12px] ml-1 tracking-wide font-medium flex items-center">
+          WebEditor Pro
+        </span>
       </div>
+
+      {/* VSCODE TITLE BAR CENTER */}
+      <div className="absolute left-1/2 -translate-x-1/2 hidden md:flex items-center justify-center pointer-events-none">
+        <span className="text-[#858585] text-[11px] px-16 h-6 rounded-md bg-[#232323] border border-[#2b2b2b] flex items-center justify-center tracking-wide font-mono">
+          Project ID - {id}
+        </span>
+      </div>
+
+      {/* ACTIONS RIGHT */}
       <div className="flex items-center gap-2">
         <SaveIndicator topicId={id ?? ''} />
+
         <button
           type="button"
           onClick={onRefreshPreview}
-          className="text-zinc-300 hover:text-white px-2 py-1 rounded hover:bg-zinc-700 text-xs"
-          title="刷新预览"
+          className="text-[#cccccc] hover:text-white w-6 h-6 flex items-center justify-center rounded shadow-sm border border-transparent hover:bg-[#333333] transition-colors outline-none mx-1"
+          title="Refresh Preview"
         >
-          刷新预览
+          <svg className="w-[14px] h-[14px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
         </button>
+
         {onPublish && (
           <button
             type="button"
             onClick={onPublish}
-            className="text-zinc-300 hover:text-white px-2 py-1 rounded hover:bg-zinc-700 text-xs"
-            title="发布到网站"
+            className="text-[#cccccc] hover:text-white px-2 py-1 rounded hover:bg-[#333333] text-xs transition-colors"
+            title="Publish"
           >
-            发布到网站
+            Publish
           </button>
         )}
         {onShare && (
           <button
             type="button"
             onClick={onShare}
-            className="text-zinc-300 hover:text-white px-2 py-1 rounded hover:bg-zinc-700 text-xs"
-            title="分享链接"
+            className="text-[#cccccc] hover:text-white px-2 py-1 rounded hover:bg-[#333333] text-xs transition-colors"
+            title="Share"
           >
-            分享链接
+            Share
           </button>
         )}
+
         <button
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs disabled:opacity-50"
+          className="bg-[#007acc] hover:bg-[#005f9e] text-white px-3 py-[3px] rounded-sm text-[11px] font-medium transition-colors outline-none shadow flex items-center justify-center min-w-[50px] disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          {saving ? '保存中...' : '保存'}
+          {saving ? 'Saving' : 'Save'}
         </button>
       </div>
     </div>

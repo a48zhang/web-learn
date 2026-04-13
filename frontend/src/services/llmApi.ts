@@ -25,7 +25,7 @@ export async function chatWithTools(
   const llmClient = createLlmClient(token);
 
   const response = await llmClient.chat.completions.create({
-    model: model,
+    model: model || 'MiniMax-M2.7',
     messages: messages as any,
     tools,
     tool_choice: tools && tools.length > 0 ? 'auto' : undefined,

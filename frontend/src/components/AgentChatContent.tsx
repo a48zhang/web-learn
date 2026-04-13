@@ -5,21 +5,16 @@ import { useAgentRuntime } from '../agent/useAgentRuntime';
 import { useAgentStore } from '../stores/useAgentStore';
 import type { AgentMessage } from '@web-learn/shared';
 
-const MODELS = [
-  'MiniMax-M2.7',
-];
-
 interface AgentChatContentProps {
   topicId: string;
   title?: string;
 }
 
-export default function AgentChatContent({ topicId, title = 'AI 助手' }: AgentChatContentProps) {
+export default function AgentChatContent({ topicId }: AgentChatContentProps) {
   const [input, setInput] = useState('');
-  const [model, setModel] = useState('MiniMax-M2.7');
-  const [showModelPicker, setShowModelPicker] = useState(false);
   const { runAgentLoop, visibleMessages } = useAgentRuntime();
   const runState = useAgentStore((s) => s.runState);
+  const model = useAgentStore((s) => s.model);
   const setVisibleMessages = useAgentStore((s) => s.setVisibleMessages);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -39,8 +34,6 @@ export default function AgentChatContent({ topicId, title = 'AI 助手' }: Agent
         // corrupted — start fresh
       }
     }
-    const savedModel = localStorage.getItem(`agent-model-${topicId}`);
-    if (savedModel) setModel(savedModel);
   }, [topicId, setVisibleMessages]);
 
   // Debounced save to localStorage
@@ -95,14 +88,6 @@ export default function AgentChatContent({ topicId, title = 'AI 助手' }: Agent
     await runAgentLoop(content, model);
   };
 
-  const handleClearChat = () => {
-    setVisibleMessages([]);
-    try {
-      localStorage.setItem(`chat-history-${topicId}`, JSON.stringify([]));
-    } catch {
-      // Silently fail
-    }
-  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -178,59 +163,6 @@ export default function AgentChatContent({ topicId, title = 'AI 助手' }: Agent
   return (
     <div className="flex flex-col flex-1 h-full min-h-0 bg-zinc-950 text-zinc-100 font-sans relative">
       {/* Header - Glassmorphism */}
-      <header className="flex-none px-4 py-3 border-b border-white/5 bg-zinc-950/80 backdrop-blur-md flex items-center justify-between sticky top-0 z-20">
-        <div className="flex items-center gap-3">
-          <h3 className="text-sm font-medium text-zinc-200">{title}</h3>
-
-          {/* Inline Model Picker */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShowModelPicker(!showModelPicker)}
-              className="text-xs bg-zinc-800/50 hover:bg-zinc-800 border border-white/5 text-zinc-300 flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors"
-            >
-              <span>{model}</span>
-              <svg className={`w-3 h-3 transition-transform ${showModelPicker ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            {showModelPicker && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setShowModelPicker(false)}
-                />
-                <div className="absolute top-full left-0 mt-1 bg-zinc-800/95 backdrop-blur-xl border border-white/10 rounded-lg shadow-xl py-1 min-w-[160px] z-20 animate-in fade-in slide-in-from-top-1 duration-200">
-                  {MODELS.map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => { setModel(m); setShowModelPicker(false); }}
-                      className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${model === m ? 'text-blue-400 bg-blue-500/10' : 'text-zinc-300 hover:bg-white/5'
-                        }`}
-                    >
-                      {m}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        {visibleMessages.length > 0 && (
-          <button
-            type="button"
-            onClick={handleClearChat}
-            className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
-            title="清空对话"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-          </button>
-        )}
-      </header>
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth custom-scrollbar">

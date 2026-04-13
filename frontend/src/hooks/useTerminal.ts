@@ -67,7 +67,7 @@ export function useTerminal({ visible, containerRef }: UseTerminalOptions) {
 
     const wc = getInstance();
     if (wc) {
-      wc.spawn('bash').then(async (process) => {
+      wc.spawn('bash', [], { cwd: '/home/project' }).then(async (process) => {
         processRef.current = process;
 
         process.output.pipeTo(

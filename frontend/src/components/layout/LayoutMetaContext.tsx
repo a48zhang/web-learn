@@ -10,6 +10,7 @@ export interface LayoutMeta {
   breadcrumbSegments: BreadcrumbSegment[];
   sideNavSlot: React.ReactNode;
   actions?: Array<{ label: string; onClick: () => void }>;
+  topBarRightSlot?: React.ReactNode;
 }
 
 const defaultMeta: LayoutMeta = {
@@ -26,7 +27,7 @@ interface LayoutMetaContextValue {
 
 const LayoutMetaContext = createContext<LayoutMetaContextValue>({
   meta: defaultMeta,
-  setMeta: () => {},
+  setMeta: () => { },
 });
 
 export function LayoutMetaProvider({ children }: { children: React.ReactNode }) {

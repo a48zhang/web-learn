@@ -96,7 +96,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <AppShell>
-                  <TopicEditorRouter />
+                  <div className="flex-1 w-full h-full flex flex-col bg-[#1e1e1e] overflow-hidden text-[#cccccc] font-sans">
+                    <TopicEditorRouter />
+                  </div>
                 </AppShell>
               </ProtectedRoute>
             }

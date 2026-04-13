@@ -63,6 +63,8 @@ export function useAgentRuntime() {
         }
 
         for (const toolCall of message.tool_calls) {
+          if (!('function' in toolCall)) continue;
+
           const toolName = toolCall.function.name;
 
           let toolPath: string | null = null;

@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import { WebContainer } from '@webcontainer/api';
 import { useEditorStore } from '../stores/useEditorStore';
 import { setWebContainerInstance } from '../agent/webcontainer';
@@ -138,10 +138,10 @@ export function useWebContainer() {
   }, [writeFile, setFileContent]);
 
   // Subscribe to global status changes on mount
-  const [syncKey] = useState(() => {
+  useEffect(() => {
     wcStatusListeners.add(setStatusFromGlobal);
-    return Date.now();
-  });
+    return () => { wcStatusListeners.delete(setStatusFromGlobal); };
+  }, [setStatusFromGlobal]);
 
   const { isReady, previewUrl, error } = status;
 

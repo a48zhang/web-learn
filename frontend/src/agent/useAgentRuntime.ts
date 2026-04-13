@@ -33,7 +33,7 @@ export function useAgentRuntime() {
   const setRunState = useAgentStore((s) => s.setRunState);
   const clearRunState = useAgentStore((s) => s.clearRunState);
 
-  async function runAgentLoop(userMessage: string): Promise<void> {
+  async function runAgentLoop(userMessage: string, model?: string): Promise<void> {
     const internalMessages: AIChatMessage[] = [
       SYSTEM_PROMPT,
       ...visibleMessages.map((m) => ({
@@ -50,7 +50,7 @@ export function useAgentRuntime() {
 
     try {
       for (let i = 0; i < MAX_TOOL_LOOPS; i++) {
-        const completion = await chatWithTools(internalMessages, openAITools);
+        const completion = await chatWithTools(internalMessages, openAITools, undefined, model);
         const choice = completion.choices[0];
         const message = choice.message;
 

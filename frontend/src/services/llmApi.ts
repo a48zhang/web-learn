@@ -15,7 +15,8 @@ const createLlmClient = (token: string) =>
 export async function chatWithTools(
   messages: AIChatMessage[],
   tools?: OpenAI.Chat.Completions.ChatCompletionTool[],
-  onStream?: (chunk: string) => void
+  onStream?: (chunk: string) => void,
+  model?: string
 ): Promise<OpenAI.Chat.Completions.ChatCompletion> {
   const token = getAuthToken();
   if (!token?.trim()) {
@@ -24,7 +25,7 @@ export async function chatWithTools(
   const llmClient = createLlmClient(token);
 
   const response = await llmClient.chat.completions.create({
-    model: import.meta.env.VITE_LLM_MODEL || 'gpt-4o',
+    model: model,
     messages: messages as any,
     tools,
     tool_choice: tools && tools.length > 0 ? 'auto' : undefined,

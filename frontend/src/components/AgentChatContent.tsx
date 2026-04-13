@@ -5,6 +5,10 @@ import { useAgentRuntime } from '../agent/useAgentRuntime';
 import { useAgentStore } from '../stores/useAgentStore';
 import type { AgentMessage } from '@web-learn/shared';
 
+const MODELS = [
+  'MiniMax-M2.7',
+];
+
 interface AgentChatContentProps {
   topicId: string;
   title?: string;
@@ -12,6 +16,8 @@ interface AgentChatContentProps {
 
 export default function AgentChatContent({ topicId, title = 'AI 助手' }: AgentChatContentProps) {
   const [input, setInput] = useState('');
+  const [model, setModel] = useState('MiniMax-M2.7');
+  const [showModelPicker, setShowModelPicker] = useState(false);
   const { runAgentLoop, visibleMessages } = useAgentRuntime();
   const runState = useAgentStore((s) => s.runState);
   const setVisibleMessages = useAgentStore((s) => s.setVisibleMessages);
@@ -30,6 +36,8 @@ export default function AgentChatContent({ topicId, title = 'AI 助手' }: Agent
         // corrupted — start fresh
       }
     }
+    const savedModel = localStorage.getItem(`agent-model-${topicId}`);
+    if (savedModel) setModel(savedModel);
   }, [topicId, setVisibleMessages]);
 
   // Debounced save to localStorage
@@ -54,6 +62,10 @@ export default function AgentChatContent({ topicId, title = 'AI 助手' }: Agent
   }, []);
 
   useEffect(() => {
+    localStorage.setItem(`agent-model-${topicId}`, model);
+  }, [topicId, model]);
+
+  useEffect(() => {
     if (visibleMessages.length > 0) {
       debouncedSave(visibleMessages);
     }
@@ -63,7 +75,7 @@ export default function AgentChatContent({ topicId, title = 'AI 助手' }: Agent
     const content = input.trim();
     if (!content || runState.isRunning) return;
     setInput('');
-    await runAgentLoop(content);
+    await runAgentLoop(content, model);
   };
 
   const handleClearChat = () => {
@@ -153,6 +165,38 @@ export default function AgentChatContent({ topicId, title = 'AI 助手' }: Agent
             工具执行失败：{runState.error}
           </div>
         )}
+      </div>
+
+      {/* Model picker */}
+      <div className="px-3 pt-2 border-t border-zinc-700">
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setShowModelPicker(!showModelPicker)}
+            className="text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1"
+          >
+            <span>{model}</span>
+            <svg className={`w-3 h-3 transition-transform ${showModelPicker ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {showModelPicker && (
+            <div className="absolute bottom-full left-0 mb-1 bg-zinc-800 border border-zinc-700 rounded-md shadow-lg py-1 min-w-[160px] z-10">
+              {MODELS.map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => { setModel(m); setShowModelPicker(false); }}
+                  className={`w-full text-left px-3 py-1.5 text-xs hover:bg-zinc-700 ${
+                    model === m ? 'text-blue-400' : 'text-zinc-300'
+                  }`}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Input */}

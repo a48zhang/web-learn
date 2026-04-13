@@ -1,11 +1,31 @@
 import { useState } from 'react';
 import { useAgentStore } from '../../stores/useAgentStore';
 
-const MODELS: Array<{ label: string; id: string }> = [
-  { label: 'MiniMax', id: 'MiniMax-M2.7' },
-  { label: 'Qwen', id: 'qwen3.6-plus' },
-  { label: 'Doubao', id: 'doubao-seed-2.0-code' },
-  { label: 'GPT-5.4', id: 'gpt-5.4' },
+const MODELS: Array<{ label: string; id: string; desc: string; logoUrl: string }> = [
+  {
+    label: 'MiniMax M2.7',
+    id: 'MiniMax-M2.7',
+    desc: 'MiniMax的通用推理模型，上下文理解与速度的极佳平衡',
+    logoUrl: 'https://avatars.githubusercontent.com/u/194880281?v=4'
+  },
+  {
+    label: 'Qwen 3.6 Plus',
+    id: 'qwen3.6-plus',
+    desc: '通义千问最新版本，长逻辑和编程能力卓越',
+    logoUrl: 'https://avatars.githubusercontent.com/u/141221163?v=4'
+  },
+  {
+    label: 'Doubao Seed Code',
+    id: 'doubao-seed-2.0-code',
+    desc: '火山引擎提供，针对代码生成深度优化',
+    logoUrl: 'https://avatars.githubusercontent.com/u/67365215?v=4'
+  },
+  {
+    label: 'GPT-5.4',
+    id: 'gpt-5.4',
+    desc: 'OpenAI的高阶系统规划、逻辑推理与编码模型',
+    logoUrl: 'https://avatars.githubusercontent.com/u/14957082?v=4'
+  },
 ];
 
 export default function AgentPanelHeaderRight() {
@@ -25,31 +45,61 @@ export default function AgentPanelHeaderRight() {
         <button
           type="button"
           onClick={() => setShowModelPicker(!showModelPicker)}
-          className="text-[11px] text-[#cccccc] hover:text-white flex items-center gap-1 px-1.5 py-1 rounded bg-[#333333] border border-[#2b2b2b] hover:bg-[#3e3e42] transition-colors h-[22px]"
+          className="text-[11px] text-[#cccccc] hover:text-white flex items-center gap-1.5 px-1.5 py-1 rounded bg-[#333333] border border-[#2b2b2b] hover:bg-[#3e3e42] transition-colors h-[22px]"
           title="切换 AI 模型"
         >
+          <img 
+            src={currentModel.logoUrl} 
+            alt={currentModel.label} 
+            className="w-[14px] h-[14px] rounded-sm object-contain" 
+          />
           <span>{currentModel.label}</span>
-          <svg className={`w-3 h-3 transition-transform ${showModelPicker ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className={`w-3 h-3 text-[#858585] transition-transform ${showModelPicker ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </button>
+
         {showModelPicker && (
           <>
             <div
               className="fixed inset-0 z-40"
               onClick={() => setShowModelPicker(false)}
             />
-            <div className="absolute right-0 top-[28px] mt-1 w-36 bg-[#252526] border border-[#2b2b2b] rounded-md shadow-lg py-1 z-50">
-              {MODELS.map((m) => (
-                <button
-                  key={m.id}
-                  onClick={() => { setModel(m.id); setShowModelPicker(false); }}
-                  className={`w-full text-left px-3 py-1.5 text-[11px] transition-colors ${model === m.id ? 'text-white bg-[#007acc]' : 'text-[#cccccc] hover:bg-[#2a2d2e] hover:text-white'
+            <div className="absolute right-0 top-[28px] mt-1 w-[260px] bg-[#252526] border border-[#3c3c3c] rounded shadow-xl py-1.5 z-50 flex flex-col gap-0.5">
+              <div className="px-3 pt-1 pb-1.5 text-[10px] uppercase tracking-wider text-[#858585] font-semibold border-b border-[#3c3c3c] mb-1">
+                选择代理使用的语言模型
+              </div>
+              {MODELS.map((m) => {
+                const isActive = model === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => { setModel(m.id); setShowModelPicker(false); }}
+                    className={`w-full flex items-start gap-3 px-3 py-2 transition-colors border-l-2 text-left ${
+                      isActive ? 'bg-[#04395e] border-[#007acc]' : 'border-transparent hover:bg-[#2a2d2e]'
                     }`}
-                >
-                  {m.label}
-                </button>
-              ))}
+                  >
+                    {/* Logo Area */}
+                    <div className="w-8 h-8 rounded-md shrink-0 mt-0.5 shadow-sm bg-white overflow-hidden flex items-center justify-center p-0.5">
+                      <img 
+                        src={m.logoUrl} 
+                        alt={m.label} 
+                        className="w-full h-full object-contain rounded-sm" 
+                        loading="lazy" 
+                      />
+                    </div>
+                    {/* Text Area */}
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className={`text-[12px] font-medium leading-none ${isActive ? 'text-white' : 'text-[#cccccc]'}`}>
+                        {m.label}
+                      </span>
+                      <span className="text-[10px] text-[#858585] mt-1.5 leading-[1.35] max-w-full">
+                        {m.desc}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </>
         )}

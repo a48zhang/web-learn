@@ -81,7 +81,7 @@ export default function AgentChatContent({ topicId, title = 'AI 助手' }: Agent
 
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
-    e.target.style.height = 'auto';
+    e.target.style.height = '52px'; // Reset line height to recalculate
     e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`;
   };
 
@@ -90,7 +90,7 @@ export default function AgentChatContent({ topicId, title = 'AI 助手' }: Agent
     if (!content || runState.isRunning) return;
     setInput('');
     if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = '52px';
     }
     await runAgentLoop(content, model);
   };
@@ -343,12 +343,13 @@ export default function AgentChatContent({ topicId, title = 'AI 助手' }: Agent
             value={input}
             onChange={handleInput}
             onKeyDown={handleKeyDown}
-            className="w-full bg-transparent px-4 py-4 pr-14 text-[14px] leading-6 text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none min-h-[56px] overflow-y-auto custom-scrollbar"
+            className="w-full bg-transparent px-4 py-[14px] pr-14 text-[14px] leading-6 text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none overflow-y-auto custom-scrollbar block box-border"
             rows={1}
+            style={{ height: '52px', minHeight: '52px' }}
             placeholder="描述你想要的更改..."
             disabled={runState.isRunning}
           />
-          <div className="absolute right-3 bottom-3">
+          <div className="absolute right-[10px] bottom-[10px]">
             <button
               type="button"
               onClick={handleSend}
@@ -356,8 +357,8 @@ export default function AgentChatContent({ topicId, title = 'AI 助手' }: Agent
               className="w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed bg-blue-600 hover:bg-blue-500 text-white shadow-sm"
               title="发送"
             >
-              <svg className="w-5 h-5 translate-x-[1px] translate-y-[-0.5px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              <svg className="w-[18px] h-[18px] translate-x-[1px] translate-y-[0px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
               </svg>
             </button>
           </div>

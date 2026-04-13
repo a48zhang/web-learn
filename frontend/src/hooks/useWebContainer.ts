@@ -7,6 +7,22 @@ let webcontainerInstance: WebContainer | null = null;
 let devServerStarted = false;
 const serverReadyListeners: Array<(url: string) => void> = [];
 
+export type WCStatus = {
+  isReady: boolean;
+  previewUrl: string | null;
+  error: string | null;
+};
+
+let wcStatus: WCStatus = { isReady: false, previewUrl: null, error: null };
+const wcStatusListeners = new Set<(s: WCStatus) => void>();
+
+function setWcStatus(partial: Partial<WCStatus>): void {
+  wcStatus = { ...wcStatus, ...partial };
+  for (const listener of wcStatusListeners) {
+    listener(wcStatus);
+  }
+}
+
 export function tryStartDevServer(): void {
   void startDevServerInternal();
 }
@@ -48,11 +64,55 @@ export function onServerReady(callback: (url: string) => void): void {
 export { devServerStarted };
 
 export function useWebContainer() {
-  const [isReady, setIsReady] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState(wcStatus);
   const { setFileContent } = useEditorStore();
   const isInitializing = useRef(false);
+
+  // Subscribe to global WC status
+  const statusRef = useRef(status);
+  statusRef.current = status;
+
+  // Sync on mount/subsequent renders
+  const setStatusFromGlobal = useCallback(() => {
+    setStatus(wcStatus);
+  }, []);
+
+  const init = useCallback(async (initialFiles?: Record<string, string>) => {
+    if (isInitializing.current) return;
+    isInitializing.current = true;
+    setWcStatus({ error: null });
+
+    // Register server-ready listener before any dev server starts
+    onServerReady((url) => {
+      setWcStatus({ previewUrl: url });
+    });
+
+    try {
+      if (!webcontainerInstance) {
+        webcontainerInstance = await WebContainer.boot();
+        setWebContainerInstance(webcontainerInstance);
+      }
+
+      // Write initial files
+      const files = initialFiles || {};
+      for (const [path, content] of Object.entries(files)) {
+        await writeFile(path, content);
+      }
+
+      setWcStatus({ isReady: true });
+
+      // If package.json exists, install deps and start dev server
+      if (files['package.json']) {
+        await startDevServerInternal();
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'WebContainer initialization failed';
+      setWcStatus({ error: message });
+      console.error('WebContainer error:', err);
+    } finally {
+      isInitializing.current = false;
+    }
+  }, []);
 
   const writeFile = useCallback(async (path: string, content: string) => {
     if (!webcontainerInstance) return;
@@ -77,42 +137,13 @@ export function useWebContainer() {
     setFileContent(path, content);
   }, [writeFile, setFileContent]);
 
-  const init = useCallback(async (initialFiles?: Record<string, string>) => {
-    if (isInitializing.current) return;
-    isInitializing.current = true;
-    setError(null);
+  // Subscribe to global status changes on mount
+  const [syncKey] = useState(() => {
+    wcStatusListeners.add(setStatusFromGlobal);
+    return Date.now();
+  });
 
-    // Register server-ready listener before any dev server starts
-    onServerReady((url) => {
-      setPreviewUrl(url);
-    });
-
-    try {
-      if (!webcontainerInstance) {
-        webcontainerInstance = await WebContainer.boot();
-        setWebContainerInstance(webcontainerInstance);
-      }
-
-      // Write initial files
-      const files = initialFiles || {};
-      for (const [path, content] of Object.entries(files)) {
-        await writeFile(path, content);
-      }
-
-      setIsReady(true);
-
-      // If package.json exists, install deps and start dev server
-      if (files['package.json']) {
-        await startDevServerInternal();
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'WebContainer initialization failed';
-      setError(message);
-      console.error('WebContainer error:', err);
-    } finally {
-      isInitializing.current = false;
-    }
-  }, [writeFile]);
+  const { isReady, previewUrl, error } = status;
 
   return {
     isReady,

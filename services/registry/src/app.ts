@@ -34,13 +34,13 @@ app.post('/register', (req: Request, res: Response) => {
 });
 
 app.post('/heartbeat', (req: Request, res: Response) => {
-  const { name } = req.body as { name?: string };
+  const { name, url } = req.body as { name?: string; url?: string };
   if (!name) {
     return res.status(400).json({ success: false, error: 'Missing required field: name' });
   }
-  const ok = registry.heartbeat(name);
+  const ok = registry.heartbeat(name, url);
   if (!ok) {
-    return res.status(404).json({ success: false, error: `Service not found: ${name}` });
+    return res.status(404).json({ success: false, error: `Service not found: ${name}${url ? ` at ${url}` : ''}` });
   }
   res.json({ success: true });
 });

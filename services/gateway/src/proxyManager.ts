@@ -1,4 +1,5 @@
 import { Application } from 'express';
+import { EventEmitter } from 'events';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import type { Options } from 'http-proxy-middleware';
 import type * as http from 'http';
@@ -16,6 +17,8 @@ const forwardUserContextHeaders = (proxyReq: http.ClientRequest, req: Request) =
   }
 };
 
+export const proxyEvents = new EventEmitter();
+
 interface ProxyGroup {
   targets: string[];
   proxies: any[];
@@ -23,6 +26,9 @@ interface ProxyGroup {
 }
 
 const proxyGroups: Record<string, ProxyGroup> = {};
+
+let appRef: Application | null = null;
+let dynamicMiddleware: ((req: any, res: any, next: any) => void) | null = null;
 
 const createProxy = (targetUrl: string) => {
   return createProxyMiddleware({
@@ -37,6 +43,24 @@ const createProxy = (targetUrl: string) => {
       return fullPath;
     },
   } as Options);
+};
+
+const createDynamicMiddleware = () => {
+  return (req: any, res: any, next: any) => {
+    const fullPath = req.baseUrl + req.path;
+    // Match route prefix
+    for (const route of Object.keys(proxyGroups)) {
+      if (fullPath.startsWith(route)) {
+        const group = proxyGroups[route];
+        if (group && group.proxies.length > 0) {
+          const idx = group.counter % group.proxies.length;
+          group.counter++;
+          return group.proxies[idx](req, res, next);
+        }
+      }
+    }
+    return next();
+  };
 };
 
 const buildRouteTargets = (services: ServiceEntry[]): Record<string, string[]> => {
@@ -55,29 +79,35 @@ const buildRouteTargets = (services: ServiceEntry[]): Record<string, string[]> =
 };
 
 export const mountProxies = (app: Application, services: ServiceEntry[]): void => {
+  appRef = app;
+  dynamicMiddleware = createDynamicMiddleware();
+
   const routeTargets = buildRouteTargets(services);
 
-  for (const [route, urls] of Object.entries(routeTargets)) {
-    if (!proxyGroups[route]) {
-      const proxies = urls.map(createProxy);
-      proxyGroups[route] = { targets: urls, proxies, counter: 0 };
-      app.use(route, (req, res, next) => {
-        const group = proxyGroups[route];
-        const idx = group.counter % group.proxies.length;
-        group.counter++;
-        group.proxies[idx](req, res, next);
-      });
-    }
+  for (const [route, urls] of Object.entries(routeTargets) as [string, string[]][]) {
+    const proxies = urls.map(createProxy);
+    proxyGroups[route] = { targets: urls, proxies, counter: 0 };
   }
+
+  // Single catch-all middleware handles all routes dynamically
+  app.use(dynamicMiddleware);
 };
 
 export const updateProxyGroups = (services: ServiceEntry[]): void => {
   const routeTargets = buildRouteTargets(services);
+  let newRoutesDetected = false;
 
   for (const [route, urls] of Object.entries(routeTargets)) {
     if (!proxyGroups[route]) {
+      newRoutesDetected = true;
+      console.log(`[gateway] New route ${route} detected, will rebuild dynamic middleware`);
+    }
+  }
+
+  for (const [route, urls] of Object.entries(routeTargets) as [string, string[]][]) {
+    if (!proxyGroups[route]) {
       const proxies = urls.map(createProxy);
-      console.log(`[gateway] Warning: new route ${route} detected, but Express middleware cannot be added at runtime. Restart gateway.`);
+      proxyGroups[route] = { targets: urls, proxies, counter: 0 };
     } else {
       const urlsChanged =
         urls.length !== proxyGroups[route].targets.length ||
@@ -96,6 +126,11 @@ export const updateProxyGroups = (services: ServiceEntry[]): void => {
       delete proxyGroups[route];
       console.log(`[gateway] Removed proxy group for ${route}`);
     }
+  }
+
+  if (newRoutesDetected && appRef && dynamicMiddleware) {
+    proxyEvents.emit('routes-changed');
+    console.log(`[gateway] Dynamic middleware rebuilt for new routes`);
   }
 };
 

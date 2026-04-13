@@ -21,28 +21,46 @@ export class ServiceRegistry {
   private services = new Map<string, ServiceEntry>();
   private cleanupInterval: ReturnType<typeof setInterval> | null = null;
 
+  private serviceKey(config: { name: string; url: string }): string {
+    return `${config.name}@${config.url}`;
+  }
+
   register(config: RegisterRequest): ServiceEntry {
     const now = new Date();
+    const key = this.serviceKey(config);
     const entry: ServiceEntry = {
       name: config.name,
       url: config.url,
       routes: config.routes,
       metadata: config.metadata,
       lastHeartbeat: now,
-      registeredAt: this.services.has(config.name)
-        ? this.services.get(config.name)!.registeredAt
+      registeredAt: this.services.has(key)
+        ? this.services.get(key)!.registeredAt
         : now,
     };
-    this.services.set(config.name, entry);
-    console.log(`[registry] Registered: ${config.name} at ${config.url}`);
+    this.services.set(key, entry);
+    console.log(`[registry] Registered: ${config.name} at ${config.url} (key: ${key})`);
     return entry;
   }
 
-  heartbeat(name: string): boolean {
-    const entry = this.services.get(name);
-    if (!entry) return false;
-    entry.lastHeartbeat = new Date();
-    return true;
+  heartbeat(name: string, url?: string): boolean {
+    // If url is provided, match by name+url. Otherwise match by name only (first instance).
+    if (url) {
+      const key = this.serviceKey({ name, url });
+      const entry = this.services.get(key);
+      if (!entry) return false;
+      entry.lastHeartbeat = new Date();
+      return true;
+    }
+    // Legacy: update all instances with matching name
+    let found = false;
+    for (const [key, entry] of this.services) {
+      if (entry.name === name) {
+        entry.lastHeartbeat = new Date();
+        found = true;
+      }
+    }
+    return found;
   }
 
   getAll(): ServiceEntry[] {

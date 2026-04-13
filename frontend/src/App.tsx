@@ -12,6 +12,7 @@ import TopicCreatePage from './pages/TopicCreatePage';
 import TopicDetailPage from './pages/TopicDetailPage';
 import WebsiteEditorPage from './pages/WebsiteEditorPage';
 import PublicHomePage from './pages/PublicHomePage';
+import PublishedTopicPage from './pages/PublishedTopicPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppShell from './components/layout/AppShell';
 import { LayoutMetaProvider } from './components/layout/LayoutMetaContext';
@@ -53,6 +54,7 @@ function App() {
               isAuthenticated ? <Navigate to="/dashboard" replace /> : <RegisterPage />
             }
           />
+          <Route path="/p/:id" element={<PublishedTopicPage />} />
 
           {/* Protected routes wrapped with AppShell */}
           <Route

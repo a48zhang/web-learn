@@ -52,6 +52,11 @@ const mockTopicModel = {
   destroy: jest.fn(),
 };
 
+const getPresignedUrlMock = jest.fn().mockResolvedValue({
+  url: 'http://localhost:3002/storage/dev/test',
+  method: 'GET',
+});
+
 jest.mock('../src/models', () => ({
   User: mockUserModel,
   Topic: mockTopicModel,
@@ -72,7 +77,7 @@ jest.mock('../src/services/storageService', () => ({
     listFiles: jest.fn().mockResolvedValue([]),
     getSize: jest.fn().mockResolvedValue(0),
     getUrl: jest.fn((key: string) => `https://cdn.example.com/${key}`),
-    getPresignedUrl: jest.fn().mockResolvedValue({ url: 'http://localhost:3002/storage/dev/test', method: 'GET' }),
+    getPresignedUrl: getPresignedUrlMock,
   })),
   initStorageService: jest.fn(),
 }));
@@ -94,6 +99,10 @@ describe('GET /health', () => {
 describe('Topics API', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    getPresignedUrlMock.mockResolvedValue({
+      url: 'http://localhost:3002/storage/dev/test',
+      method: 'GET',
+    });
   });
 
   describe('GET /api/topics', () => {
@@ -349,6 +358,71 @@ describe('Topics API', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
+    });
+  });
+
+  describe('GET /api/topics/:id/git/presign', () => {
+    it('returns PUT presign for publish op when requester is editor', async () => {
+      mockTopicModel.findByPk.mockResolvedValue({
+        id: UUID_1,
+        title: 'Publishable Topic',
+        status: 'draft',
+        editors: ['aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'],
+        created_by: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      });
+
+      const response = await request(app)
+        .get(`/api/topics/${UUID_1}/git/presign?op=publish`)
+        .set('x-user-id', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
+        .set('x-user-username', 'editor')
+        .set('x-user-email', 'editor@example.com')
+        .set('x-user-role', 'user');
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(getPresignedUrlMock).toHaveBeenCalledWith(
+        `topics/${UUID_1}-published.tar.gz`,
+        'PUT',
+        'application/gzip',
+        1
+      );
+    });
+
+    it('returns GET presign for publish op when topic is already published and requester is anonymous', async () => {
+      mockTopicModel.findByPk.mockResolvedValue({
+        id: UUID_2,
+        title: 'Published Topic',
+        status: 'published',
+        editors: ['aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'],
+        created_by: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      });
+
+      const response = await request(app).get(`/api/topics/${UUID_2}/git/presign?op=publish`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(getPresignedUrlMock).toHaveBeenCalledWith(
+        `topics/${UUID_2}-published.tar.gz`,
+        'GET',
+        undefined,
+        1
+      );
+    });
+
+    it('blocks publish op for anonymous users when topic is not published', async () => {
+      mockTopicModel.findByPk.mockResolvedValue({
+        id: UUID_3,
+        title: 'Draft Topic',
+        status: 'draft',
+        editors: ['aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'],
+        created_by: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      });
+
+      const response = await request(app).get(`/api/topics/${UUID_3}/git/presign?op=publish`);
+
+      expect(response.status).toBe(403);
+      expect(response.body.success).toBe(false);
+      expect(getPresignedUrlMock).not.toHaveBeenCalled();
     });
   });
 });

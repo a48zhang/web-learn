@@ -4,6 +4,7 @@ import { useAgentStore } from '../../stores/useAgentStore';
 import { toast } from '../../stores/useToastStore';
 import { topicGitApi } from '../../services/api';
 import { createTarball } from '../../utils/tarUtils';
+import PublishShareDialog from '../PublishShareDialog';
 import SaveIndicator from './SaveIndicator';
 
 interface EditorActionsProps {
@@ -15,6 +16,8 @@ export default function EditorActions({ topicId, onRefreshPreview }: EditorActio
   const { getAllFiles, markSaved } = useEditorStore();
   const visibleMessages = useAgentStore((s) => s.visibleMessages);
   const [saving, setSaving] = useState(false);
+  const [showPublishDialog, setShowPublishDialog] = useState(false);
+  const [publishing, setPublishing] = useState(false);
 
   const handleSave = async () => {
     setSaving(true);
@@ -42,6 +45,17 @@ export default function EditorActions({ topicId, onRefreshPreview }: EditorActio
     }
   };
 
+  const handlePublish = () => {
+    setPublishing(true);
+    setShowPublishDialog(true);
+  };
+
+  const handlePublished = () => {
+    setPublishing(false);
+    markSaved();
+    toast.success('发布成功');
+  };
+
   return (
     <div className="flex items-center justify-end gap-3 h-full">
       <div className="hidden sm:flex">
@@ -61,12 +75,32 @@ export default function EditorActions({ topicId, onRefreshPreview }: EditorActio
 
       <button
         type="button"
+        onClick={handlePublish}
+        disabled={publishing}
+        className="bg-violet-600 hover:bg-violet-700 text-white px-4 py-1.5 rounded-md text-sm font-medium transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center min-w-[60px]"
+      >
+        发布
+      </button>
+
+      <button
+        type="button"
         onClick={handleSave}
-        disabled={saving}
+        disabled={saving || publishing}
         className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-sm font-medium transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center min-w-[70px]"
       >
         {saving ? '保存中...' : '保存代码'}
       </button>
+
+      {showPublishDialog && (
+        <PublishShareDialog
+          topicId={topicId}
+          onClose={() => {
+            setShowPublishDialog(false);
+            setPublishing(false);
+          }}
+          onPublished={handlePublished}
+        />
+      )}
     </div>
   );
 }

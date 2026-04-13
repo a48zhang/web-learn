@@ -48,17 +48,20 @@ const createProxy = (targetUrl: string) => {
 const createDynamicMiddleware = () => {
   return (req: any, res: any, next: any) => {
     const fullPath = req.baseUrl + req.path;
+    const keys = Object.keys(proxyGroups);
     // Match route prefix
-    for (const route of Object.keys(proxyGroups)) {
+    for (const route of keys) {
       if (fullPath.startsWith(route)) {
         const group = proxyGroups[route];
         if (group && group.proxies.length > 0) {
+          console.log(`[gateway] proxy match: ${fullPath} -> ${group.targets[group.counter % group.targets.length]}`);
           const idx = group.counter % group.proxies.length;
           group.counter++;
           return group.proxies[idx](req, res, next);
         }
       }
     }
+    console.log(`[gateway] dynamic middleware: no match for ${fullPath}, proxyGroups keys: [${keys.join(', ')}]`);
     return next();
   };
 };
@@ -78,19 +81,23 @@ const buildRouteTargets = (services: ServiceEntry[]): Record<string, string[]> =
   return routeTargets;
 };
 
-export const mountProxies = (app: Application, services: ServiceEntry[]): void => {
-  appRef = app;
+export const registerProxyMiddleware = (app: Application): void => {
+  // Register empty middleware synchronously — routes will be populated later.
+  // This must be called BEFORE notFoundHandler in app.ts.
   dynamicMiddleware = createDynamicMiddleware();
+  appRef = app;
+  app.use(dynamicMiddleware);
+};
 
+export const mountProxies = (services: ServiceEntry[]): void => {
   const routeTargets = buildRouteTargets(services);
 
+  console.log(`[gateway] mountProxies: received ${services.length} services, ${Object.keys(routeTargets).length} route groups`);
   for (const [route, urls] of Object.entries(routeTargets) as [string, string[]][]) {
+    console.log(`[gateway]   route: ${route} -> ${urls.join(', ')}`);
     const proxies = urls.map(createProxy);
     proxyGroups[route] = { targets: urls, proxies, counter: 0 };
   }
-
-  // Single catch-all middleware handles all routes dynamically
-  app.use(dynamicMiddleware);
 };
 
 export const updateProxyGroups = (services: ServiceEntry[]): void => {

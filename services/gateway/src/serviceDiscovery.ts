@@ -1,6 +1,6 @@
 import { Application } from 'express';
 import { fetchServices } from '@web-learn/shared';
-import { mountProxies, updateProxyGroups } from './proxyManager';
+import { mountProxies, registerProxyMiddleware, updateProxyGroups } from './proxyManager';
 
 const pollWithRetry = async (maxRetries: number, delayMs: number): Promise<void> => {
   for (let i = 0; i < maxRetries; i++) {
@@ -21,13 +21,17 @@ export const waitForRegistry = async (): Promise<void> => {
 };
 
 export const initServiceDiscovery = (app: Application): void => {
+  // Register middleware synchronously — it will pass requests through
+  // until services are discovered and populate proxyGroups.
+  registerProxyMiddleware(app);
+
   (async () => {
     for (let attempt = 0; attempt < 10; attempt++) {
       try {
         const services = await fetchServices();
         if (services.length > 0) {
           console.log(`[gateway] Discovered ${services.length} services from registry`);
-          mountProxies(app, services);
+          mountProxies(services);
           return;
         }
         console.log(`[gateway] No services registered yet (attempt ${attempt + 1}/10)...`);

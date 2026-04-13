@@ -64,9 +64,9 @@ export const getTopics = async (req: AuthRequest | any, res: Response) => {
 
     let filtered = topics;
     if (req.user?.role !== 'admin') {
-      const uid = String(req.user.id);
+      const uid = req.user ? String(req.user.id) : null;
       filtered = topics.filter(
-        (t) => t.status === 'published' || t.editors?.includes(uid)
+        (t) => t.status === 'published' || (uid && t.editors?.includes(uid))
       );
     }
 

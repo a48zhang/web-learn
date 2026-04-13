@@ -56,6 +56,8 @@ const createApp = () => {
 
   app.use(authVerificationMiddleware);
 
+  // Register proxy middleware BEFORE notFoundHandler so routes are reached.
+  // The actual discovery is async, but the middleware is registered synchronously.
   initServiceDiscovery(app);
 
   if (process.env.NODE_ENV !== 'production') {

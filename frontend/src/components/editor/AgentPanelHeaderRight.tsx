@@ -1,11 +1,18 @@
 import { useState } from 'react';
 import { useAgentStore } from '../../stores/useAgentStore';
 
-const MODELS = ['MiniMax-M2.7', 'Qwen-Max', 'DeepSeek-V3'];
+const MODELS: Array<{ label: string; id: string }> = [
+  { label: 'MiniMax', id: 'MiniMax-M2.7' },
+  { label: 'Qwen', id: 'qwen3.6-plus' },
+  { label: 'Doubao', id: 'doubao-seed-2.0-code' },
+  { label: 'GPT-5.4', id: 'gpt-5.4' },
+];
 
 export default function AgentPanelHeaderRight() {
   const { model, setModel, visibleMessages, setVisibleMessages } = useAgentStore();
   const [showModelPicker, setShowModelPicker] = useState(false);
+
+  const currentModel = MODELS.find((m) => m.id === model) ?? MODELS[0];
 
   const handleClearChat = () => {
     setVisibleMessages([]);
@@ -21,7 +28,7 @@ export default function AgentPanelHeaderRight() {
           className="text-[11px] text-[#cccccc] hover:text-white flex items-center gap-1 px-1.5 py-1 rounded bg-[#333333] border border-[#2b2b2b] hover:bg-[#3e3e42] transition-colors h-[22px]"
           title="切换 AI 模型"
         >
-          <span>{model}</span>
+          <span>{currentModel.label}</span>
           <svg className={`w-3 h-3 transition-transform ${showModelPicker ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
@@ -32,16 +39,15 @@ export default function AgentPanelHeaderRight() {
               className="fixed inset-0 z-40"
               onClick={() => setShowModelPicker(false)}
             />
-            <div className="absolute right-0 top-[28px] mt-1 w-32 bg-[#252526] border border-[#2b2b2b] rounded-md shadow-lg py-1 z-50">
+            <div className="absolute right-0 top-[28px] mt-1 w-36 bg-[#252526] border border-[#2b2b2b] rounded-md shadow-lg py-1 z-50">
               {MODELS.map((m) => (
                 <button
-                  key={m}
-                  onClick={() => { setModel(m); setShowModelPicker(false); }}
-                  className={`w-full text-left px-3 py-1.5 text-[11px] transition-colors ${
-                    model === m ? 'text-white bg-[#007acc]' : 'text-[#cccccc] hover:bg-[#2a2d2e] hover:text-white'
-                  }`}
+                  key={m.id}
+                  onClick={() => { setModel(m.id); setShowModelPicker(false); }}
+                  className={`w-full text-left px-3 py-1.5 text-[11px] transition-colors ${model === m.id ? 'text-white bg-[#007acc]' : 'text-[#cccccc] hover:bg-[#2a2d2e] hover:text-white'
+                    }`}
                 >
-                  {m}
+                  {m.label}
                 </button>
               ))}
             </div>

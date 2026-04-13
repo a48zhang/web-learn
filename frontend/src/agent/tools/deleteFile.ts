@@ -1,5 +1,6 @@
 import { registerTool } from '../toolRegistry';
 import { wcDeleteFile } from '../webcontainer';
+import { useEditorStore } from '../../stores/useEditorStore';
 
 registerTool('delete_file', {
   name: 'delete_file',
@@ -17,5 +18,6 @@ registerTool('delete_file', {
     return { content: 'path is required and must be a string', isError: true };
   }
   await wcDeleteFile(path);
+  useEditorStore.getState().deleteFile(path);
   return { content: `Successfully deleted ${path}` };
 });

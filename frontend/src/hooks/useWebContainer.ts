@@ -4,6 +4,48 @@ import { useEditorStore } from '../stores/useEditorStore';
 import { setWebContainerInstance } from '../agent/webcontainer';
 
 let webcontainerInstance: WebContainer | null = null;
+let devServerStarted = false;
+const serverReadyListeners: Array<(url: string) => void> = [];
+
+export function tryStartDevServer(): void {
+  void startDevServerInternal();
+}
+
+async function startDevServerInternal(): Promise<void> {
+  if (!webcontainerInstance || devServerStarted) return;
+  devServerStarted = true;
+
+  try {
+    const installProcess = await webcontainerInstance.spawn('npm', ['install']);
+    installProcess.output.pipeTo(
+      new WritableStream({ write: (data) => console.log('[npm]', data) })
+    );
+    await installProcess.exit;
+  } catch (err) {
+    console.warn('npm install failed, continuing anyway:', err);
+  }
+
+  try {
+    const devProcess = await webcontainerInstance.spawn('npm', ['run', 'dev', '--', '--host', 'localhost', '--port', '5173']);
+    devProcess.output.pipeTo(
+      new WritableStream({ write: (data) => console.log('[dev]', data) })
+    );
+
+    webcontainerInstance.on('server-ready', (_port: number, url: string) => {
+      for (const listener of serverReadyListeners) {
+        listener(url);
+      }
+    });
+  } catch (err) {
+    console.error('Failed to start dev server:', err);
+  }
+}
+
+export function onServerReady(callback: (url: string) => void): void {
+  serverReadyListeners.push(callback);
+}
+
+export { devServerStarted };
 
 export function useWebContainer() {
   const [isReady, setIsReady] = useState(false);
@@ -40,6 +82,11 @@ export function useWebContainer() {
     isInitializing.current = true;
     setError(null);
 
+    // Register server-ready listener before any dev server starts
+    onServerReady((url) => {
+      setPreviewUrl(url);
+    });
+
     try {
       if (!webcontainerInstance) {
         webcontainerInstance = await WebContainer.boot();
@@ -56,23 +103,8 @@ export function useWebContainer() {
 
       // If package.json exists, install deps and start dev server
       if (files['package.json']) {
-        const installProcess = await webcontainerInstance.spawn('npm', ['install']);
-        installProcess.output.pipeTo(
-          new WritableStream({ write: (data) => console.log('[npm]', data) })
-        );
-        await installProcess.exit;
+        await startDevServerInternal();
       }
-
-      // Start dev server
-      const devProcess = await webcontainerInstance.spawn('npm', ['run', 'dev', '--', '--host', 'localhost', '--port', '5173']);
-      devProcess.output.pipeTo(
-        new WritableStream({ write: (data) => console.log('[dev]', data) })
-      );
-
-      // Wait for server to be ready
-      webcontainerInstance.on('server-ready', (_port: number, url: string) => {
-        setPreviewUrl(url);
-      });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'WebContainer initialization failed';
       setError(message);

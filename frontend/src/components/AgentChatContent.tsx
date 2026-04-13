@@ -176,7 +176,7 @@ export default function AgentChatContent({ topicId, title = 'AI 助手' }: Agent
   };
 
   return (
-    <div className="flex flex-col h-full bg-zinc-950 text-zinc-100 font-sans relative">
+    <div className="flex flex-col flex-1 h-full min-h-0 bg-zinc-950 text-zinc-100 font-sans relative">
       {/* Header - Glassmorphism */}
       <header className="flex-none px-4 py-3 border-b border-white/5 bg-zinc-950/80 backdrop-blur-md flex items-center justify-between sticky top-0 z-20">
         <div className="flex items-center gap-3">
@@ -233,7 +233,7 @@ export default function AgentChatContent({ topicId, title = 'AI 助手' }: Agent
       </header>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth">
+      <div className="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth custom-scrollbar">
         {visibleMessages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center space-y-3 opacity-60">
             <div className="w-12 h-12 rounded-2xl bg-zinc-800/50 flex items-center justify-center border border-white/5">
@@ -343,20 +343,20 @@ export default function AgentChatContent({ topicId, title = 'AI 助手' }: Agent
             value={input}
             onChange={handleInput}
             onKeyDown={handleKeyDown}
-            className="w-full bg-transparent p-3.5 pr-14 text-[14px] leading-relaxed text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none min-h-[48px] overflow-y-auto"
+            className="w-full bg-transparent px-4 py-4 pr-14 text-[14px] leading-6 text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none min-h-[56px] overflow-y-auto custom-scrollbar"
             rows={1}
             placeholder="描述你想要的更改..."
             disabled={runState.isRunning}
           />
-          <div className="absolute right-2 bottom-2">
+          <div className="absolute right-3 bottom-3">
             <button
               type="button"
               onClick={handleSend}
               disabled={runState.isRunning || !input.trim()}
-              className="p-1.5 rounded-xl flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed bg-blue-600 hover:bg-blue-500 text-white shadow-sm"
+              className="w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed bg-blue-600 hover:bg-blue-500 text-white shadow-sm"
               title="发送"
             >
-              <svg className="w-5 h-5 translate-x-px translate-y-[-0.5px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-5 h-5 translate-x-[1px] translate-y-[-0.5px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
               </svg>
             </button>

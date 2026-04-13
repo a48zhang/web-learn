@@ -13,9 +13,9 @@ export default function AppShell({ children }: AppShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
+    <div className="h-screen bg-gray-50 dark:bg-gray-950 flex flex-col overflow-hidden">
       <TopNav onMenuClick={() => setDrawerOpen(true)} />
-      <div className="px-4 py-2 flex items-center justify-between bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+      <div className="px-4 py-2 flex items-center justify-between bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shrink-0">
         <BreadcrumbBar segments={meta.breadcrumbSegments} />
         {meta.actions && meta.actions.length > 0 && (
           <div className="flex items-center gap-2 shrink-0 ml-4">
@@ -32,11 +32,11 @@ export default function AppShell({ children }: AppShellProps) {
           </div>
         )}
       </div>
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         <LeftNav isOpen={drawerOpen} onClose={() => setDrawerOpen(false)}>
           {meta.sideNavSlot}
         </LeftNav>
-        <main className="flex-1 min-w-0 min-h-0">
+        <main className="flex-1 min-w-0 min-h-0 overflow-y-auto">
           {children}
         </main>
       </div>

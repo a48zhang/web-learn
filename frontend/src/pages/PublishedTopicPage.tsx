@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { topicApi, topicGitApi } from '../services/api';
 import { buildPublishedHtml } from '../utils/rewriteAssetUrls';
@@ -8,6 +8,7 @@ export default function PublishedTopicPage() {
   const [srcdoc, setSrcdoc] = useState<string | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error' | 'unpublished'>('loading');
   const [errorMessage, setErrorMessage] = useState('');
+  const blobUrlsRef = useRef<string[]>([]);
 
   useEffect(() => {
     if (!id) {
@@ -15,6 +16,16 @@ export default function PublishedTopicPage() {
       setErrorMessage('无效专题 ID');
       return;
     }
+
+    // Revoke previous Blob URLs when navigating to a different topic
+    return () => {
+      blobUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+      blobUrlsRef.current = [];
+    };
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
 
     const load = async () => {
       try {
@@ -30,8 +41,9 @@ export default function PublishedTopicPage() {
           throw new Error(`Download failed: ${response.status}`);
         }
 
-        const html = await buildPublishedHtml(await response.arrayBuffer());
-        setSrcdoc(html);
+        const result = await buildPublishedHtml(await response.arrayBuffer());
+        blobUrlsRef.current = result.blobUrls;
+        setSrcdoc(result.html);
         setStatus('ready');
       } catch (err) {
         setErrorMessage(err instanceof Error ? err.message : '加载失败');

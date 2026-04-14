@@ -34,7 +34,7 @@ describe('PublishedTopicPage', () => {
   it('renders iframe for published topic', async () => {
     getByIdMock.mockResolvedValueOnce({ id: 'topic-1', status: 'published' });
     getPresignMock.mockResolvedValueOnce({ url: 'https://example.com/published.tgz' });
-    buildPublishedHtmlMock.mockResolvedValueOnce('<html><body>published</body></html>');
+    buildPublishedHtmlMock.mockResolvedValueOnce({ html: '<html><body>published</body></html>', blobUrls: [] });
     fetchMock.mockResolvedValueOnce({
       ok: true,
       arrayBuffer: async () => new ArrayBuffer(0),

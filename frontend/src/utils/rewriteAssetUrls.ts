@@ -27,27 +27,29 @@ function getMime(path: string): string {
   return MIME_MAP[path.slice(extIndex).toLowerCase()] || 'application/octet-stream';
 }
 
-export async function buildPublishedHtml(buffer: ArrayBuffer): Promise<string> {
+export async function buildPublishedHtml(
+  buffer: ArrayBuffer
+): Promise<{ html: string; blobUrls: string[] }> {
   const files = extractTarball(buffer);
   const indexHtml = files['index.html'];
   if (!indexHtml) {
     throw new Error('index.html not found in published files');
   }
 
-  const blobUrls: Record<string, string> = {};
+  const blobUrlMap: Record<string, string> = {};
   for (const [path, content] of Object.entries(files)) {
     if (path === 'index.html') continue;
     const blob = new Blob([content], { type: getMime(path) });
-    blobUrls[path] = URL.createObjectURL(blob);
+    blobUrlMap[path] = URL.createObjectURL(blob);
   }
 
   let html = indexHtml;
-  for (const [path, blobUrl] of Object.entries(blobUrls)) {
+  for (const [path, blobUrl] of Object.entries(blobUrlMap)) {
     const normalizedPath = path.replace(/^\.?\//, '');
     const pathPattern = escapeRegExp(normalizedPath);
     html = html.replace(new RegExp(`([\"'])/?${pathPattern}\\1`, 'g'), `$1${blobUrl}$1`);
     html = html.replace(new RegExp(`([\"'])\\.\\/${pathPattern}\\1`, 'g'), `$1${blobUrl}$1`);
   }
 
-  return html;
+  return { html, blobUrls: Object.values(blobUrlMap) };
 }

@@ -17,9 +17,10 @@ describe('buildPublishedHtml', () => {
       'assets/index.js': 'console.log("ok");',
     });
 
-    const html = await buildPublishedHtml(tarball);
-    expect(html).toContain('blob:');
-    expect(html).not.toContain('/assets/index.css');
-    expect(html).not.toContain('/assets/index.js');
+    const result = await buildPublishedHtml(tarball);
+    expect(result.html).toContain('blob:');
+    expect(result.html).not.toContain('/assets/index.css');
+    expect(result.html).not.toContain('/assets/index.js');
+    expect(result.blobUrls).toHaveLength(2);
   });
 });

@@ -1,20 +1,15 @@
 import { useState } from 'react';
-import { useEditorStore } from '../../stores/useEditorStore';
-import { useAgentStore } from '../../stores/useAgentStore';
 import { toast } from '../../stores/useToastStore';
-import { topicGitApi } from '../../services/api';
-import { createTarball } from '../../utils/tarUtils';
 import PublishShareDialog from '../PublishShareDialog';
 import SaveIndicator from './SaveIndicator';
 
 interface EditorActionsProps {
   topicId: string;
   onRefreshPreview: () => void;
+  onSave: () => Promise<boolean>;
 }
 
-export default function EditorActions({ topicId, onRefreshPreview }: EditorActionsProps) {
-  const { getAllFiles, markSaved } = useEditorStore();
-  const visibleMessages = useAgentStore((s) => s.visibleMessages);
+export default function EditorActions({ topicId, onRefreshPreview, onSave }: EditorActionsProps) {
   const [saving, setSaving] = useState(false);
   const [showPublishDialog, setShowPublishDialog] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -22,22 +17,8 @@ export default function EditorActions({ topicId, onRefreshPreview }: EditorActio
   const handleSave = async () => {
     setSaving(true);
     try {
-      const files = getAllFiles();
-      const tarball = createTarball(files);
-      const { url } = await topicGitApi.getPresign(topicId, 'upload');
-
-      const response = await fetch(url, {
-        method: 'PUT',
-        body: new Blob([tarball], { type: 'application/gzip' }),
-      });
-
-      if (!response.ok) throw new Error(`Upload failed: ${response.status}`);
-
-      localStorage.setItem(`snapshot-${topicId}`, JSON.stringify(files));
-      localStorage.setItem(`chat-history-${topicId}`, JSON.stringify(visibleMessages));
-
-      markSaved();
-      toast.success('保存成功');
+      const ok = await onSave();
+      toast.success(ok ? '保存成功' : '没有可保存的内容');
     } catch {
       toast.error('保存失败，文件未同步到云端');
     } finally {
@@ -45,14 +26,26 @@ export default function EditorActions({ topicId, onRefreshPreview }: EditorActio
     }
   };
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     setPublishing(true);
-    setShowPublishDialog(true);
+    setSaving(true);
+    try {
+      const ok = await onSave();
+      if (!ok) {
+        toast.warning('没有可发布的文件，请先添加内容');
+        return;
+      }
+      setShowPublishDialog(true);
+    } catch {
+      toast.error('保存失败，请先解决网络问题');
+    } finally {
+      setSaving(false);
+      setPublishing(false);
+    }
   };
 
   const handlePublished = () => {
     setPublishing(false);
-    markSaved();
     toast.success('发布成功');
   };
 
@@ -76,10 +69,10 @@ export default function EditorActions({ topicId, onRefreshPreview }: EditorActio
       <button
         type="button"
         onClick={handlePublish}
-        disabled={publishing}
+        disabled={publishing || saving}
         className="bg-violet-600 hover:bg-violet-700 text-white px-4 py-1.5 rounded-md text-sm font-medium transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center min-w-[60px]"
       >
-        发布
+        {saving && publishing ? '保存中...' : publishing ? '发布中...' : '发布'}
       </button>
 
       <button
@@ -88,7 +81,7 @@ export default function EditorActions({ topicId, onRefreshPreview }: EditorActio
         disabled={saving || publishing}
         className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-sm font-medium transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center min-w-[70px]"
       >
-        {saving ? '保存中...' : '保存代码'}
+        {saving && !publishing ? '保存中...' : '保存代码'}
       </button>
 
       {showPublishDialog && (

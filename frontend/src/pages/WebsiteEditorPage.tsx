@@ -20,6 +20,7 @@ import TerminalToggle from '../components/TerminalToggle';
 import PreviewPanel from '../components/editor/PreviewPanel';
 import PreviewPanelHeaderRight from '../components/editor/PreviewPanelHeaderRight';
 import { bootWebContainer, useWebContainer } from '../hooks/useWebContainer';
+import { useAutoSave } from '../hooks/useAutoSave';
 import { useEditorStore } from '../stores/useEditorStore';
 
 function WebsiteEditorPage() {
@@ -41,6 +42,7 @@ function WebsiteEditorPage() {
   } = useWebContainer();
 
   const { openFile, getAllFiles, loadSnapshot, deleteFile } = useEditorStore();
+  const { save: autoSave } = useAutoSave(id ?? '');
 
   const handleRefreshPreview = useCallback(() => {
     setPreviewReloadKey((prev) => prev + 1);
@@ -107,7 +109,7 @@ function WebsiteEditorPage() {
             { label: '编辑' },
           ],
           sideNavSlot: null,
-          topBarRightSlot: <EditorActions topicId={id} onRefreshPreview={handleRefreshPreview} />,
+          topBarRightSlot: <EditorActions topicId={id} onRefreshPreview={handleRefreshPreview} onSave={autoSave} />,
         });
       } catch (err: unknown) {
         setError(getApiErrorMessage(err, '加载编辑器失败'));

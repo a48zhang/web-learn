@@ -4,8 +4,38 @@ import { useEditorStore } from '../stores/useEditorStore';
 import { setWebContainerInstance } from '../agent/webcontainer';
 
 let webcontainerInstance: WebContainer | null = null;
+let bootPromise: Promise<WebContainer> | null = null;
 let devServerStarted = false;
 const serverReadyListeners: Array<(url: string) => void> = [];
+
+export function bootWebContainer(): Promise<WebContainer> {
+  if (!bootPromise) {
+    bootPromise = WebContainer.boot();
+  }
+  return bootPromise;
+}
+
+function isInChina(): boolean {
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return (
+    tz === 'Asia/Shanghai' ||
+    tz === 'Asia/Chongqing' ||
+    tz === 'Asia/Harbin' ||
+    tz === 'Asia/Urumqi'
+  );
+}
+
+async function setupNpmRegistry(wc: WebContainer): Promise<void> {
+  if (isInChina()) {
+    const proc = await wc.spawn(
+      'npm',
+      ['config', 'set', 'registry', 'https://registry.npmmirror.com'],
+      { cwd: '/home/project' }
+    );
+    await proc.exit;
+    console.log('[WC] Set npm registry to npmmirror.com');
+  }
+}
 
 export type WCStatus = {
   isReady: boolean;
@@ -89,14 +119,27 @@ export function useWebContainer() {
 
     try {
       if (!webcontainerInstance) {
-        webcontainerInstance = await WebContainer.boot();
+        webcontainerInstance = await (bootPromise || WebContainer.boot());
         setWebContainerInstance(webcontainerInstance);
       }
 
-      // Write initial files
+      await setupNpmRegistry(webcontainerInstance);
+
+      // Write initial files in parallel batches
+      const wc = webcontainerInstance;
       const files = initialFiles || {};
-      for (const [path, content] of Object.entries(files)) {
-        await writeFile(path, content);
+      const entries = Object.entries(files);
+      const BATCH_SIZE = 20;
+      for (let i = 0; i < entries.length; i += BATCH_SIZE) {
+        const batch = entries.slice(i, i + BATCH_SIZE);
+        await Promise.all(
+          batch.map(async ([path, content]) => {
+            const resolved = path.startsWith('/') ? path : `/home/project/${path}`;
+            const dir = resolved.substring(0, resolved.lastIndexOf('/'));
+            if (dir) await wc.fs.mkdir(dir, { recursive: true });
+            await wc.fs.writeFile(resolved, content);
+          })
+        );
       }
 
       setWcStatus({ isReady: true });

@@ -19,7 +19,7 @@ import TerminalPanel from '../components/TerminalPanel';
 import TerminalToggle from '../components/TerminalToggle';
 import PreviewPanel from '../components/editor/PreviewPanel';
 import PreviewPanelHeaderRight from '../components/editor/PreviewPanelHeaderRight';
-import { useWebContainer } from '../hooks/useWebContainer';
+import { bootWebContainer, useWebContainer } from '../hooks/useWebContainer';
 import { useEditorStore } from '../stores/useEditorStore';
 
 function WebsiteEditorPage() {
@@ -44,6 +44,11 @@ function WebsiteEditorPage() {
 
   const handleRefreshPreview = useCallback(() => {
     setPreviewReloadKey((prev) => prev + 1);
+  }, []);
+
+  // Eager boot — starts WebContainer immediately, independent of topic data
+  useEffect(() => {
+    bootWebContainer();
   }, []);
 
   // Editors-based permission: admin, creator, or editor

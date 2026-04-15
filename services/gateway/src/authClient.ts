@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getProxyTarget } from './proxyManager';
+import { getProxyTargetWithoutCounter } from './proxyManager';
 
 export interface VerifyRequest {
   token: string;
@@ -17,7 +17,7 @@ export interface VerifyResponse {
 }
 
 export async function verifyToken(token: string): Promise<VerifyResponse> {
-  const authUrl = getProxyTarget('/api/auth');
+  const authUrl = getProxyTargetWithoutCounter('/api/auth');
   if (!authUrl) {
     return { success: false, error: 'Auth service not available' };
   }

@@ -141,6 +141,15 @@ export const updateProxyGroups = (services: ServiceEntry[]): void => {
   }
 };
 
+// Used by auth verification (read-only, no side effects)
+export const getProxyTargetWithoutCounter = (route: string): string | undefined => {
+  const group = proxyGroups[route];
+  if (!group || group.targets.length === 0) return undefined;
+  // Return the first target without modifying counter
+  return group.targets[0];
+};
+
+// Used by proxy middleware (with round-robin counter)
 export const getProxyTarget = (route: string): string | undefined => {
   const group = proxyGroups[route];
   if (!group || group.targets.length === 0) return undefined;

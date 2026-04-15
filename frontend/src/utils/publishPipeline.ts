@@ -38,6 +38,10 @@ export async function publishTopic(
 
   const uploadResponse = await fetch(url, {
     method: 'PUT',
+    headers: {
+      'Content-Type': 'application/gzip',
+      'x-ms-blob-type': 'BlockBlob',
+    },
     body: new Blob([tarball], { type: 'application/gzip' }),
   });
   if (!uploadResponse.ok) {

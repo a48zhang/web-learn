@@ -109,8 +109,8 @@ export default function AgentChatContent({ topicId }: AgentChatContentProps) {
     return map[toolName] || '执行工具';
   };
 
-  const renderAssistantMessage = (content: string) => {
-    if (!content) return null;
+  const renderAssistantMessage = (message: AgentMessage) => {
+    const content = message.content || '';
     const parts = [];
     let lastIndex = 0;
     const thinkRegex = /<think>([\s\S]*?)(?:<\/think>|$)/g;
@@ -132,12 +132,12 @@ export default function AgentChatContent({ topicId }: AgentChatContentProps) {
         {parts.map((part, i) => {
           if (part.type === 'think') {
             return (
-              <details key={i} className="group">
+              <details key={`think-${i}`} className="group">
                 <summary className="flex items-center gap-1.5 cursor-pointer text-[13px] font-medium text-zinc-500 hover:text-zinc-300 transition-colors select-none w-max outline-none">
                   <svg className="w-3.5 h-3.5 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
-                  思考过程
+                  深入思考
                 </summary>
                 <div className="pl-4 py-2 mt-2 border-l-2 border-zinc-700/50 text-[13px] text-zinc-400 bg-zinc-950/30 rounded-r-lg [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 prose prose-sm max-w-none prose-invert prose-p:leading-relaxed">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -149,13 +149,73 @@ export default function AgentChatContent({ topicId }: AgentChatContentProps) {
           }
           if (!part.content.trim()) return null;
           return (
-            <div key={i} className="prose prose-sm max-w-none prose-invert prose-p:leading-relaxed prose-pre:bg-zinc-950 prose-pre:border prose-pre:border-white/10">
+            <div key={`text-${i}`} className="prose prose-sm max-w-none prose-invert prose-p:leading-relaxed prose-pre:bg-zinc-950 prose-pre:border prose-pre:border-white/10">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {part.content}
               </ReactMarkdown>
             </div>
           );
         })}
+        {message.tools && message.tools.length > 0 && (
+          <div className="flex flex-col gap-2 mt-3 pt-3 border-t border-white/5">
+            {message.tools.map((tool, i) => {
+              const ToolIcon = tool.state === 'running' ? (
+                <svg className="w-3.5 h-3.5 text-blue-400 animate-spin shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              ) : tool.state === 'error' ? (
+                <svg className="w-3.5 h-3.5 text-red-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="w-3.5 h-3.5 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              );
+
+              const toolPath = tool.args?.path || tool.args?.oldPath || tool.args?.newPath || '';
+              const desc = toolPath ? `${getToolActionText(tool.name)}: ${toolPath.split('/').pop()}` : getToolActionText(tool.name);
+
+              return (
+                <details key={`tool-${tool.id}-${i}`} className="group group-tool">
+                  <summary className="flex items-center gap-2 px-3 py-2 bg-zinc-950/20 hover:bg-zinc-950/40 border border-zinc-800/50 rounded-lg cursor-pointer transition-colors outline-none list-none [&::-webkit-details-marker]:hidden">
+                    {ToolIcon}
+                    <span className={`text-[13px] font-medium flex-1 ${tool.state === 'error' ? 'text-red-400/90' : 'text-zinc-300'}`}>
+                      {desc}
+                    </span>
+                    <div className="flex items-center gap-2 text-[12px] text-zinc-500">
+                      {tool.state === 'running'
+                        ? <span className="animate-pulse">执行中...</span>
+                        : tool.state === 'success'
+                          ? <span className="text-emerald-500/80">已完成</span>
+                          : <span className="text-red-500/80">失败</span>
+                      }
+                      <svg className="w-3.5 h-3.5 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </summary>
+                  <div className="mt-1 flex flex-col gap-2 relative">
+                    <div className="p-3 bg-zinc-950/50 border border-zinc-800/50 rounded-lg text-[12px] font-mono text-zinc-400 overflow-x-auto custom-scrollbar">
+                      <div className="text-zinc-500 mb-1 font-sans text-[11px]">工具参数</div>
+                      <pre className="!m-0 !p-0 !bg-transparent whitespace-pre-wrap word-break-all">
+                        {JSON.stringify(tool.args, null, 2)}
+                      </pre>
+                    </div>
+                    {tool.result && (
+                      <div className={`p-3 bg-zinc-950/50 border border-zinc-800/50 rounded-lg text-[12px] font-mono overflow-x-auto custom-scrollbar ${tool.state === 'error' ? 'text-red-400' : 'text-zinc-400'}`}>
+                        <div className="text-zinc-500 mb-1 font-sans text-[11px]">执行结果</div>
+                        <pre className="!m-0 !p-0 !bg-transparent whitespace-pre-wrap word-break-all">
+                          {tool.result}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                </details>
+              );
+            })}
+          </div>
+        )}
       </div>
     );
   };
@@ -210,7 +270,7 @@ export default function AgentChatContent({ topicId }: AgentChatContentProps) {
                   {isUser ? (
                     <p className="whitespace-pre-wrap">{message.content}</p>
                   ) : (
-                    renderAssistantMessage(message.content || '')
+                    renderAssistantMessage(message)
                   )}
                 </div>
               </div>
@@ -218,26 +278,9 @@ export default function AgentChatContent({ topicId }: AgentChatContentProps) {
           );
         })}
 
-        {/* Tool Activity Indicator */}
-        {runState.isRunning && runState.currentToolName && (
-          <div className="flex gap-3 max-w-full flex-row items-center">
-            <div className="w-7 h-7 shrink-0" /> {/* Spacer */}
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-800/50 border border-zinc-700/50 rounded-full text-xs text-zinc-400">
-              <svg className="w-3.5 h-3.5 text-blue-400 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              <span className="animate-pulse">
-                {runState.currentToolPath
-                  ? `正在${getToolActionText(runState.currentToolName)}：${runState.currentToolPath.split('/').pop()}`
-                  : `正在调用工具：${runState.currentToolName}`}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Thinking Indicator */}
-        {runState.isRunning && !runState.currentToolName && (
-          <div className="flex gap-3 max-w-full flex-row">
+        {/* Thinking Indicator (Generic) */}
+        {runState.isRunning && !runState.currentToolName && visibleMessages.length > 0 && visibleMessages[visibleMessages.length - 1].role === 'user' && (
+          <div className="flex gap-3 max-w-full flex-row animate-fade-in">
             <div className="shrink-0 mt-0.5">
               <div className="w-7 h-7 rounded-lg bg-zinc-800 border border-white/10 flex items-center justify-center shadow-sm">
                 <svg className="w-4 h-4 text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -245,10 +288,10 @@ export default function AgentChatContent({ topicId }: AgentChatContentProps) {
                 </svg>
               </div>
             </div>
-            <div className="px-4 py-3 bg-zinc-900 border border-white/5 rounded-2xl rounded-tl-sm flex items-center gap-1">
-              <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-              <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-              <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            <div className="px-4 py-3 bg-zinc-900 border border-white/5 rounded-2xl rounded-tl-sm flex items-center gap-1.5 shadow-sm">
+              <div className="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+              <div className="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+              <div className="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
             </div>
           </div>
         )}

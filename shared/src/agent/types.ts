@@ -1,23 +1,17 @@
-// Agent tool definitions shared between frontend and model protocol
-export interface AgentToolDefinition {
+export interface ToolAction {
+  id: string;
   name: string;
-  description: string;
-  parameters: Record<string, unknown>;
+  args: any;
+  state: 'running' | 'success' | 'error';
+  result?: string;
 }
 
-// Result returned by a tool execution
-export interface AgentToolResult {
-  content: string;
-  isError?: boolean;
-}
-
-// Visible message persisted to backend
 export interface AgentMessage {
   role: 'user' | 'assistant';
   content: string;
+  tools?: ToolAction[];
 }
 
-// Agent runtime state (frontend only, not sent to backend)
 export interface AgentRunState {
   isRunning: boolean;
   currentToolName?: string | null;

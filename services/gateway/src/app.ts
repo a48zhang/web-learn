@@ -60,9 +60,8 @@ const createApp = () => {
   // The actual discovery is async, but the middleware is registered synchronously.
   initServiceDiscovery(app);
 
-  if (process.env.NODE_ENV !== 'production') {
-    app.use(notFoundHandler);
-  }
+  // Always use notFoundHandler in all environments to prevent hanging requests!
+  app.use(notFoundHandler);
 
   return app;
 };

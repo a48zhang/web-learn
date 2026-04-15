@@ -40,12 +40,12 @@ export async function authVerificationMiddleware(req: Request, res: Response, ne
         });
       }
     } catch (error) {
-      if (!publicReadPaths.some(path => req.path === path && req.method === 'GET')) {
-        return res.status(503).json({
-          success: false,
-          error: 'Auth service unavailable'
-        });
-      }
+      // Even for public read paths, if auth service is unavailable, we should return 503
+      // rather than letting the request hang — the user needs to know there's an issue
+      return res.status(503).json({
+        success: false,
+        error: 'Auth service unavailable'
+      });
     }
   } else {
     // No token → reject unless it's a public read path

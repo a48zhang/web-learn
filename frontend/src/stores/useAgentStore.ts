@@ -7,6 +7,7 @@ interface AgentStoreState {
   model: string;
   setModel: (model: string) => void;
   addVisibleMessage: (message: AgentMessage) => void;
+  updateLastMessage: (updater: (msg: AgentMessage) => AgentMessage) => void;
   setRunState: (state: Partial<AgentRunState>) => void;
   clearRunState: () => void;
   setVisibleMessages: (messages: AgentMessage[]) => void;
@@ -31,6 +32,14 @@ export const useAgentStore = create<AgentStoreState>((set) => ({
 
   addVisibleMessage: (message) =>
     set((state) => ({ visibleMessages: [...state.visibleMessages, message] })),
+  updateLastMessage: (updater) =>
+    set((state) => {
+      const messages = [...state.visibleMessages];
+      if (messages.length > 0) {
+        messages[messages.length - 1] = updater(messages[messages.length - 1]);
+      }
+      return { visibleMessages: messages };
+    }),
 
   setRunState: (partial) =>
     set((state) => ({ runState: { ...state.runState, ...partial } })),

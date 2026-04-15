@@ -6,11 +6,17 @@ import { setWebContainerInstance } from '../agent/webcontainer';
 let webcontainerInstance: WebContainer | null = null;
 let bootPromise: Promise<WebContainer> | null = null;
 let devServerStarted = false;
-const serverReadyListeners: Array<(url: string) => void> = [];
+// Fix #4: use Set to deduplicate listeners
+const serverReadyListeners = new Set<(url: string) => void>();
 
 export function bootWebContainer(): Promise<WebContainer> {
   if (!bootPromise) {
-    bootPromise = WebContainer.boot();
+    bootPromise = WebContainer.boot().then(async (wc) => {
+      setWebContainerInstance(wc);
+      // Fix #1: fire-and-forget registry setup — don't block the critical path
+      void setupNpmRegistry(wc).catch(() => {});
+      return wc;
+    });
   }
   return bootPromise;
 }
@@ -88,7 +94,7 @@ async function startDevServerInternal(): Promise<void> {
 }
 
 export function onServerReady(callback: (url: string) => void): void {
-  serverReadyListeners.push(callback);
+  serverReadyListeners.add(callback);
 }
 
 export { devServerStarted };
@@ -98,11 +104,9 @@ export function useWebContainer() {
   const { setFileContent } = useEditorStore();
   const isInitializing = useRef(false);
 
-  // Subscribe to global WC status
   const statusRef = useRef(status);
   statusRef.current = status;
 
-  // Sync on mount/subsequent renders
   const setStatusFromGlobal = useCallback(() => {
     setStatus(wcStatus);
   }, []);
@@ -112,31 +116,44 @@ export function useWebContainer() {
     isInitializing.current = true;
     setWcStatus({ error: null });
 
-    // Register server-ready listener before any dev server starts
-    onServerReady((url) => {
-      setWcStatus({ previewUrl: url });
-    });
-
     try {
+      // Fix #2: always await bootPromise if set; never double-boot
       if (!webcontainerInstance) {
-        webcontainerInstance = await (bootPromise || WebContainer.boot());
+        if (bootPromise) {
+          webcontainerInstance = await bootPromise;
+        } else {
+          // Fallback: should not happen if bootWebContainer was called eagerly
+          webcontainerInstance = await WebContainer.boot();
+        }
         setWebContainerInstance(webcontainerInstance);
       }
 
-      await setupNpmRegistry(webcontainerInstance);
+      // Fix #1: setupNpmRegistry removed from here — already fire-and-forget in bootWebContainer
 
-      // Write initial files in parallel batches
+      // Fix #3: pre-compute unique directories, mkdir first (no races), then write files
       const wc = webcontainerInstance;
       const files = initialFiles || {};
       const entries = Object.entries(files);
-      const BATCH_SIZE = 20;
-      for (let i = 0; i < entries.length; i += BATCH_SIZE) {
-        const batch = entries.slice(i, i + BATCH_SIZE);
-        await Promise.all(
-          batch.map(async ([path, content]) => {
+      const dirs = [...new Set(
+        entries
+          .map(([path]) => {
             const resolved = path.startsWith('/') ? path : `/home/project/${path}`;
             const dir = resolved.substring(0, resolved.lastIndexOf('/'));
-            if (dir) await wc.fs.mkdir(dir, { recursive: true });
+            return dir || null;
+          })
+          .filter((d): d is string => d != null)
+      )];
+
+      // mkdir all directories in parallel
+      if (dirs.length > 0) {
+        await Promise.all(dirs.map((d) => wc.fs.mkdir(d, { recursive: true })));
+      }
+
+      // write all files in parallel (directories already exist)
+      if (entries.length > 0) {
+        await Promise.all(
+          entries.map(async ([path, content]) => {
+            const resolved = path.startsWith('/') ? path : `/home/project/${path}`;
             await wc.fs.writeFile(resolved, content);
           })
         );
@@ -181,10 +198,19 @@ export function useWebContainer() {
     setFileContent(path, content);
   }, [writeFile, setFileContent]);
 
-  // Subscribe to global status changes on mount
+  // Fix #4: register server-ready listener in useEffect with cleanup
   useEffect(() => {
     wcStatusListeners.add(setStatusFromGlobal);
-    return () => { wcStatusListeners.delete(setStatusFromGlobal); };
+
+    const handleServerReady = (url: string) => {
+      setWcStatus({ previewUrl: url });
+    };
+    serverReadyListeners.add(handleServerReady);
+
+    return () => {
+      wcStatusListeners.delete(setStatusFromGlobal);
+      serverReadyListeners.delete(handleServerReady);
+    };
   }, [setStatusFromGlobal]);
 
   const { isReady, previewUrl, error } = status;

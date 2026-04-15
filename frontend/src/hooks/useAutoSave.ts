@@ -36,6 +36,10 @@ export function useAutoSave(topicId: string) {
       const { url } = await topicGitApi.getPresign(topicId, 'upload');
       const response = await fetch(url, {
         method: 'PUT',
+        headers: {
+          'Content-Type': 'application/gzip',
+          'x-ms-blob-type': 'BlockBlob',
+        },
         body: new Blob([tarball], { type: 'application/gzip' }),
       });
       if (!response.ok) throw new Error(`Upload failed: ${response.status}`);

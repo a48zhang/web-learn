@@ -30,6 +30,7 @@ const SYSTEM_PROMPT: AIChatMessage = {
 export function useAgentRuntime() {
   const visibleMessages = useAgentStore((s) => s.visibleMessages);
   const addVisibleMessage = useAgentStore((s) => s.addVisibleMessage);
+  const updateLastMessage = useAgentStore((s) => s.updateLastMessage);
   const setRunState = useAgentStore((s) => s.setRunState);
   const clearRunState = useAgentStore((s) => s.clearRunState);
 
@@ -56,20 +57,49 @@ export function useAgentRuntime() {
 
         internalMessages.push(message as AIChatMessage);
 
-        if (!message.tool_calls || message.tool_calls.length === 0) {
-          const assistantContent = message.content || '';
-          addVisibleMessage({ role: 'assistant', content: assistantContent });
+        const hasToolCalls = message.tool_calls && message.tool_calls.length > 0;
+        const assistantContent = message.content || '';
+
+        // Create tool actions for UI display
+        let tools: any[] = [];
+        if (hasToolCalls) {
+          tools = message.tool_calls!.map(tc => {
+            let args = {};
+            if ('function' in tc) {
+              try { args = JSON.parse(tc.function.arguments || '{}'); } catch { }
+              return {
+                id: tc.id,
+                name: tc.function.name,
+                args,
+                state: 'running'
+              };
+            }
+            return null;
+          }).filter(Boolean);
+        }
+
+        // Add message to view if it has content (like <think>) or tools
+        if (assistantContent || tools.length > 0) {
+          addVisibleMessage({
+            role: 'assistant',
+            content: assistantContent,
+            ...(tools.length > 0 ? { tools } : {})
+          });
+        }
+
+        if (!hasToolCalls) {
           break;
         }
 
-        for (const toolCall of message.tool_calls) {
+        for (const toolCall of message.tool_calls!) {
           if (!('function' in toolCall)) continue;
 
           const toolName = toolCall.function.name;
 
+          let args: any = {};
           let toolPath: string | null = null;
           try {
-            const args = JSON.parse(toolCall.function.arguments || '{}');
+            args = JSON.parse(toolCall.function.arguments || '{}');
             toolPath = args.path ?? args.oldPath ?? args.newPath ?? null;
           } catch {
             // ignore
@@ -77,13 +107,30 @@ export function useAgentRuntime() {
 
           setRunState({ currentToolName: toolName, currentToolPath: toolPath });
 
-          const result = await executeTool(toolName, JSON.parse(toolCall.function.arguments || '{}'));
+          let resultContent: string;
+          try {
+            const result = await executeTool(toolName, args);
+            resultContent = result.content;
+          } catch (e: any) {
+            resultContent = `Error: ${e.message}`;
+          }
 
           internalMessages.push({
             role: 'tool',
-            content: result.content,
+            content: resultContent,
             tool_call_id: toolCall.id,
           } as AIChatMessage);
+
+          // Update tool state to success in the UI
+          updateLastMessage((msg) => {
+            if (!msg.tools) return msg;
+            return {
+              ...msg,
+              tools: msg.tools.map(t =>
+                t.id === toolCall.id ? { ...t, state: 'success', result: resultContent } : t
+              )
+            };
+          });
         }
       }
     } catch (error: unknown) {

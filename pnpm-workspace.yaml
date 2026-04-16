@@ -1,6 +1,10 @@
 packages:
-  - 'frontend'
-  - 'shared'
-  - 'packages/*'
-  - 'services/*'
-  - 'tests'
+  - frontend
+  - shared
+  - packages/*
+  - services/*
+  - tests
+
+onlyBuiltDependencies:
+  - esbuild
+  - unrs-resolver

@@ -1,3 +1,14 @@
+export interface AgentToolResult {
+  content: string;
+  isError?: boolean;
+}
+
+export interface AgentToolDefinition {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+}
+
 export interface ToolAction {
   id: string;
   name: string;

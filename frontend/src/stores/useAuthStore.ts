@@ -95,20 +95,25 @@ export const useAuthStore = create<AuthState>()(
       },
 
       updateUser: async (data: { username?: string }) => {
-        // Optimistic update
         const currentUser = get().user;
+        // Optimistic update
         if (currentUser) {
           set({ user: { ...currentUser, ...data } });
         }
-        // TODO: Add API call when backend is ready
-        // await api.patch('/users/me', data);
+        try {
+          const updated = await authApi.updateMe(data);
+          set({ user: updated });
+        } catch (error) {
+          // Rollback optimistic update on failure
+          if (currentUser) {
+            set({ user: currentUser });
+          }
+          throw error;
+        }
       },
 
-      changePassword: async (_newPassword: string) => {
-        // TODO: Add API call when backend is ready
-        // await api.post('/users/me/change-password', { newPassword });
-
-        // Security: logout after password change
+      changePassword: async (newPassword: string) => {
+        await authApi.changePassword({ currentPassword: '', newPassword });
         get().logout();
       },
     }),

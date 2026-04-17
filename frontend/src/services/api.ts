@@ -72,6 +72,16 @@ export const authApi = {
   logout: (): void => {
     localStorage.removeItem('auth_token');
   },
+
+  updateMe: async (data: { username?: string }): Promise<User> => {
+    const response = await api.put<ApiResponse<User>>('/users/me', data);
+    return response.data.data as User;
+  },
+
+  changePassword: async (data: { currentPassword: string; newPassword: string }): Promise<void> => {
+    const response = await api.post<ApiResponse<{ message: string }>>('/users/me/change-password', data);
+    return response.data.data as unknown as void;
+  },
 };
 
 // Topic API

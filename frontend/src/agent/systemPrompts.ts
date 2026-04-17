@@ -1,4 +1,5 @@
 import type { AgentType, AIChatMessage } from '@web-learn/shared';
+import { AGENT_SKILLS } from '@web-learn/shared';
 import { getAvailableSkills } from './skills';
 
 const BUILDING_BASE_PROMPT = `你是 Web Learn 专题构建助手。你的职责是帮助用户创建交互式学习专题。

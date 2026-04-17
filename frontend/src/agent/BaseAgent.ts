@@ -138,7 +138,7 @@ export abstract class BaseAgent {
     this.context.setVisibleMessages(recentMessages as PersistedAgentMessage[]);
   }
 
-  protected buildLlmMessages(): AIChatMessage[] {
+  buildLlmMessages(): AIChatMessage[] {
     const messages: AIChatMessage[] = [this.buildSystemPrompt()];
 
     if (this.context.compressedContext.hasCompressedContext && this.context.compressedContext.summary) {

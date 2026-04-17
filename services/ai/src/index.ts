@@ -2,6 +2,7 @@ import app from './app';
 import { config } from './utils/config';
 import { sequelize } from './utils/database';
 import { startHeartbeat } from '@web-learn/shared';
+import './models';
 
 (async () => {
   await sequelize.authenticate();
@@ -9,7 +10,11 @@ import { startHeartbeat } from '@web-learn/shared';
 
   // topic_topics and auth_users tables are managed by topic-space and auth services.
   // They run schema drift checks in dev mode and only force-sync when schema changes.
-  // No migration needed here.
+  // AI service models (ai_agent_conversations, ai_agent_messages) sync automatically in dev mode.
+  if (process.env.NODE_ENV !== 'production') {
+    await sequelize.sync({ alter: true });
+    console.log('[ai] database schema synced (dev mode)');
+  }
 
   app.listen(config.port, () => {
     console.log(`[ai] listening on port ${config.port}`);

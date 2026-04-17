@@ -3,6 +3,7 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { config } from './utils/config';
 import aiRouter from './routes/aiRoutes';
+import agentConversationRouter from './routes/agentConversationRoutes';
 
 const isLocalOrigin = (origin: string) => {
   try {
@@ -33,5 +34,6 @@ app.get('/health', (_req, res) => {
 });
 
 app.use('/api/ai', aiRouter);
+app.use('/api/ai', agentConversationRouter);
 
 export default app;

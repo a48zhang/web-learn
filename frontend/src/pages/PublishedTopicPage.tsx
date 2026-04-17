@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { topicApi, topicGitApi } from '../services/api';
 import { buildPublishedHtml } from '../utils/rewriteAssetUrls';
+import AIChatSidebar from '../components/AIChatSidebar';
 
 export default function PublishedTopicPage() {
   const { id } = useParams<{ id: string }>();
@@ -92,18 +93,21 @@ export default function PublishedTopicPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#1e1e1e]">
-      <div className="flex items-center justify-between px-4 py-2 border-b border-[#3c3c3c] bg-[#252526]">
-        <a href="/" className="text-[13px] text-zinc-400 hover:text-white transition-colors">
-          ← 返回首页
-        </a>
+    <>
+      <div className="min-h-screen flex flex-col bg-[#1e1e1e]">
+        <div className="flex items-center justify-between px-4 py-2 border-b border-[#3c3c3c] bg-[#252526]">
+          <a href="/" className="text-[13px] text-zinc-400 hover:text-white transition-colors">
+            ← 返回首页
+          </a>
+        </div>
+        <iframe
+          title="published-topic"
+          className="w-full flex-1 bg-white"
+          sandbox="allow-scripts allow-modals allow-forms allow-popups allow-same-origin"
+          srcDoc={srcdoc ?? ''}
+        />
       </div>
-      <iframe
-        title="published-topic"
-        className="w-full flex-1 bg-white"
-        sandbox="allow-scripts allow-modals allow-forms allow-popups allow-same-origin"
-        srcDoc={srcdoc ?? ''}
-      />
-    </div>
+      {id && <AIChatSidebar topicId={id} agentType="learning" title="学习助手" />}
+    </>
   );
 }

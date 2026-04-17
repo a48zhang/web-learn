@@ -7,65 +7,26 @@ import type { AgentMessage } from '@web-learn/shared';
 
 interface AgentChatContentProps {
   topicId: string;
+  agentType: 'building' | 'learning';
   title?: string;
 }
 
-export default function AgentChatContent({ topicId }: AgentChatContentProps) {
+export default function AgentChatContent({ topicId, agentType }: AgentChatContentProps) {
   const [input, setInput] = useState('');
-  const { runAgentLoop, visibleMessages } = useAgentRuntime();
+  const { runAgentLoop, visibleMessages, hydrateConversation } = useAgentRuntime({ topicId, agentType });
   const runState = useAgentStore((s) => s.runState);
   const model = useAgentStore((s) => s.model);
-  const setVisibleMessages = useAgentStore((s) => s.setVisibleMessages);
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const compressedContext = useAgentStore((s) => s.compressedContext);
+  const setSessionContext = useAgentStore((s) => s.setSessionContext);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Load chat history on mount
+  // Load conversation from backend on mount
   useEffect(() => {
-    const raw = localStorage.getItem(`chat-history-${topicId}`);
-    if (raw) {
-      try {
-        const msgs: AgentMessage[] = JSON.parse(raw);
-        if (Array.isArray(msgs)) {
-          setVisibleMessages(msgs);
-        }
-      } catch {
-        // corrupted — start fresh
-      }
-    }
-  }, [topicId, setVisibleMessages]);
-
-  // Debounced save to localStorage
-  const debouncedSave = useCallback(
-    (msgs: AgentMessage[]) => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = setTimeout(() => {
-        try {
-          localStorage.setItem(`chat-history-${topicId}`, JSON.stringify(msgs));
-        } catch {
-          // Silently fail
-        }
-      }, 2000);
-    },
-    [topicId]
-  );
-
-  useEffect(() => {
-    return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    };
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem(`agent-model-${topicId}`, model);
-  }, [topicId, model]);
-
-  useEffect(() => {
-    if (visibleMessages.length > 0) {
-      debouncedSave(visibleMessages);
-    }
-  }, [visibleMessages, debouncedSave]);
+    setSessionContext(topicId, agentType);
+    void hydrateConversation();
+  }, [topicId, agentType, hydrateConversation, setSessionContext]);
 
   // Auto-scroll effect
   useEffect(() => {
@@ -226,6 +187,12 @@ export default function AgentChatContent({ topicId }: AgentChatContentProps) {
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth custom-scrollbar">
+        {compressedContext.hasCompressedContext && (
+          <div className="text-[11px] text-zinc-500 px-4 pt-2">
+            较早历史已压缩，当前对话基于摘要继续。
+          </div>
+        )}
+        
         {visibleMessages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center space-y-3 opacity-60">
             <div className="w-12 h-12 rounded-2xl bg-zinc-800/50 flex items-center justify-center border border-white/5">

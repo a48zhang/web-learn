@@ -29,3 +29,35 @@ export interface AgentRunState {
   currentToolPath?: string | null;
   error: string | null;
 }
+
+import type { AgentType } from './skills';
+
+export interface AgentConversationSummary {
+  id: string;
+  topicId: string;
+  userId: string;
+  agentType: AgentType;
+  selectedSkills: string[];
+  updatedAt: string;
+}
+
+export interface PersistedAgentMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: string;
+}
+
+export interface AgentCompressedContext {
+  summary: string;
+  summaryVersion: number;
+  lastCompressedMessageId: string | null;
+  updatedAt: string;
+  hasCompressedContext: boolean;
+}
+
+export interface PersistedConversationState {
+  selectedSkills: string[];
+  compressedContext: AgentCompressedContext;
+  messages: PersistedAgentMessage[];
+}

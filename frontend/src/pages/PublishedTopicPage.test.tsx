@@ -52,6 +52,7 @@ describe('PublishedTopicPage', () => {
       expect(screen.getByTitle('published-topic')).toBeInTheDocument();
     });
     expect(getPresignMock).toHaveBeenCalledWith('topic-1', 'publish');
+    expect(screen.getByRole('button', { name: '学习助手' })).toBeInTheDocument();
   });
 
   it('renders unpublished state for non-published topic', async () => {

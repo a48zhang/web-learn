@@ -1,6 +1,6 @@
 # 数据模型
 
-> 最后更新：2026-04-12
+> 最后更新：2026-04-17
 
 ## 概述
 
@@ -30,6 +30,18 @@ erDiagram
 |------|------|------|
 | `auth_users` | Auth Service | Topic Space / AI 服务只读 |
 | `topic_topics` | Topic Space Service | AI 服务只读 |
+| `ai_agent_conversations` | AI Service | AI 服务读写 |
+| `ai_agent_messages` | AI Service | AI 服务读写 |
+
+## Agent 对话持久化模型
+
+- ✅ `ai_agent_conversations`：按 `topic_id + user_id + agent_type` 维度存储会话摘要
+  - `agent_type`：`building` / `learning`
+  - `selected_skills`：已选技能 ID 列表
+  - `compressed_summary` / `compressed_summary_version`
+  - `last_compressed_message_id` / `has_compressed_context`
+- ✅ `ai_agent_messages`：仅存储用户可见消息（`user` / `assistant`），按 `seq` 保持顺序
+- ❌ 不持久化 tool call 细节、临时运行状态、内部推理消息
 
 ## 数据库环境
 

@@ -2,6 +2,7 @@ import app from './app';
 import { startHeartbeat } from '@web-learn/shared';
 import { config } from './utils/config';
 import { sequelize } from './utils/database';
+import { syncSchemaWithDiffCheck } from './utils/schemaSync';
 import { initStorageService } from './services/storageService';
 import { createAzureBlobStorageService } from './services/azureBlobStorageService';
 import { createNullStorageService } from './services/nullStorageService';
@@ -13,11 +14,9 @@ import { runMigrations } from './utils/migrate';
   const isProd = process.env.NODE_ENV === 'production';
 
   if (!isProd) {
-    // Drop and recreate tables on every dev startup.
-    // This avoids MySQL's 64-index limit that sync({ alter: true }) can hit
-    // after repeated restarts, and always brings the schema to the latest state.
-    await sequelize.sync({ force: true });
-    console.log('[topic-space] database reset and synced (dev mode)');
+    // Dev mode: compare DB schema with model definitions.
+    // Recreate tables only when drift is detected.
+    await syncSchemaWithDiffCheck(sequelize, 'topic-space');
   } else {
     await sequelize.sync();
     console.log('[topic-space] database synced (production mode)');

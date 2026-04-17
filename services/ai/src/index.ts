@@ -8,7 +8,7 @@ import { startHeartbeat } from '@web-learn/shared';
   console.log('[ai] database connected');
 
   // topic_topics and auth_users tables are managed by topic-space and auth services.
-  // Those services call sync({ force: true }) in dev mode, so tables are always up to date.
+  // They run schema drift checks in dev mode and only force-sync when schema changes.
   // No migration needed here.
 
   app.listen(config.port, () => {

@@ -75,7 +75,7 @@ describe('AI API', () => {
   });
 
   it('rejects unauthenticated chat requests', async () => {
-    const response = await request(app).post('/api/ai/chat').send({
+    const response = await request(app).post('/api/ai/chat/completions').send({
       messages: [{ role: 'user', content: 'hi' }],
     });
 
@@ -98,7 +98,7 @@ describe('AI API', () => {
     });
 
     const response = await request(app)
-      .post('/api/ai/chat')
+      .post('/api/ai/chat/completions')
       .set('Authorization', 'Bearer token')
       .send({
         messages: [{ role: 'user', content: 'hello' }],
@@ -118,7 +118,7 @@ describe('AI API', () => {
     });
 
     const response = await request(app)
-      .post('/api/ai/chat')
+      .post('/api/ai/chat/completions')
       .set('Authorization', 'Bearer token')
       .send({
         messages: 'not-array',
@@ -137,7 +137,7 @@ describe('AI API', () => {
     });
 
     const response = await request(app)
-      .post('/api/ai/chat')
+      .post('/api/ai/chat/completions')
       .set('Authorization', 'Bearer token')
       .send({
         messages: Array.from({ length: 101 }).map((_, i) => ({ role: 'user', content: `m-${i}` })),
@@ -156,7 +156,7 @@ describe('AI API', () => {
     });
 
     const response = await request(app)
-      .post('/api/ai/chat')
+      .post('/api/ai/chat/completions')
       .set('Authorization', 'Bearer token')
       .send({
         messages: [{ role: 'hacker', content: 'hello' }],
@@ -175,7 +175,7 @@ describe('AI API', () => {
     });
 
     const response = await request(app)
-      .post('/api/ai/chat')
+      .post('/api/ai/chat/completions')
       .set('Authorization', 'Bearer token')
       .send({
         messages: [{ role: 'user', content: 'x'.repeat(10001) }],
@@ -194,7 +194,7 @@ describe('AI API', () => {
     });
 
     const response = await request(app)
-      .post('/api/ai/chat')
+      .post('/api/ai/chat/completions')
       .set('Authorization', 'Bearer token')
       .send({
         messages: [],
@@ -226,7 +226,7 @@ describe('AI API', () => {
     ];
 
     const response = await request(app)
-      .post('/api/ai/chat')
+      .post('/api/ai/chat/completions')
       .set('Authorization', 'Bearer token')
       .send({
         messages: [{ role: 'user', content: 'list my files' }],

@@ -3,9 +3,7 @@ import { getOpenAITools, executeTool } from './toolRegistry';
 import { useAgentStore } from '../stores/useAgentStore';
 import type { AIChatMessage } from '@web-learn/shared';
 
-const MAX_TOOL_LOOPS = 8;
-
-
+const MAX_TOOL_LOOPS = 1000;
 
 function systemPromptBuilder() {
   const SYSTEM_PROMPT: AIChatMessage = {

@@ -40,7 +40,7 @@ pnpm dev
 
 默认地址：
 - 前端：http://localhost:5173
-- 后端：http://localhost:3001
+- Gateway（API 统一入口）：http://localhost:3000
 
 ## 环境变量
 
@@ -63,12 +63,12 @@ pnpm dev
 ## 当前核心能力
 
 - ✅ 用户注册与登录（JWT 认证）
-- ✅ 角色体系（admin / teacher / student）
-- ✅ 专题管理（knowledge / website）
-- ✅ 知识库页面树 CRUD 与排序
-- ✅ 公开浏览已发布专题与页面
-- ✅ AI 学习助手与搭建助手（`/api/ai/chat`）
-- ✅ 网站型专题 ZIP 上传/更新/删除与预览
+- ✅ 用户角色与专题级编辑权限（`editors` 字段）
+- ✅ 专题管理（统一网站模型）
+- ✅ 网站文件上传/更新/删除与预览
+- ✅ 公开浏览已发布专题
+- ✅ AI 学习助手（`/api/ai/chat`）
+- ✅ AI 专题搭建助手（VSCode 风格编辑器）
 
 ## 常用命令
 
@@ -83,6 +83,4 @@ pnpm test
 - [产品概述](docs/spec/overview.md)
 - [功能清单](docs/spec/features.md)
 - [数据模型](docs/spec/data-models.md)
-- [API 设计](docs/spec/api-design.md)
-- [AI Agent 系统](docs/spec/agents.md)
 - [技术架构](docs/spec/architecture.md)

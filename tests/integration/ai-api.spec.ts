@@ -21,7 +21,7 @@ afterAll(async () => {
 describe('AI API', () => {
   describe('Authentication', () => {
     it('denies chat without authentication', async () => {
-      const res = await api.post('/api/ai/chat', {
+      const res = await api.post('/api/ai/chat/completions', {
         messages: [{ role: 'user', content: 'hello' }],
       });
       expect(res.status).toBe(401);
@@ -34,7 +34,7 @@ describe('AI API', () => {
       // Note: This will fail if OpenAI is not configured,
       // but we verify the auth flow and proxy routing work
       const res = await api.post(
-        '/api/ai/chat',
+        '/api/ai/chat/completions',
         {
           messages: [{ role: 'user', content: 'hello' }],
         },

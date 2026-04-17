@@ -12,7 +12,6 @@
 - **[用户角色与权限](./spec/user-roles.md)** - 角色定义、权限矩阵
 - **[功能清单](./spec/features.md)** - 详细功能列表
 - **[数据模型](./spec/data-models.md)** - 数据库设计
-- **[API 设计](./spec/api-design.md)** - RESTful API 规范
 - **[技术架构](./spec/architecture.md)** - 系统架构设计
 
 ### 设计与规划
@@ -23,9 +22,7 @@
 - **[前端 Agent Runtime 设计](./superpowers/specs/2026-04-08-frontend-agent-runtime-webcontainer-design.md)** - 前端工具循环与 WebContainer 集成
 
 **[superpowers/plans/](./superpowers/plans/)** - 实施计划
-- **[用户设置实施计划](./superpowers/plans/2026-04-07-user-settings.md)** - 用户设置实施计划
-- **[网站编辑器实施计划](./superpowers/plans/2026-04-07-website-editor.md)** - 16步实施计划
-- **[前端 Agent Runtime 实施计划](./superpowers/plans/2026-04-08-frontend-agent-runtime-webcontainer-plan.md)** - WebContainer 工具循环
+- **[修复 auth store updateUser](./superpowers/plans/2026-04-15-fix-auth-store-updateuser.md)** - 修复 auth store updateUser 逻辑
 
 ## 迁移文档
 

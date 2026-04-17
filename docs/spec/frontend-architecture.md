@@ -15,12 +15,12 @@
 - `/api/topics/*` → Topic Space Service
 - `/api/ai/*` → AI Service
 
-## 2. 路由与页面分层
+## 2. 路由与页面
 
 - `TopicDetailPage` 统一展示专题网站（不再按类型分流）
 - 编辑路由统一为 `WebsiteEditorPage`（VSCode 风格三栏布局）
 
-## 2. 专题网站编辑器体系
+## 3. 专题网站编辑器体系
 
 - `TopicDetailPage`
   - 负责公开浏览专题网站，通过 iframe 预览网站内容
@@ -33,7 +33,7 @@
   - 使用 Monaco Editor 进行文件编辑
   - WebContainer 在后台运行 Node.js 环境
 
-## 3. 共享组件与工具
+## 4. 共享组件与工具
 
 - `AIChatSidebar` / `AIChatPanel`
   - 统一聊天 UI，按 `agentType` 区分学习/搭建模式
@@ -52,7 +52,7 @@
 - `frontend/src/stores/authStore.ts`
   - 认证状态管理
 
-## 4. 编辑器核心组件
+## 5. 编辑器核心组件
 
 ### FileTreePanel
 - 展示专题网站的文件结构
@@ -72,7 +72,7 @@
 - 支持响应式预览切换（桌面/平板/手机）
 - 自动热重载
 
-## 5. 数据流与接口边界
+## 6. 数据流与接口边界
 
 - 页面仅通过 `frontend/src/services/api.ts` 与后端通信
 - 所有请求发往 Gateway：`http://localhost:3000/api/*`（生产环境配置为实际域名）
@@ -88,7 +88,7 @@
 - 透明转发到下游微服务
 - 前端无感知微服务拆分细节
 
-## 6. 状态管理约定
+## 7. 状态管理约定
 
 - 认证态：`useAuthStore`（存储 JWT token、用户信息）
 - 主题态：`useThemeStore`（light/dark 模式切换）
@@ -96,7 +96,7 @@
 - 编辑器状态：保留在 `WebsiteEditorPage` 组件内（避免过度全局化）
 - WebContainer 实例：编辑器局部状态
 
-## 7. WebContainer 集成
+## 8. WebContainer 集成
 
 **初始化流程：**
 ```typescript
@@ -121,7 +121,7 @@ const url = container.getServerUrl(5173);
 - Agent 生成代码 → WebContainer fs.writeFile
 - 保存到后端 → 提交 filesSnapshot
 
-## 8. 开发与部署
+## 9. 开发与部署
 
 **开发环境：**
 ```
@@ -147,7 +147,7 @@ server: {
 - API 请求发往生产 Gateway URL
 - 环境变量配置：`VITE_API_URL`
 
-## 9. 与旧设计的差异
+## 10. 与旧设计的差异
 
 ### 已移除的页面
 

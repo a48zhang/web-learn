@@ -35,7 +35,7 @@ test.describe('AI Chat', () => {
 
     // Send a chat request - it may succeed or fail depending on OpenAI config,
     // but should NOT return 401 (auth passed through)
-    const chatRes = await page.request.post('/api/ai/chat', {
+    const chatRes = await page.request.post('/api/ai/chat/completions', {
       headers: { Authorization: `Bearer ${token}` },
       data: { messages: [{ role: 'user', content: 'hello' }] },
     });

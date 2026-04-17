@@ -63,7 +63,7 @@ export const useAgentStore = create<AgentStoreState>((set) => ({
 
   addVisibleMessage: (message) =>
     set((state) => ({ visibleMessages: [...state.visibleMessages, message as PersistedAgentMessage] })),
-  
+
   updateLastMessage: (updater) =>
     set((state) => {
       const messages = [...state.visibleMessages];

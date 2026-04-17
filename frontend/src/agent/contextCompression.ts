@@ -2,6 +2,8 @@ import { defaultAgentContextBudget } from '@web-learn/shared';
 import type { RuntimeMessage } from './runtimeMessage';
 import type { AgentType } from '@web-learn/shared';
 
+const MAX_HISTORICAL_MESSAGE_LENGTH = 800;
+
 export function estimateMessageTokens(message: RuntimeMessage): number {
   return Math.ceil(message.content.length / 4) + 12;
 }
@@ -43,7 +45,10 @@ export function selectRecentWindowGreedy(messages: RuntimeMessage[]): {
 export function normalizeHistoricalMessage(message: RuntimeMessage): RuntimeMessage {
   return {
     ...message,
-    content: message.content.length > 800 ? `${message.content.slice(0, 800)}...` : message.content,
+    content:
+      message.content.length > MAX_HISTORICAL_MESSAGE_LENGTH
+        ? `${message.content.slice(0, MAX_HISTORICAL_MESSAGE_LENGTH)}...`
+        : message.content,
   };
 }
 

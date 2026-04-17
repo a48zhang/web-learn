@@ -4,7 +4,7 @@ import { getOpenAITools, executeTool } from './toolRegistry';
 import { useAgentStore } from '../stores/useAgentStore';
 import { BuildAgent } from './BuildAgent';
 import { AskAgent } from './AskAgent';
-import type { AIChatMessage, PersistedAgentMessage } from '@web-learn/shared';
+import type { AIChatMessage, PersistedAgentMessage, AgentMessage } from '@web-learn/shared';
 import type { AgentSessionContext } from './BaseAgent';
 
 const MAX_TOOL_LOOPS = 1000;
@@ -92,7 +92,7 @@ export function useAgentRuntime(options: { topicId: string; agentType: 'building
             role: 'assistant',
             content: assistantContent,
             ...(tools.length > 0 ? { tools } : {})
-          } as any);
+          } as AgentMessage);
         }
 
         if (!hasToolCalls) {

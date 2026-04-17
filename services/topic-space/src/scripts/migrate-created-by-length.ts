@@ -5,7 +5,8 @@ async function runMigration() {
   const queryInterface = sequelize.getQueryInterface();
   const tableDescription = await queryInterface.describeTable('topic_topics');
 
-  if (tableDescription.created_by && tableDescription.created_by.type === 'varchar' && tableDescription.created_by.length === 100) {
+  const existingType = tableDescription.created_by?.type?.toLowerCase().replace(/\s+/g, '');
+  if (existingType === 'varchar(100)') {
     console.log('created_by is already VARCHAR(100), skipping');
     process.exit(0);
   }

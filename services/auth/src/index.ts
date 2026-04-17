@@ -1,7 +1,7 @@
-import { DataTypes } from 'sequelize';
 import app from './app';
 import { config } from './utils/config';
 import { sequelize } from './utils/database';
+import { syncSchemaWithDiffCheck } from './utils/schemaSync';
 import { startHeartbeat } from '@web-learn/shared';
 
 (async () => {
@@ -10,11 +10,9 @@ import { startHeartbeat } from '@web-learn/shared';
   const isProd = process.env.NODE_ENV === 'production';
 
   if (!isProd) {
-    // Drop and recreate tables on every dev startup.
-    // This avoids MySQL's 64-index limit that sync({ alter: true }) can hit
-    // after repeated restarts, and always brings the schema to the latest state.
-    await sequelize.sync({ force: true });
-    console.log('[auth] database reset and synced (dev mode)');
+    // Dev mode: compare DB schema with model definitions.
+    // Recreate tables only when drift is detected.
+    await syncSchemaWithDiffCheck(sequelize, 'auth');
   } else {
     await sequelize.sync();
     console.log('[auth] database synced (production mode)');

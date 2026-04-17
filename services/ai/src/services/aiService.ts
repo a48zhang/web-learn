@@ -20,8 +20,10 @@ export const chatWithLLM = async (
     throw new Error('OPENAI_API_KEY is not configured');
   }
 
-  const params: OpenAI.Chat.Completions.ChatCompletionCreateParams = {
-    model: model || config.ai.model,
+  const selectedModel = model ?? config.ai.model ?? 'MiniMax-M2.7';
+
+  const params: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
+    model: selectedModel,
     messages,
     stream: false,
   };

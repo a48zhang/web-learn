@@ -48,3 +48,5 @@ shared/package-lock.json
 
 # Thesis
 paper/
+
+.codex

@@ -139,3 +139,9 @@ export interface EditorState {
 }
 
 export type { AgentToolDefinition, AgentToolResult, AgentMessage, AgentRunState } from '../agent/types';
+
+export type {
+  AgentConversationSummary,
+  PersistedConversationState,
+  PersistedAgentMessage,
+} from '../agent/types';

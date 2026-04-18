@@ -1,6 +1,6 @@
 # 前端架构说明
 
-> 最后更新：2026-04-07
+> 最后更新：2026-04-17
 
 ## 1. 架构概览
 
@@ -20,18 +20,21 @@
 - `TopicDetailPage` 统一展示专题网站（不再按类型分流）
 - 编辑路由统一为 `WebsiteEditorPage`（VSCode 风格三栏布局）
 
-## 3. 专题网站编辑器体系
+## 3. Agent Runtime 与专题页面
 
-- `TopicDetailPage`
-  - 负责公开浏览专题网站，通过 iframe 预览网站内容
-  - 使用 `AIChatSidebar(agentType=learning)` 提供学习助手
 - `WebsiteEditorPage`
-  - 负责 VSCode 风格三栏布局编辑器
-  - 左侧：文件树面板（FileTreePanel）
-  - 中间：Agent 对话面板（AIChatPanel, agentType=building）
-  - 右侧：WebContainer 预览面板（PreviewPanel）
-  - 使用 Monaco Editor 进行文件编辑
-  - WebContainer 在后台运行 Node.js 环境
+  - 编辑器内挂载 `AgentChatContent(topicId, agentType=building)`
+  - 搭建助手走 `BuildAgent`，共享 `BaseAgent` 运行时
+- `WebsiteTopicPage` / `PublishedTopicPage`
+  - 浏览态页面通过 `AIChatSidebar(agentType=learning, title=学习助手)` 提供学习助手
+  - 学习助手使用 `AskAgent`，与搭建助手共享 hydration / compression / persistence 流程
+
+### 运行时抽象
+
+- `BaseAgent`：统一管理会话加载、压缩预处理、LLM 循环、会话持久化
+- `BuildAgent`：搭建提示词与工具链（文件操作）
+- `AskAgent`：学习提示词与浏览引导
+- `useAgentRuntime`：按 `topicId + agentType` 绑定 agent 实例并驱动 UI
 
 ## 4. 共享组件与工具
 
@@ -155,7 +158,7 @@ server: {
 
 - ❌ `KnowledgeTopicPage` - 知识库浏览页面
 - ❌ `KnowledgeEditorPage` - 知识库编辑页面
-- ❌ `WebsiteTopicPage` - 旧版网站预览页面（已由 `TopicDetailPage` 替代）
+- ❌ 旧版 `WebsiteTopicPage` 实现（无学习助手、无新 runtime）
 - ❌ `PageTreeNav` - 知识库页面树导航
 - ❌ `PageTreeEditor` - 知识库页面树编辑器
 
@@ -163,10 +166,10 @@ server: {
 
 ### 新增/重构的页面
 
-- ✅ `TopicDetailPage` - 统一的专题详情页，iframe 预览网站
+- ✅ `WebsiteTopicPage` / `PublishedTopicPage` - 浏览态页面，挂载学习助手
 - ✅ `WebsiteEditorPage` - VSCode 风格三栏编辑器
 - ✅ `FileTreePanel` - 文件树面板
-- ✅ `AIChatPanel` - Agent 对话面板
+- ✅ `AgentChatContent` - 统一 Agent 对话面板（building / learning）
 - ✅ `PreviewPanel` - WebContainer 预览面板
 - ✅ `SettingsModal` - 用户设置弹窗
 

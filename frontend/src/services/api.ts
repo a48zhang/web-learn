@@ -10,6 +10,7 @@ import type {
   UpdateTopicDto,
   UpdateTopicStatusDto,
   DeleteTopicResponse,
+  PersistedConversationState,
 } from '@web-learn/shared';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
@@ -125,6 +126,26 @@ export const topicGitApi = {
       { params: { op } }
     );
     return response.data.data!;
+  },
+};
+
+// Agent Conversation API
+export const agentConversationApi = {
+  getConversation: async (topicId: string, agentType: 'building' | 'learning'): Promise<PersistedConversationState> => {
+    const response = await api.get<ApiResponse<PersistedConversationState>>(`/ai/conversations/${topicId}/${agentType}`);
+    return response.data.data as PersistedConversationState;
+  },
+  
+  replaceConversation: async (
+    topicId: string,
+    agentType: 'building' | 'learning',
+    payload: PersistedConversationState
+  ): Promise<PersistedConversationState> => {
+    const response = await api.put<ApiResponse<PersistedConversationState>>(
+      `/ai/conversations/${topicId}/${agentType}`,
+      payload
+    );
+    return response.data.data as PersistedConversationState;
   },
 };
 

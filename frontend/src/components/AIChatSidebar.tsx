@@ -3,10 +3,11 @@ import AgentChatContent from './AgentChatContent';
 
 interface AIChatSidebarProps {
   topicId: string;
+  agentType: 'building' | 'learning';
   title?: string;
 }
 
-function AIChatSidebar({ topicId, title = 'AI 助手' }: AIChatSidebarProps) {
+function AIChatSidebar({ topicId, agentType, title = 'AI 助手' }: AIChatSidebarProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -20,7 +21,7 @@ function AIChatSidebar({ topicId, title = 'AI 助手' }: AIChatSidebarProps) {
       </button>
       {open && (
         <aside className="fixed top-0 right-0 h-full w-full sm:w-[420px] bg-zinc-900 border-l border-zinc-700 shadow-2xl z-50 flex flex-col">
-          <AgentChatContent topicId={topicId} title={title} />
+          <AgentChatContent topicId={topicId} agentType={agentType} title={title} />
         </aside>
       )}
     </>

@@ -203,7 +203,7 @@ function WebsiteEditorPage() {
               collapsible: true,
               header: 'Agent 对话',
               headerRight: <AgentPanelHeaderRight />,
-              content: <AgentChatContent topicId={id ?? ''} />,
+              content: <AgentChatContent topicId={id ?? ''} agentType="building" />,
             },
             {
               id: 'preview',

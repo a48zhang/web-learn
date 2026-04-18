@@ -1,8 +1,12 @@
 import { create } from 'zustand';
-import type { AgentMessage, AgentRunState } from '@web-learn/shared';
+import type { AgentMessage, AgentRunState, AgentCompressedContext, PersistedAgentMessage } from '@web-learn/shared';
 
 interface AgentStoreState {
-  visibleMessages: AgentMessage[];
+  topicId: string | null;
+  agentType: 'building' | 'learning';
+  selectedSkills: string[];
+  compressedContext: AgentCompressedContext;
+  visibleMessages: PersistedAgentMessage[];
   runState: AgentRunState;
   model: string;
   setModel: (model: string) => void;
@@ -10,7 +14,10 @@ interface AgentStoreState {
   updateLastMessage: (updater: (msg: AgentMessage) => AgentMessage) => void;
   setRunState: (state: Partial<AgentRunState>) => void;
   clearRunState: () => void;
-  setVisibleMessages: (messages: AgentMessage[]) => void;
+  setVisibleMessages: (messages: PersistedAgentMessage[]) => void;
+  setSessionContext: (topicId: string, agentType: 'building' | 'learning') => void;
+  setSelectedSkills: (skills: string[]) => void;
+  setCompressedContext: (context: AgentCompressedContext) => void;
 }
 
 const initialRunState: AgentRunState = {
@@ -20,23 +27,68 @@ const initialRunState: AgentRunState = {
   error: null,
 };
 
+const initialCompressedContext: AgentCompressedContext = {
+  summary: '',
+  summaryVersion: 1,
+  firstUncompressedMessageId: null,
+  updatedAt: new Date().toISOString(),
+  hasCompressedContext: false,
+};
+
+function toPersistedAgentMessage(message: AgentMessage): PersistedAgentMessage {
+  const persistedMessage = message as PersistedAgentMessage;
+
+  return {
+    ...message,
+    id: persistedMessage.id || crypto.randomUUID(),
+    createdAt: persistedMessage.createdAt || new Date().toISOString(),
+  };
+}
+
+function getStoredModel(): string {
+  if (typeof globalThis.localStorage?.getItem !== 'function') {
+    return 'MiniMax-M2.7';
+  }
+
+  return globalThis.localStorage.getItem('agent-model') || 'MiniMax-M2.7';
+}
+
 export const useAgentStore = create<AgentStoreState>((set) => ({
+  topicId: null,
+  agentType: 'building',
+  selectedSkills: [],
+  compressedContext: initialCompressedContext,
   visibleMessages: [],
   runState: initialRunState,
-  model: localStorage.getItem('agent-model') || 'MiniMax-M2.7',
+  model: getStoredModel(),
 
   setModel: (model: string) => {
-    localStorage.setItem('agent-model', model);
+    if (typeof globalThis.localStorage?.setItem === 'function') {
+      globalThis.localStorage.setItem('agent-model', model);
+    }
     set({ model });
   },
 
+  setSessionContext: (topicId: string, agentType: 'building' | 'learning') => {
+    set({ topicId, agentType });
+  },
+
+  setSelectedSkills: (skills: string[]) => {
+    set({ selectedSkills: skills });
+  },
+
+  setCompressedContext: (context: AgentCompressedContext) => {
+    set({ compressedContext: context });
+  },
+
   addVisibleMessage: (message) =>
-    set((state) => ({ visibleMessages: [...state.visibleMessages, message] })),
+    set((state) => ({ visibleMessages: [...state.visibleMessages, toPersistedAgentMessage(message)] })),
+
   updateLastMessage: (updater) =>
     set((state) => {
       const messages = [...state.visibleMessages];
       if (messages.length > 0) {
-        messages[messages.length - 1] = updater(messages[messages.length - 1]);
+        messages[messages.length - 1] = updater(messages[messages.length - 1] as AgentMessage) as PersistedAgentMessage;
       }
       return { visibleMessages: messages };
     }),

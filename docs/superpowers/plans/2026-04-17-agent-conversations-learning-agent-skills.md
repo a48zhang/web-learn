@@ -80,7 +80,7 @@
 - Modify: `shared/src/index.ts`
 - Test: `pnpm --filter @web-learn/shared build`
 
-- [ ] **Step 1: Define shared conversation and skill types**
+- [x] **Step 1: Define shared conversation and skill types**
 
 ```ts
 // shared/src/agent/skills.ts
@@ -180,7 +180,7 @@ export function shouldCompressConversation(
 }
 ```
 
-- [ ] **Step 2: Export the new types from shared entrypoints**
+- [x] **Step 2: Export the new types from shared entrypoints**
 
 ```ts
 // shared/src/index.ts
@@ -198,12 +198,12 @@ export type {
 } from '../agent/types';
 ```
 
-- [ ] **Step 3: Run shared package build**
+- [x] **Step 3: Run shared package build**
 
 Run: `pnpm --filter @web-learn/shared build`
 Expected: `tsc` completes without type errors
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add shared/src/agent/skills.ts shared/src/agent/contextCompression.ts shared/src/agent/types.ts shared/src/types/index.ts shared/src/index.ts
@@ -225,7 +225,7 @@ git commit -m "feat: add shared agent conversation and compression contracts"
 - Test: `services/ai/tests/agent-conversations.test.ts`
 - Test: `services/ai/tests/ai.test.ts`
 
-- [ ] **Step 1: Write failing backend API tests for loading and saving visible messages**
+- [x] **Step 1: Write failing backend API tests for loading and saving visible messages**
 
 ```ts
 // services/ai/tests/agent-conversations.test.ts
@@ -263,12 +263,12 @@ it('replaces persisted visible messages selected skills and compressed context',
 });
 ```
 
-- [ ] **Step 2: Run backend tests to verify the new endpoints fail**
+- [x] **Step 2: Run backend tests to verify the new endpoints fail**
 
 Run: `pnpm --filter @web-learn/ai-service test -- agent-conversations.test.ts`
 Expected: FAIL with missing route, model, or controller errors
 
-- [ ] **Step 3: Add Sequelize models for conversations and visible messages**
+- [x] **Step 3: Add Sequelize models for conversations and visible messages**
 
 ```ts
 // services/ai/src/models/AgentConversation.ts
@@ -311,7 +311,7 @@ class AgentMessage extends Model {
 }
 ```
 
-- [ ] **Step 4: Implement load/save controller endpoints**
+- [x] **Step 4: Implement load/save controller endpoints**
 
 ```ts
 // services/ai/src/controllers/agentConversationController.ts
@@ -352,7 +352,7 @@ export const replaceConversation = async (req: AuthRequest, res: Response) => {
 };
 ```
 
-- [ ] **Step 5: Register the routes in the AI service**
+- [x] **Step 5: Register the routes in the AI service**
 
 ```ts
 // services/ai/src/routes/agentConversationRoutes.ts
@@ -366,12 +366,12 @@ app.use('/api/ai', aiRouter);
 app.use('/api/ai', agentConversationRouter);
 ```
 
-- [ ] **Step 6: Run AI service tests**
+- [x] **Step 6: Run AI service tests**
 
 Run: `pnpm --filter @web-learn/ai-service test`
 Expected: existing proxy tests still pass and new conversation tests pass
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add services/ai/src/models services/ai/src/controllers/agentConversationController.ts services/ai/src/routes/agentConversationRoutes.ts services/ai/src/app.ts services/ai/src/index.ts services/ai/tests/agent-conversations.test.ts services/ai/tests/ai.test.ts
@@ -392,7 +392,7 @@ git commit -m "feat: persist visible agent conversation state in ai service"
 - Test: `frontend/src/agent/useAgentRuntime.test.ts`
 - Test: `services/ai/tests/agent-conversations.test.ts`
 
-- [ ] **Step 1: Write failing tests for frontend-triggered compression and backend cursor persistence**
+- [x] **Step 1: Write failing tests for frontend-triggered compression and backend cursor persistence**
 
 ```ts
 it('compresses before a new llm request and persists recent visible messages plus cursor', async () => {
@@ -414,12 +414,12 @@ it('compresses before a new llm request and persists recent visible messages plu
 });
 ```
 
-- [ ] **Step 2: Run tests to verify compression persistence is not implemented yet**
+- [x] **Step 2: Run tests to verify compression persistence is not implemented yet**
 
 Run: `pnpm --filter @web-learn/frontend test -- useAgentRuntime`
 Expected: FAIL because the runtime has no preflight compression hook yet
 
-- [ ] **Step 3: Implement frontend token estimation and greedy recent-window selection**
+- [x] **Step 3: Implement frontend token estimation and greedy recent-window selection**
 
 ```ts
 // frontend/src/agent/runtimeMessage.ts
@@ -470,7 +470,7 @@ export function selectRecentWindowGreedy(
 }
 ```
 
-- [ ] **Step 4: Define message normalization for history before the greedy pointer**
+- [x] **Step 4: Define message normalization for history before the greedy pointer**
 
 ```ts
 // frontend/src/agent/contextCompression.ts
@@ -482,7 +482,7 @@ export function normalizeHistoricalMessage(message: RuntimeMessage): RuntimeMess
 }
 ```
 
-- [ ] **Step 5: Design the compression prompt so it carries forward old compressed memory plus new old-history**
+- [x] **Step 5: Design the compression prompt so it carries forward old compressed memory plus new old-history**
 
 ```ts
 // frontend/src/agent/contextCompression.ts
@@ -535,7 +535,7 @@ export function buildCompressionPrompt(input: {
 }
 ```
 
-- [ ] **Step 6: Implement frontend preflight compression before every new LLM request**
+- [x] **Step 6: Implement frontend preflight compression before every new LLM request**
 
 ```ts
 // frontend/src/agent/BaseAgent.ts
@@ -591,7 +591,7 @@ async function maybeCompressContextBeforeLlmRequest(nextUserInput: string) {
 }
 ```
 
-- [ ] **Step 7: Add a single persistence entrypoint so compression does not race with normal saves**
+- [x] **Step 7: Add a single persistence entrypoint so compression does not race with normal saves**
 
 ```ts
 // frontend/src/agent/BaseAgent.ts
@@ -609,7 +609,7 @@ async function persistConversationState() {
 // 3. no second replaceConversation call should overwrite freshly compressed state with stale messages
 ```
 
-- [ ] **Step 8: Inject compressed summary into the next real LLM request**
+- [x] **Step 8: Inject compressed summary into the next real LLM request**
 
 ```ts
 // frontend/src/agent/BaseAgent.ts
@@ -625,7 +625,7 @@ if (compressedContext.hasCompressedContext && compressedContext.summary) {
 }
 ```
 
-- [ ] **Step 9: Keep the UI hint minimal**
+- [x] **Step 9: Keep the UI hint minimal**
 
 ```tsx
 // frontend/src/components/AgentChatContent.tsx
@@ -636,7 +636,7 @@ if (compressedContext.hasCompressedContext && compressedContext.summary) {
 )}
 ```
 
-- [ ] **Step 10: Add fallback behavior for failed compression**
+- [x] **Step 10: Add fallback behavior for failed compression**
 
 ```ts
 // frontend/src/agent/contextCompression.ts
@@ -660,12 +660,12 @@ export async function compressWithLlmOrFallback(
 // 3. if nothing useful can be extracted, keep the old summary unchanged
 ```
 
-- [ ] **Step 11: Run verification tests**
+- [x] **Step 11: Run verification tests**
 
 Run: `pnpm --filter @web-learn/frontend test -- useAgentRuntime`
 Expected: runtime tests pass with preflight compression, greedy recent window selection, summary injection, and single persistence flow
 
-- [ ] **Step 12: Commit**
+- [x] **Step 12: Commit**
 
 ```bash
 git add frontend/src/agent/contextCompression.ts frontend/src/agent/runtimeMessage.ts frontend/src/agent/BaseAgent.ts frontend/src/stores/useAgentStore.ts frontend/src/components/AgentChatContent.tsx frontend/src/services/api.ts
@@ -686,7 +686,7 @@ git commit -m "feat: add detailed agent context compression"
 - Modify: `frontend/src/components/editor/AgentPanelHeaderRight.tsx`
 - Test: `frontend/src/components/AgentChatContent.test.tsx`
 
-- [ ] **Step 1: Write failing frontend tests for loading and saving conversation state**
+- [x] **Step 1: Write failing frontend tests for loading and saving conversation state**
 
 ```tsx
 it('loads persisted messages and selected skills on mount', async () => {
@@ -701,12 +701,12 @@ it('loads persisted messages and selected skills on mount', async () => {
 });
 ```
 
-- [ ] **Step 2: Run frontend test to verify it fails**
+- [x] **Step 2: Run frontend test to verify it fails**
 
 Run: `pnpm --filter @web-learn/frontend test -- AgentChatContent`
 Expected: FAIL because `agentType` props and backend persistence API do not exist yet
 
-- [ ] **Step 3: Add agent conversation API methods**
+- [x] **Step 3: Add agent conversation API methods**
 
 ```ts
 // frontend/src/services/api.ts
@@ -726,7 +726,7 @@ export const agentConversationApi = {
 };
 ```
 
-- [ ] **Step 4: Namespace the agent store by topic and agent type**
+- [x] **Step 4: Namespace the agent store by topic and agent type**
 
 ```ts
 // frontend/src/stores/useAgentStore.ts
@@ -742,7 +742,7 @@ interface AgentStoreState {
 }
 ```
 
-- [ ] **Step 5: Refactor runtime to construct concrete agent classes and persist full conversation state**
+- [x] **Step 5: Refactor runtime to construct concrete agent classes and persist full conversation state**
 
 ```ts
 // frontend/src/agent/BaseAgent.ts
@@ -812,7 +812,7 @@ export function useAgentRuntime(options: { topicId: string; agentType: 'building
 }
 ```
 
-- [ ] **Step 6: Update chat UI and header components to use backend persistence instead of localStorage**
+- [x] **Step 6: Update chat UI and header components to use backend persistence instead of localStorage**
 
 ```tsx
 // frontend/src/components/AgentChatContent.tsx
@@ -828,12 +828,12 @@ useEffect(() => {
 }, [topicId, agentType, hydrateConversation, setSessionContext]);
 ```
 
-- [ ] **Step 7: Run frontend tests**
+- [x] **Step 7: Run frontend tests**
 
 Run: `pnpm --filter @web-learn/frontend test -- AgentChatContent AgentPanelHeaderRight`
 Expected: component tests pass and no code still depends on `chat-history-${topicId}` localStorage writes
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add frontend/src/services/api.ts frontend/src/stores/useAgentStore.ts frontend/src/agent/BaseAgent.ts frontend/src/agent/BuildAgent.ts frontend/src/agent/AskAgent.ts frontend/src/agent/useAgentRuntime.ts frontend/src/components/AgentChatContent.tsx frontend/src/components/editor/AgentPanelHeaderRight.tsx
@@ -852,7 +852,7 @@ git commit -m "refactor: move agent sessions to backend persistence"
 - Test: `frontend/src/pages/WebsiteTopicPage.test.tsx`
 - Test: `frontend/src/pages/PublishedTopicPage.test.tsx`
 
-- [ ] **Step 1: Write failing page tests for the browsing assistant entrypoint**
+- [x] **Step 1: Write failing page tests for the browsing assistant entrypoint**
 
 ```tsx
 it('shows the learning agent trigger on topic pages for authenticated users', async () => {
@@ -861,12 +861,12 @@ it('shows the learning agent trigger on topic pages for authenticated users', as
 });
 ```
 
-- [ ] **Step 2: Run the page tests to verify they fail**
+- [x] **Step 2: Run the page tests to verify they fail**
 
 Run: `pnpm --filter @web-learn/frontend test -- WebsiteTopicPage PublishedTopicPage`
 Expected: FAIL because no learning sidebar is rendered
 
-- [ ] **Step 3: Make browsing pages instantiate `AskAgent` through the shared runtime hook**
+- [x] **Step 3: Make browsing pages instantiate `AskAgent` through the shared runtime hook**
 
 ```ts
 // frontend/src/agent/AskAgent.ts
@@ -876,7 +876,7 @@ export class AskAgent extends BaseAgent {
 }
 ```
 
-- [ ] **Step 4: Mount the learning sidebar on browsing pages**
+- [x] **Step 4: Mount the learning sidebar on browsing pages**
 
 ```tsx
 // frontend/src/pages/WebsiteTopicPage.tsx
@@ -894,12 +894,12 @@ export class AskAgent extends BaseAgent {
 <AIChatSidebar topicId={id!} agentType="learning" title="学习助手" />
 ```
 
-- [ ] **Step 5: Run browsing page tests**
+- [x] **Step 5: Run browsing page tests**
 
 Run: `pnpm --filter @web-learn/frontend test -- WebsiteTopicPage PublishedTopicPage`
 Expected: browsing pages render the assistant trigger without breaking existing page layout
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add frontend/src/components/AIChatSidebar.tsx frontend/src/pages/WebsiteTopicPage.tsx frontend/src/pages/PublishedTopicPage.tsx frontend/src/agent/AskAgent.ts frontend/src/pages/WebsiteTopicPage.test.tsx frontend/src/pages/PublishedTopicPage.test.tsx
@@ -920,7 +920,7 @@ git commit -m "feat: add browsing-side learning agent"
 - Modify: `frontend/src/components/AgentChatContent.tsx`
 - Test: `frontend/src/agent/useAgentRuntime.test.ts`
 
-- [ ] **Step 1: Write failing runtime test for skill prompt injection**
+- [x] **Step 1: Write failing runtime test for skill prompt injection**
 
 ```ts
 it('injects selected skill prompt fragments into the system prompt', async () => {
@@ -934,12 +934,12 @@ it('injects selected skill prompt fragments into the system prompt', async () =>
 });
 ```
 
-- [ ] **Step 2: Run the runtime test to verify it fails**
+- [x] **Step 2: Run the runtime test to verify it fails**
 
 Run: `pnpm --filter @web-learn/frontend test -- useAgentRuntime`
 Expected: FAIL because no skill registry or prompt composer exists
 
-- [ ] **Step 3: Create frontend skill lookup helpers**
+- [x] **Step 3: Create frontend skill lookup helpers**
 
 ```ts
 // frontend/src/agent/skills.ts
@@ -950,7 +950,7 @@ export function getAvailableSkills(agentType: AgentType): AgentSkillDefinition[]
 }
 ```
 
-- [ ] **Step 4: Build system prompts from base prompt plus selected skills**
+- [x] **Step 4: Build system prompts from base prompt plus selected skills**
 
 ```ts
 // frontend/src/agent/systemPrompts.ts
@@ -973,7 +973,7 @@ export function buildSystemPrompt(input: {
 }
 ```
 
-- [ ] **Step 5: Add skill selection UI in the agent panel header**
+- [x] **Step 5: Add skill selection UI in the agent panel header**
 
 ```tsx
 // frontend/src/components/editor/AgentPanelHeaderRight.tsx
@@ -988,7 +988,7 @@ export function buildSystemPrompt(input: {
 </select>
 ```
 
-- [ ] **Step 6: Persist selected skills together with full conversation state**
+- [x] **Step 6: Persist selected skills together with full conversation state**
 
 ```ts
 // frontend/src/agent/useAgentRuntime.ts
@@ -999,12 +999,12 @@ await agent.persistConversation({
 });
 ```
 
-- [ ] **Step 7: Run frontend tests**
+- [x] **Step 7: Run frontend tests**
 
 Run: `pnpm --filter @web-learn/frontend test -- useAgentRuntime AgentPanelHeaderRight`
 Expected: runtime and header tests pass, selected skill survives hydration from backend
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add frontend/src/agent/skills.ts frontend/src/agent/systemPrompts.ts frontend/src/agent/BaseAgent.ts frontend/src/agent/BuildAgent.ts frontend/src/agent/AskAgent.ts frontend/src/components/editor/AgentPanelHeaderRight.tsx frontend/src/components/AgentChatContent.tsx
@@ -1023,7 +1023,7 @@ git commit -m "feat: add first-version agent skills"
 - Test: `services/ai/tests/agent-conversations.test.ts`
 - Test: `tests/e2e/ai-chat.spec.ts`
 
-- [ ] **Step 1: Update product and architecture docs to reflect the new agent model**
+- [x] **Step 1: Update product and architecture docs to reflect the new agent model**
 
 ```md
 <!-- docs/spec/data-models.md -->
@@ -1040,7 +1040,7 @@ git commit -m "feat: add first-version agent skills"
 - skill 为声明式 prompt/tool profile，不执行远程插件代码
 ```
 
-- [ ] **Step 2: Extend e2e coverage to assert browsing assistant visibility and persistence API reachability**
+- [x] **Step 2: Extend e2e coverage to assert browsing assistant visibility and persistence API reachability**
 
 ```ts
 // tests/e2e/ai-chat.spec.ts
@@ -1050,7 +1050,7 @@ test('topic browsing page exposes learning agent entry', async ({ page }) => {
 });
 ```
 
-- [ ] **Step 3: Run verification suite**
+- [x] **Step 3: Run verification suite**
 
 Run: `pnpm --filter @web-learn/ai-service test`
 Expected: AI service tests pass
@@ -1061,7 +1061,7 @@ Expected: frontend unit tests pass
 Run: `pnpm test:e2e -- ai-chat.spec.ts`
 Expected: AI chat smoke tests pass with updated UI assertions
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add docs/spec/data-models.md docs/spec/ai-service.md docs/spec/frontend-architecture.md tests/e2e/ai-chat.spec.ts

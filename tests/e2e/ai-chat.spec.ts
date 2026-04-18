@@ -69,7 +69,7 @@ test.describe('AI Chat', () => {
         compressedContext: {
           summary: '',
           summaryVersion: 1,
-          lastCompressedMessageId: null,
+          firstUncompressedMessageId: null,
           hasCompressedContext: false,
         },
         messages: [

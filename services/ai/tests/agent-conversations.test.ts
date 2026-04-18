@@ -27,11 +27,6 @@ jest.mock('../src/utils/config', () => ({
 }));
 
 import request from 'supertest';
-import jwt from 'jsonwebtoken';
-
-const mockUserModel = {
-  findByPk: jest.fn(),
-};
 
 const mockAgentConversationModel = {
   findOne: jest.fn(),
@@ -53,7 +48,7 @@ const mockSequelize = {
 };
 
 jest.mock('../src/models', () => ({
-  User: mockUserModel,
+  User: { findByPk: jest.fn() },
   Topic: { findByPk: jest.fn() },
   AgentConversation: mockAgentConversationModel,
   AgentMessage: mockAgentMessageModel,
@@ -66,13 +61,8 @@ jest.mock('../src/utils/database', () => ({
 import app from '../src/app';
 
 describe('Agent Conversation API', () => {
-  const mockUser = { id: 'test-user-1', username: 'testuser', role: 'user' };
-  let authToken: string;
-
   beforeEach(() => {
     jest.clearAllMocks();
-    authToken = jwt.sign(mockUser, mockConfig.jwt.secret);
-    mockUserModel.findByPk.mockResolvedValue(mockUser);
   });
 
   describe('GET /api/ai/conversations/:topicId/:agentType', () => {
@@ -81,7 +71,10 @@ describe('Agent Conversation API', () => {
 
       const response = await request(app)
         .get('/api/ai/conversations/topic-1/building')
-        .set('Authorization', `Bearer ${authToken}`);
+        .set('x-user-id', 'test-user-1')
+        .set('x-user-username', 'testuser')
+        .set('x-user-email', 'test@example.com')
+        .set('x-user-role', 'user');
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -96,7 +89,7 @@ describe('Agent Conversation API', () => {
         selected_skills: ['topic-planner'],
         compressed_summary: '## 历史概览\n- 已完成结构规划',
         compressed_summary_version: 1,
-        last_compressed_message_id: 'm-2',
+        first_uncompressed_message_id: 'm-2',
         has_compressed_context: true,
         updatedAt: new Date('2026-04-17T00:00:00Z'),
         get: jest.fn((key: string) => {
@@ -124,18 +117,24 @@ describe('Agent Conversation API', () => {
 
       const response = await request(app)
         .get('/api/ai/conversations/topic-1/building')
-        .set('Authorization', `Bearer ${authToken}`);
+        .set('x-user-id', 'test-user-1')
+        .set('x-user-username', 'testuser')
+        .set('x-user-email', 'test@example.com')
+        .set('x-user-role', 'user');
 
       expect(response.status).toBe(200);
       expect(response.body.data.selectedSkills).toEqual(['topic-planner']);
-      expect(response.body.data.compressedContext.lastCompressedMessageId).toBe('m-2');
+      expect(response.body.data.compressedContext.firstUncompressedMessageId).toBe('m-2');
       expect(response.body.data.messages).toHaveLength(2);
     });
 
     it('rejects invalid agentType', async () => {
       const response = await request(app)
         .get('/api/ai/conversations/topic-1/invalid')
-        .set('Authorization', `Bearer ${authToken}`);
+        .set('x-user-id', 'test-user-1')
+        .set('x-user-username', 'testuser')
+        .set('x-user-email', 'test@example.com')
+        .set('x-user-role', 'user');
 
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
@@ -152,7 +151,7 @@ describe('Agent Conversation API', () => {
         selected_skills: ['topic-planner'],
         compressed_summary: '## 历史概览\n- 已完成结构规划',
         compressed_summary_version: 1,
-        last_compressed_message_id: 'm-2',
+        first_uncompressed_message_id: 'm-2',
         has_compressed_context: true,
         updatedAt: new Date('2026-04-17T00:00:00Z'),
         update: jest.fn().mockResolvedValue(undefined),
@@ -184,13 +183,16 @@ describe('Agent Conversation API', () => {
 
       const response = await request(app)
         .put('/api/ai/conversations/topic-1/building')
-        .set('Authorization', `Bearer ${authToken}`)
+        .set('x-user-id', 'test-user-1')
+        .set('x-user-username', 'testuser')
+        .set('x-user-email', 'test@example.com')
+        .set('x-user-role', 'user')
         .send({
           selectedSkills: ['topic-planner'],
           compressedContext: {
             summary: '## 历史概览\n- 已完成结构规划',
             summaryVersion: 1,
-            lastCompressedMessageId: 'm-2',
+            firstUncompressedMessageId: 'm-2',
             hasCompressedContext: true,
           },
           messages: [
@@ -202,7 +204,7 @@ describe('Agent Conversation API', () => {
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.data.selectedSkills).toEqual(['topic-planner']);
-      expect(response.body.data.compressedContext.lastCompressedMessageId).toBe('m-2');
+      expect(response.body.data.compressedContext.firstUncompressedMessageId).toBe('m-2');
       expect(response.body.data.messages).toHaveLength(2);
     });
 
@@ -215,7 +217,7 @@ describe('Agent Conversation API', () => {
         selected_skills: [],
         compressed_summary: '',
         compressed_summary_version: 1,
-        last_compressed_message_id: null,
+        first_uncompressed_message_id: null,
         has_compressed_context: false,
         updatedAt: new Date('2026-04-17T00:00:00Z'),
         update: jest.fn().mockResolvedValue(undefined),
@@ -230,13 +232,16 @@ describe('Agent Conversation API', () => {
 
       const response = await request(app)
         .put('/api/ai/conversations/topic-1/learning')
-        .set('Authorization', `Bearer ${authToken}`)
+        .set('x-user-id', 'test-user-1')
+        .set('x-user-username', 'testuser')
+        .set('x-user-email', 'test@example.com')
+        .set('x-user-role', 'user')
         .send({
           selectedSkills: [],
           compressedContext: {
             summary: '',
             summaryVersion: 1,
-            lastCompressedMessageId: null,
+            firstUncompressedMessageId: null,
             hasCompressedContext: false,
           },
           messages: [],
@@ -250,7 +255,10 @@ describe('Agent Conversation API', () => {
     it('rejects invalid payload', async () => {
       const response = await request(app)
         .put('/api/ai/conversations/topic-1/building')
-        .set('Authorization', `Bearer ${authToken}`)
+        .set('x-user-id', 'test-user-1')
+        .set('x-user-username', 'testuser')
+        .set('x-user-email', 'test@example.com')
+        .set('x-user-role', 'user')
         .send({
           selectedSkills: 'not-an-array',
         });

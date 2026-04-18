@@ -30,10 +30,28 @@ const initialRunState: AgentRunState = {
 const initialCompressedContext: AgentCompressedContext = {
   summary: '',
   summaryVersion: 1,
-  lastCompressedMessageId: null,
+  firstUncompressedMessageId: null,
   updatedAt: new Date().toISOString(),
   hasCompressedContext: false,
 };
+
+function toPersistedAgentMessage(message: AgentMessage): PersistedAgentMessage {
+  const persistedMessage = message as PersistedAgentMessage;
+
+  return {
+    ...message,
+    id: persistedMessage.id || crypto.randomUUID(),
+    createdAt: persistedMessage.createdAt || new Date().toISOString(),
+  };
+}
+
+function getStoredModel(): string {
+  if (typeof globalThis.localStorage?.getItem !== 'function') {
+    return 'MiniMax-M2.7';
+  }
+
+  return globalThis.localStorage.getItem('agent-model') || 'MiniMax-M2.7';
+}
 
 export const useAgentStore = create<AgentStoreState>((set) => ({
   topicId: null,
@@ -42,10 +60,12 @@ export const useAgentStore = create<AgentStoreState>((set) => ({
   compressedContext: initialCompressedContext,
   visibleMessages: [],
   runState: initialRunState,
-  model: localStorage.getItem('agent-model') || 'MiniMax-M2.7',
+  model: getStoredModel(),
 
   setModel: (model: string) => {
-    localStorage.setItem('agent-model', model);
+    if (typeof globalThis.localStorage?.setItem === 'function') {
+      globalThis.localStorage.setItem('agent-model', model);
+    }
     set({ model });
   },
 
@@ -62,7 +82,7 @@ export const useAgentStore = create<AgentStoreState>((set) => ({
   },
 
   addVisibleMessage: (message) =>
-    set((state) => ({ visibleMessages: [...state.visibleMessages, message as PersistedAgentMessage] })),
+    set((state) => ({ visibleMessages: [...state.visibleMessages, toPersistedAgentMessage(message)] })),
 
   updateLastMessage: (updater) =>
     set((state) => {

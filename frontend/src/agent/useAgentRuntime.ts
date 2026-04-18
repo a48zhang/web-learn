@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { chatWithTools } from '../services/llmApi';
 import { getOpenAITools, executeTool } from './toolRegistry';
 import { useAgentStore } from '../stores/useAgentStore';
@@ -15,26 +15,26 @@ export function useAgentRuntime(options: { topicId: string; agentType: 'building
   const updateLastMessage = useAgentStore((s) => s.updateLastMessage);
   const setRunState = useAgentStore((s) => s.setRunState);
   const clearRunState = useAgentStore((s) => s.clearRunState);
-  const compressedContext = useAgentStore((s) => s.compressedContext);
-  const selectedSkills = useAgentStore((s) => s.selectedSkills);
   const setVisibleMessages = useAgentStore((s) => s.setVisibleMessages);
   const setCompressedContext = useAgentStore((s) => s.setCompressedContext);
   const setSelectedSkills = useAgentStore((s) => s.setSelectedSkills);
 
-  const createAgentSessionContext = (): AgentSessionContext => ({
-    topicId: options.topicId,
-    topicTitle: undefined,
-    selectedSkills,
-    visibleMessages,
-    compressedContext,
-    setSelectedSkills,
-    setVisibleMessages,
-    setCompressedContext,
-  });
+  const agent = useMemo(() => {
+    const context: AgentSessionContext = {
+      topicId: options.topicId,
+      topicTitle: undefined,
+      getSelectedSkills: () => useAgentStore.getState().selectedSkills,
+      getVisibleMessages: () => useAgentStore.getState().visibleMessages,
+      getCompressedContext: () => useAgentStore.getState().compressedContext,
+      setSelectedSkills,
+      setVisibleMessages,
+      setCompressedContext,
+    };
 
-  const agent = options.agentType === 'building'
-    ? new BuildAgent(createAgentSessionContext())
-    : new AskAgent(createAgentSessionContext());
+    return options.agentType === 'building'
+      ? new BuildAgent(context)
+      : new AskAgent(context);
+  }, [options.topicId, options.agentType, setCompressedContext, setSelectedSkills, setVisibleMessages]);
 
   const hydrateConversation = useCallback(async () => {
     try {
@@ -54,7 +54,6 @@ export function useAgentRuntime(options: { topicId: string; agentType: 'building
       internalMessages.push({ role: 'user', content: userMessage });
 
       const openAITools = getOpenAITools();
-
       addVisibleMessage({ role: 'user', content: userMessage } as PersistedAgentMessage);
       setRunState({ isRunning: true, error: null });
 
@@ -74,7 +73,9 @@ export function useAgentRuntime(options: { topicId: string; agentType: 'building
           tools = message.tool_calls!.map(tc => {
             let args = {};
             if ('function' in tc) {
-              try { args = JSON.parse(tc.function.arguments || '{}'); } catch { }
+              try { args = JSON.parse(tc.function.arguments || '{}'); } catch {
+                // Ignore malformed tool arguments in the transient UI payload.
+              }
               return {
                 id: tc.id,
                 name: tc.function.name,

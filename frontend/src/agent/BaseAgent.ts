@@ -21,9 +21,9 @@ import type { RuntimeMessage } from './runtimeMessage';
 export interface AgentSessionContext {
   topicId: string;
   topicTitle?: string;
-  selectedSkills: string[];
-  visibleMessages: PersistedAgentMessage[];
-  compressedContext: AgentCompressedContext;
+  getSelectedSkills(): string[];
+  getVisibleMessages(): PersistedAgentMessage[];
+  getCompressedContext(): AgentCompressedContext;
   setSelectedSkills(skills: string[]): void;
   setVisibleMessages(messages: PersistedAgentMessage[]): void;
   setCompressedContext(context: AgentCompressedContext): void;
@@ -37,7 +37,7 @@ export abstract class BaseAgent {
   buildSystemPrompt(): AIChatMessage {
     return buildSystemPrompt({
       agentType: this.getAgentType(),
-      selectedSkills: this.context.selectedSkills,
+      selectedSkills: this.context.getSelectedSkills(),
       topicTitle: this.context.topicTitle,
     });
   }
@@ -55,17 +55,26 @@ export abstract class BaseAgent {
 
   async persistConversationState(): Promise<void> {
     await this.persistConversation({
-      selectedSkills: this.context.selectedSkills,
-      compressedContext: this.context.compressedContext,
-      messages: this.context.visibleMessages,
+      selectedSkills: this.context.getSelectedSkills(),
+      compressedContext: this.context.getCompressedContext(),
+      messages: this.context.getVisibleMessages(),
     });
   }
 
-  protected isAfterCompressionCursor(message: RuntimeMessage, lastCompressedMessageId: string | null): boolean {
-    if (!lastCompressedMessageId) {
+  protected isAfterCompressionCursor(message: RuntimeMessage, firstUncompressedMessageId: string | null): boolean {
+    if (!firstUncompressedMessageId) {
       return true;
     }
-    return message.id !== lastCompressedMessageId;
+
+    const visibleMessages = this.context.getVisibleMessages() as RuntimeMessage[];
+    const cursorIndex = visibleMessages.findIndex((candidate) => candidate.id === firstUncompressedMessageId);
+
+    if (cursorIndex === -1) {
+      return true;
+    }
+
+    const messageIndex = visibleMessages.findIndex((candidate) => candidate.id === message.id);
+    return messageIndex >= cursorIndex;
   }
 
   protected async requestCompressionSummary(compressionPrompt: string): Promise<string> {
@@ -83,7 +92,10 @@ export abstract class BaseAgent {
   }
 
   async maybeCompressContextBeforeLlmRequest(nextUserInput: string): Promise<void> {
-    const { compressedContext, visibleMessages, selectedSkills, topicTitle } = this.context;
+    const compressedContext = this.context.getCompressedContext();
+    const visibleMessages = this.context.getVisibleMessages();
+    const selectedSkills = this.context.getSelectedSkills();
+    const { topicTitle } = this.context;
     const systemPrompt = this.buildSystemPrompt().content || '';
     const skillPrompt = buildSkillPrompt(selectedSkills);
 
@@ -102,7 +114,7 @@ export abstract class BaseAgent {
     const { recentMessages } = selectRecentWindowGreedy(visibleMessages as RuntimeMessage[]);
     const newlyCompressibleMessages = visibleMessages
       .slice(0, visibleMessages.length - recentMessages.length)
-      .filter((message) => this.isAfterCompressionCursor(message as RuntimeMessage, compressedContext.lastCompressedMessageId))
+      .filter((message) => this.isAfterCompressionCursor(message as RuntimeMessage, compressedContext.firstUncompressedMessageId))
       .map((m) => normalizeHistoricalMessage(m as RuntimeMessage));
 
     if (newlyCompressibleMessages.length === 0) {
@@ -129,7 +141,7 @@ export abstract class BaseAgent {
     const nextCompressedContext: AgentCompressedContext = {
       summary: nextSummary,
       summaryVersion: 1,
-      lastCompressedMessageId: newlyCompressibleMessages.at(-1)?.id ?? compressedContext.lastCompressedMessageId,
+      firstUncompressedMessageId: recentMessages[0]?.id ?? null,
       updatedAt: new Date().toISOString(),
       hasCompressedContext: true,
     };
@@ -140,19 +152,21 @@ export abstract class BaseAgent {
 
   buildLlmMessages(): AIChatMessage[] {
     const messages: AIChatMessage[] = [this.buildSystemPrompt()];
+    const compressedContext = this.context.getCompressedContext();
+    const visibleMessages = this.context.getVisibleMessages();
 
-    if (this.context.compressedContext.hasCompressedContext && this.context.compressedContext.summary) {
+    if (compressedContext.hasCompressedContext && compressedContext.summary) {
       messages.push({
         role: 'system',
         content: [
           '以下是此前较早历史的压缩记忆，请将其视为已确认的长期上下文。',
           '如果它与 recent window 冲突，以 recent window 为准。',
-          this.context.compressedContext.summary,
+          compressedContext.summary,
         ].join('\n\n'),
       });
     }
 
-    for (const message of this.context.visibleMessages) {
+    for (const message of visibleMessages) {
       messages.push({
         role: message.role,
         content: message.content,

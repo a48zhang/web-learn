@@ -51,7 +51,7 @@ export interface PersistedAgentMessage {
 export interface AgentCompressedContext {
   summary: string;
   summaryVersion: number;
-  lastCompressedMessageId: string | null;
+  firstUncompressedMessageId: string | null;
   updatedAt: string;
   hasCompressedContext: boolean;
 }

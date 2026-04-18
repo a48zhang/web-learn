@@ -21,12 +21,17 @@ export default function AgentChatContent({ topicId, agentType }: AgentChatConten
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const hydrateConversationRef = useRef(hydrateConversation);
+
+  useEffect(() => {
+    hydrateConversationRef.current = hydrateConversation;
+  }, [hydrateConversation]);
 
   // Load conversation from backend on mount
   useEffect(() => {
     setSessionContext(topicId, agentType);
-    void hydrateConversation();
-  }, [topicId, agentType, hydrateConversation, setSessionContext]);
+    void hydrateConversationRef.current();
+  }, [topicId, agentType, setSessionContext]);
 
   // Auto-scroll effect
   useEffect(() => {

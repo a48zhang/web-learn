@@ -26,8 +26,8 @@ const validateConversationPayload = (payload: unknown): string | null => {
   if (typeof ctx.summaryVersion !== 'number') {
     return 'compressedContext.summaryVersion must be a number';
   }
-  if (ctx.lastCompressedMessageId !== null && typeof ctx.lastCompressedMessageId !== 'string') {
-    return 'compressedContext.lastCompressedMessageId must be a string or null';
+  if (ctx.firstUncompressedMessageId !== null && typeof ctx.firstUncompressedMessageId !== 'string') {
+    return 'compressedContext.firstUncompressedMessageId must be a string or null';
   }
   if (typeof ctx.hasCompressedContext !== 'boolean') {
     return 'compressedContext.hasCompressedContext must be a boolean';
@@ -83,7 +83,7 @@ export const getConversation = async (req: AuthRequest, res: Response) => {
           compressedContext: {
             summary: '',
             summaryVersion: 1,
-            lastCompressedMessageId: null,
+            firstUncompressedMessageId: null,
             hasCompressedContext: false,
             updatedAt: new Date().toISOString(),
           },
@@ -101,7 +101,7 @@ export const getConversation = async (req: AuthRequest, res: Response) => {
         compressedContext: {
           summary: conversation.compressed_summary,
           summaryVersion: conversation.compressed_summary_version,
-          lastCompressedMessageId: conversation.last_compressed_message_id,
+          firstUncompressedMessageId: conversation.first_uncompressed_message_id,
           hasCompressedContext: conversation.has_compressed_context,
           updatedAt: conversation.updatedAt.toISOString(),
         },
@@ -154,7 +154,7 @@ export const replaceConversation = async (req: AuthRequest, res: Response) => {
             selected_skills: selectedSkills,
             compressed_summary: compressedContext.summary,
             compressed_summary_version: compressedContext.summaryVersion,
-            last_compressed_message_id: compressedContext.lastCompressedMessageId,
+            first_uncompressed_message_id: compressedContext.firstUncompressedMessageId,
             has_compressed_context: compressedContext.hasCompressedContext,
           },
           { transaction }
@@ -165,7 +165,7 @@ export const replaceConversation = async (req: AuthRequest, res: Response) => {
             selected_skills: selectedSkills,
             compressed_summary: compressedContext.summary,
             compressed_summary_version: compressedContext.summaryVersion,
-            last_compressed_message_id: compressedContext.lastCompressedMessageId,
+            first_uncompressed_message_id: compressedContext.firstUncompressedMessageId,
             has_compressed_context: compressedContext.hasCompressedContext,
           },
           { transaction }
@@ -199,7 +199,7 @@ export const replaceConversation = async (req: AuthRequest, res: Response) => {
         compressedContext: {
           summary: conversation.compressed_summary,
           summaryVersion: conversation.compressed_summary_version,
-          lastCompressedMessageId: conversation.last_compressed_message_id,
+          firstUncompressedMessageId: conversation.first_uncompressed_message_id,
           hasCompressedContext: conversation.has_compressed_context,
           updatedAt: conversation.updatedAt.toISOString(),
         },

@@ -9,7 +9,7 @@ interface AgentConversationAttributes {
   selected_skills: string[];
   compressed_summary: string;
   compressed_summary_version: number;
-  last_compressed_message_id: string | null;
+  first_uncompressed_message_id: string | null;
   has_compressed_context: boolean;
   createdAt?: Date;
   updatedAt?: Date;
@@ -18,7 +18,7 @@ interface AgentConversationAttributes {
 interface AgentConversationCreationAttributes
   extends Optional<
     AgentConversationAttributes,
-    'id' | 'selected_skills' | 'compressed_summary' | 'compressed_summary_version' | 'last_compressed_message_id' | 'has_compressed_context'
+    'id' | 'selected_skills' | 'compressed_summary' | 'compressed_summary_version' | 'first_uncompressed_message_id' | 'has_compressed_context'
   > {}
 
 class AgentConversation
@@ -32,7 +32,7 @@ class AgentConversation
   public selected_skills!: string[];
   public compressed_summary!: string;
   public compressed_summary_version!: number;
-  public last_compressed_message_id!: string | null;
+  public first_uncompressed_message_id!: string | null;
   public has_compressed_context!: boolean;
   public declare createdAt: Date;
   public declare updatedAt: Date;
@@ -72,9 +72,10 @@ AgentConversation.init(
       allowNull: false,
       defaultValue: 1,
     },
-    last_compressed_message_id: {
+    first_uncompressed_message_id: {
       type: DataTypes.STRING(64),
       allowNull: true,
+      field: 'last_compressed_message_id',
     },
     has_compressed_context: {
       type: DataTypes.BOOLEAN,

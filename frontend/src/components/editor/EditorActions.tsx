@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useEditorStore } from '../../stores/useEditorStore';
 import { toast } from '../../stores/useToastStore';
 import PublishShareDialog from '../PublishShareDialog';
 import SaveIndicator from './SaveIndicator';
@@ -14,12 +15,16 @@ export default function EditorActions({ topicId, onRefreshPreview, onSave }: Edi
   const [showPublishDialog, setShowPublishDialog] = useState(false);
   const [publishing, setPublishing] = useState(false);
 
+  const getFileCount = () => Object.keys(useEditorStore.getState().getAllFiles()).length;
+
   const handleSave = async () => {
     setSaving(true);
     try {
       const ok = await onSave();
       if (ok) {
         toast.success('保存成功');
+      } else if (getFileCount() === 0) {
+        toast.success('没有可保存的内容');
       } else {
         toast.error('保存失败，文件未同步到云端');
       }
@@ -36,7 +41,11 @@ export default function EditorActions({ topicId, onRefreshPreview, onSave }: Edi
     try {
       const ok = await onSave();
       if (!ok) {
-        toast.error('保存失败，请先解决网络问题');
+        if (getFileCount() === 0) {
+          toast.warning('没有可发布的文件，请先添加内容');
+        } else {
+          toast.error('保存失败，请先解决网络问题');
+        }
         return;
       }
       setShowPublishDialog(true);

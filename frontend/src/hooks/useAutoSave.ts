@@ -74,7 +74,7 @@ export function useAutoSave(topicId: string) {
 
   // 手动保存方法，供顶部按钮调用
   const manualSave = useCallback(async (): Promise<boolean> => {
-    return saveToOSSRef.current(topicId, '手动保存');
+    return saveToOSSRef.current(topicId, '手动保存', { force: true });
   }, [topicId]);
 
   return { save: manualSave };

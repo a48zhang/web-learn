@@ -2,12 +2,14 @@ import { useCallback, useMemo } from 'react';
 import { chatWithTools } from '../services/llmApi';
 import { getOpenAITools, executeTool } from './toolRegistry';
 import { useAgentStore } from '../stores/useAgentStore';
+import { useEditorStore } from '../stores/useEditorStore';
 import { BuildAgent } from './BuildAgent';
 import { AskAgent } from './AskAgent';
 import type { AIChatMessage, PersistedAgentMessage, AgentMessage } from '@web-learn/shared';
 import type { AgentSessionContext } from './BaseAgent';
 
 const MAX_TOOL_LOOPS = 1000;
+const FILE_MUTATION_TOOLS = new Set(['write_file', 'create_file', 'delete_file', 'move_file']);
 
 export function useAgentRuntime(options: { topicId: string; agentType: 'building' | 'learning' }) {
   const visibleMessages = useAgentStore((s) => s.visibleMessages);
@@ -46,6 +48,8 @@ export function useAgentRuntime(options: { topicId: string; agentType: 'building
 
   async function runAgentLoop(userMessage: string, model?: string): Promise<void> {
     try {
+      let didMutateFiles = false;
+
       // Compress context if needed before starting new request
       await agent.maybeCompressContextBeforeLlmRequest(userMessage);
 
@@ -120,6 +124,9 @@ export function useAgentRuntime(options: { topicId: string; agentType: 'building
           try {
             const result = await executeTool(toolName, args);
             resultContent = result.content;
+            if (!result.isError && FILE_MUTATION_TOOLS.has(toolName)) {
+              didMutateFiles = true;
+            }
           } catch (e: any) {
             resultContent = `Error: ${e.message}`;
           }
@@ -145,6 +152,12 @@ export function useAgentRuntime(options: { topicId: string; agentType: 'building
 
       // Persist conversation after successful completion
       await agent.persistConversationState();
+
+      // BuildAgent 成功修改文件后强制上传一次，避免本地快照提前清掉脏标记。
+      if (agent instanceof BuildAgent && didMutateFiles) {
+        const { saveToOSS } = useEditorStore.getState();
+        await saveToOSS(options.topicId, undefined, { force: true });
+      }
 
     } catch (error: unknown) {
       const errorMsg = error instanceof Error ? error.message : 'LLM request failed';

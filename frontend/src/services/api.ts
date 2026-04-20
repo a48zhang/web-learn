@@ -120,10 +120,10 @@ export const topicApi = {
 
 // Topic git operations (clone/push via OSS presigned URLs)
 export const topicGitApi = {
-  getPresign: async (topicId: string, op: 'upload' | 'download' | 'publish'): Promise<{ url: string; method: string; contentType?: string }> => {
+  getPresign: async (topicId: string, op: 'upload' | 'download' | 'publish', commitMessage?: string): Promise<{ url: string; method: string; contentType?: string }> => {
     const response = await api.get<ApiResponse<{ url: string; method: string; contentType?: string }>>(
       `/topics/${topicId}/git/presign`,
-      { params: { op } }
+      { params: { op, commitMessage } }
     );
     return response.data.data!;
   },

@@ -65,7 +65,6 @@ AgentConversation.init(
     compressed_summary: {
       type: DataTypes.TEXT('long'),
       allowNull: false,
-      defaultValue: '',
     },
     compressed_summary_version: {
       type: DataTypes.INTEGER,

@@ -10,7 +10,34 @@ type TableColumn = {
 const normalizeString = (value: string): string =>
   value.toLowerCase().replace(/[`"'\s]/g, '');
 
-const normalizeType = (value: string): string => normalizeString(value);
+const normalizeType = (value: string): string =>
+  value.toLowerCase().replace(/[`"\s]/g, '');
+
+const getEnumValues = (type: unknown): string[] => {
+  if (!type || typeof type !== 'object') {
+    return [];
+  }
+
+  const values = (type as { options?: { values?: unknown[] }; values?: unknown[] }).options?.values
+    ?? (type as { values?: unknown[] }).values;
+
+  if (!Array.isArray(values)) {
+    return [];
+  }
+
+  return values.map((value) => String(value));
+};
+
+const escapeEnumValue = (value: string): string => value.replace(/'/g, "''");
+
+const getExpectedType = (definition: ModelAttributeColumnOptions): string => {
+  const enumValues = getEnumValues(definition.type);
+  if (enumValues.length > 0) {
+    return `ENUM(${enumValues.map((value) => `'${escapeEnumValue(value)}'`).join(',')})`;
+  }
+
+  return String(definition.type);
+};
 
 const parseEnumValues = (typeValue: string): string[] => {
   const matches = typeValue.match(/'([^']+)'/g);
@@ -144,7 +171,7 @@ export const syncSchemaWithDiffCheck = async (
         continue;
       }
 
-      const expectedType = String(expectedDefinition.type);
+      const expectedType = getExpectedType(expectedDefinition);
       if (!typesMatch(expectedType, actualDefinition.type)) {
         driftReasons.push(
           `${rawTableName}.${columnName}: type ${actualDefinition.type} -> ${expectedType}`

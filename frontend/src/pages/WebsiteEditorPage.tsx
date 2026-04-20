@@ -15,10 +15,11 @@ import FileTree from '../components/editor/FileTree';
 import CodeEditor from '../components/editor/CodeEditor';
 import AgentChatContent from '../components/AgentChatContent';
 import AgentPanelHeaderRight from '../components/editor/AgentPanelHeaderRight';
+import PreviewPanelHeaderRight from '../components/editor/PreviewPanelHeaderRight';
 import TerminalPanel from '../components/TerminalPanel';
 import TerminalToggle from '../components/TerminalToggle';
-import PreviewPanel from '../components/editor/PreviewPanel';
-import PreviewPanelHeaderRight from '../components/editor/PreviewPanelHeaderRight';
+// 替换为新的预览面板
+import { PreviewPanel } from '../components/preview/PreviewPanel';
 import { bootWebContainer, useWebContainer } from '../hooks/useWebContainer';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { useEditorStore } from '../stores/useEditorStore';
@@ -179,7 +180,8 @@ function WebsiteEditorPage() {
             {
               id: 'file-tree',
               minSize: 15,
-              defaultSize: 20,
+              maxSize: 40,
+              defaultSize: 25,
               collapsible: true,
               header: (
                 <div className="flex items-center justify-between w-full">
@@ -198,8 +200,9 @@ function WebsiteEditorPage() {
             },
             {
               id: 'agent-chat',
-              minSize: 20,
-              defaultSize: 25,
+              minSize: 30,
+              maxSize: 60,
+              defaultSize: 45,
               collapsible: true,
               header: 'Agent 对话',
               headerRight: <AgentPanelHeaderRight />,
@@ -207,9 +210,10 @@ function WebsiteEditorPage() {
             },
             {
               id: 'preview',
-              minSize: 30,
-              defaultSize: 55,
-              collapsible: false,
+              minSize: 20,
+              maxSize: 50,
+              defaultSize: 30,
+              collapsible: true,
               header: '应用预览',
               headerRight: <PreviewPanelHeaderRight previewUrl={previewUrl} onRefresh={handleRefreshPreview} />,
               content: (
@@ -218,7 +222,7 @@ function WebsiteEditorPage() {
                   isReady={isReady}
                   error={wcError}
                   onRefresh={handleRefreshPreview}
-                  externalReloadKey={previewReloadKey}
+                  reloadKey={previewReloadKey}
                 />
               ),
             },

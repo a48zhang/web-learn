@@ -1,5 +1,12 @@
 import { create } from 'zustand';
 import type { FileTreeNode } from '@web-learn/shared';
+import { topicGitApi } from '../services/api';
+import { createTarball } from '../utils/tarUtils';
+import { toast } from './useToastStore';
+
+interface SaveToOSSOptions {
+  force?: boolean;
+}
 
 interface EditorState {
   files: Record<string, string>;
@@ -10,6 +17,12 @@ interface EditorState {
   isWebContainerReady: boolean;
   hasUnsavedChanges: boolean;
   lastSavedAt: Date | null;
+  lastLocalBackupAt: Date | null;
+  // 预览状态
+  previewMode: 'page' | 'code';
+  setPreviewMode: (mode: 'page' | 'code') => void;
+  activePreviewContent: string | null;
+  setActivePreviewContent: (content: string | null) => void;
   setFileContent: (path: string, content: string) => void;
   openFile: (path: string) => void;
   closeFile: (path: string) => void;
@@ -22,8 +35,12 @@ interface EditorState {
   loadSnapshot: (files: Record<string, string>) => void;
   getAllFiles: () => Record<string, string>;
   getFileTree: () => FileTreeNode[];
+  getChangedFiles: () => string[];
   markSaved: () => void;
   markUnsaved: () => void;
+  backupToLocal: (topicId: string) => void;
+  restoreFromLocalBackup: (topicId: string) => boolean;
+  saveToOSS: (topicId: string, commitMessage?: string, options?: SaveToOSSOptions) => Promise<boolean>;
 }
 
 function buildFileTree(files: Record<string, string>): FileTreeNode[] {
@@ -67,6 +84,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   isWebContainerReady: false,
   hasUnsavedChanges: false,
   lastSavedAt: null,
+  lastLocalBackupAt: null,
+  // 预览状态
+  previewMode: 'page',
+  setPreviewMode: (mode) => set({ previewMode: mode }),
+  activePreviewContent: null,
+  setActivePreviewContent: (content) => set({ activePreviewContent: content }),
 
   setFileContent: (path, content) => {
     set((state) => ({
@@ -156,4 +179,85 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   markSaved: () => set({ hasUnsavedChanges: false, lastSavedAt: new Date() }),
   markUnsaved: () => set({ hasUnsavedChanges: true }),
+
+  getChangedFiles: () => {
+    // 这里可以对比上次保存的文件快照，暂时简化实现：返回所有文件路径
+    // 实际项目中可以维护lastSavedFiles快照来对比
+    return Object.keys(get().files);
+  },
+
+  backupToLocal: (topicId: string) => {
+    try {
+      const files = get().files;
+      const backupData = {
+        files,
+        timestamp: Date.now(),
+      };
+      localStorage.setItem(`local-backup-${topicId}`, JSON.stringify(backupData));
+      set({ lastLocalBackupAt: new Date() });
+    } catch (e) {
+      console.error('Local backup failed:', e);
+    }
+  },
+
+  restoreFromLocalBackup: (topicId: string): boolean => {
+    try {
+      const backupStr = localStorage.getItem(`local-backup-${topicId}`);
+      if (!backupStr) return false;
+      const backupData = JSON.parse(backupStr);
+      get().loadSnapshot(backupData.files);
+      toast.success('已从本地备份恢复数据');
+      return true;
+    } catch (e) {
+      console.error('Restore local backup failed:', e);
+      return false;
+    }
+  },
+
+  saveToOSS: async (topicId: string, commitMessage?: string, options?: SaveToOSSOptions): Promise<boolean> => {
+    const { hasUnsavedChanges, getAllFiles, getChangedFiles, markSaved, backupToLocal } = get();
+    if (!hasUnsavedChanges && !options?.force) return true;
+
+    // 先自动备份到本地
+    backupToLocal(topicId);
+
+    try {
+      // 【已注释】版本冲突检测：获取云端版本号（接口不存在，暂不启用）
+      // const { version: cloudVersion } = await topicGitApi.getVersion(topicId);
+      // 这里可以对比本地版本号，暂时简化实现，实际项目需要维护localVersion
+      // if (localVersion < cloudVersion) {
+      //   // 提示用户选择覆盖/合并/放弃
+      //   useToastStore.getState().error('版本冲突，请选择操作');
+      //   return false;
+      // }
+
+      const files = getAllFiles();
+      if (Object.keys(files).length === 0) return false;
+      
+      // 生成commit信息
+      const changedFiles = getChangedFiles();
+      const defaultCommitMessage = `AI修改: 修改了${changedFiles.join('、')}`;
+      const finalCommitMessage = commitMessage || defaultCommitMessage;
+
+      const tarball = createTarball(files);
+      const { url } = await topicGitApi.getPresign(topicId, 'upload', finalCommitMessage);
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/gzip',
+          'x-ms-blob-type': 'BlockBlob',
+        },
+        body: new Blob([tarball], { type: 'application/gzip' }),
+      });
+      if (!response.ok) throw new Error(`Upload failed: ${response.status}`);
+      
+      markSaved();
+      toast.success('保存成功');
+      return true;
+    } catch (e) {
+      console.error('Save to OSS failed:', e);
+      toast.error('保存失败，请稍后重试');
+      return false;
+    }
+  },
 }));

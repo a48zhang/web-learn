@@ -6,6 +6,7 @@ export { Panel, PanelGroup, PanelResizeHandle };
 export interface PanelConfig {
   id: string;
   minSize: number;
+  maxSize?: number;
   defaultSize?: number;
   collapsible?: boolean;
   header: React.ReactNode;
@@ -36,6 +37,7 @@ export function EditorPanelGroup({ panels, direction = 'horizontal' }: EditorPan
           <Panel
             id={panel.id}
             minSize={panel.minSize}
+            maxSize={panel.maxSize}
             defaultSize={panel.defaultSize}
             collapsible={panel.collapsible}
           >

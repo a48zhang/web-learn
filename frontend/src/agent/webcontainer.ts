@@ -1,12 +1,19 @@
 import { WebContainer } from '@webcontainer/api';
 
 let wcInstance: WebContainer | null = null;
+const fileChangeListeners = new Set<(path: string) => void>();
 
 const WC_PROJECT_DIR = '/home/project';
 
 function wcPath(path: string): string {
   if (path.startsWith('/')) return path;
   return `${WC_PROJECT_DIR}/${path}`;
+}
+
+function emitFileChange(path: string): void {
+  for (const listener of fileChangeListeners) {
+    listener(path);
+  }
 }
 
 export async function getWebContainer(): Promise<WebContainer> {
@@ -39,6 +46,7 @@ export async function wcWriteFile(path: string, content: string): Promise<void> 
     await wc.fs.mkdir(dir, { recursive: true });
   }
   await wc.fs.writeFile(resolved, content);
+  emitFileChange(path);
 }
 
 export async function wcCreateFile(path: string, content = ''): Promise<void> {
@@ -49,6 +57,7 @@ export async function wcCreateFile(path: string, content = ''): Promise<void> {
     await wc.fs.mkdir(dir, { recursive: true });
   }
   await wc.fs.writeFile(resolved, content);
+  emitFileChange(path);
 }
 
 export async function wcDeleteFile(path: string): Promise<void> {
@@ -110,7 +119,7 @@ export async function wcSpawnCommand(
   const timeout = options?.timeout ?? 30000;
 
   if (!SAFE_COMMANDS.has(command)) {
-    throw new Error(`Command "${command}" is not in the allowed command list`);
+    throw new Error(`Command \"${command}\" is not in the allowed command list`);
   }
 
   const process = await wc.spawn(command, args);
@@ -140,4 +149,9 @@ export async function wcSpawnCommand(
     output: output.join(''),
     exitCode,
   };
+}
+
+export function wcOnFileChange(callback: (path: string) => void): () => void {
+  fileChangeListeners.add(callback);
+  return () => fileChangeListeners.delete(callback);
 }

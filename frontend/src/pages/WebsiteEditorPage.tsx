@@ -75,10 +75,8 @@ function WebsiteEditorPage() {
           if (response.ok) {
             const buffer = await response.arrayBuffer();
             const files = await extractTarball(buffer);
-            if (Object.keys(files).length > 0) {
-              loadSnapshot(files);
-              loaded = true;
-            }
+            loadSnapshot(files);
+            loaded = true;
           } else {
             console.warn('[OSS download] Response not OK:', response.status, response.statusText);
           }

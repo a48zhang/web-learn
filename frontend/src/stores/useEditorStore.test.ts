@@ -117,6 +117,21 @@ describe('local recovery snapshots', () => {
     });
   });
 
+  it('falls back to legacy extraction when files is a literal file name', () => {
+    const snapshot = parseLocalRecoverySnapshot(JSON.stringify({
+      files: 'literal file content',
+      'src/app.ts': 'other',
+    }));
+
+    expect(snapshot).toEqual({
+      files: {
+        files: 'literal file content',
+        'src/app.ts': 'other',
+      },
+      timestamp: 0,
+    });
+  });
+
   it('prefers the newest local backup over an older snapshot', () => {
     const getItemMock = vi.mocked(localStorage.getItem);
     getItemMock.mockImplementation((key: string) => {

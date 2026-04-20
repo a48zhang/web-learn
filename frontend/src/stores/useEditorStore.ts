@@ -43,13 +43,13 @@ export function parseLocalRecoverySnapshot(raw: string | null): LocalRecoverySna
 
     if ('files' in parsed) {
       const files = extractFiles(parsed.files);
-      if (!files) return null;
+      if (files) {
+        const timestamp = typeof parsed.timestamp === 'number' && Number.isFinite(parsed.timestamp)
+          ? parsed.timestamp
+          : 0;
 
-      const timestamp = typeof parsed.timestamp === 'number' && Number.isFinite(parsed.timestamp)
-        ? parsed.timestamp
-        : 0;
-
-      return { files, timestamp };
+        return { files, timestamp };
+      }
     }
 
     const files = extractFiles(parsed);

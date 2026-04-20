@@ -156,7 +156,10 @@ export function useAgentRuntime(options: { topicId: string; agentType: 'building
       // BuildAgent 成功修改文件后强制上传一次，避免本地快照提前清掉脏标记。
       if (agent instanceof BuildAgent && didMutateFiles) {
         const { saveToOSS } = useEditorStore.getState();
-        await saveToOSS(options.topicId, undefined, { force: true });
+        const saved = await saveToOSS(options.topicId, undefined, { force: true });
+        if (!saved) {
+          throw new Error('Failed to save build changes to OSS');
+        }
       }
 
     } catch (error: unknown) {

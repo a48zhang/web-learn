@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { FileTreeNode } from '@web-learn/shared';
 import { topicGitApi } from '../services/api';
 import { createTarball } from '../utils/tarUtils';
+import { toast } from './useToastStore';
 
 interface SaveToOSSOptions {
   force?: boolean;

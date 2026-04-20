@@ -8,7 +8,6 @@ const getOpenAIToolsMock = vi.hoisted(() => vi.fn());
 const executeToolMock = vi.hoisted(() => vi.fn());
 const saveToOSSMock = vi.hoisted(() => vi.fn());
 const replaceConversationMock = vi.hoisted(() => vi.fn());
-const originalClearRunState = useAgentStore.getState().clearRunState;
 
 vi.mock('../services/llmApi', () => ({
   chatWithTools: chatWithToolsMock,
@@ -66,7 +65,6 @@ describe('useAgentRuntime', () => {
         currentToolPath: null,
         error: null,
       },
-      clearRunState: originalClearRunState,
       model: 'MiniMax-M2.7',
     });
   });
@@ -106,6 +104,12 @@ describe('useAgentRuntime', () => {
 
     expect(saveToOSSMock).toHaveBeenCalledTimes(1);
     expect(saveToOSSMock).toHaveBeenCalledWith('topic-1', undefined, { force: true });
+    expect(useAgentStore.getState().runState).toEqual({
+      isRunning: false,
+      currentToolName: null,
+      currentToolPath: null,
+      error: null,
+    });
   });
 
   it('surfaces a run error when the forced save fails after a build mutation', async () => {
@@ -133,9 +137,8 @@ describe('useAgentRuntime', () => {
             content: 'done',
           },
         }],
-    });
+      });
     saveToOSSMock.mockResolvedValue(false);
-    useAgentStore.setState({ clearRunState: vi.fn() } as any);
 
     const { result } = renderHook(() => useAgentRuntime({ topicId: 'topic-1', agentType: 'building' }));
 
@@ -144,6 +147,11 @@ describe('useAgentRuntime', () => {
     });
 
     expect(saveToOSSMock).toHaveBeenCalledTimes(1);
-    expect(useAgentStore.getState().runState.error).toBe('Failed to save build changes to OSS');
+    expect(useAgentStore.getState().runState).toEqual({
+      isRunning: false,
+      currentToolName: null,
+      currentToolPath: null,
+      error: 'Failed to save build changes to OSS',
+    });
   });
 });

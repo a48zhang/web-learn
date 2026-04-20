@@ -47,6 +47,7 @@ export function useAgentRuntime(options: { topicId: string; agentType: 'building
   }, [agent]);
 
   async function runAgentLoop(userMessage: string, model?: string): Promise<void> {
+    let encounteredError = false;
     try {
       let didMutateFiles = false;
 
@@ -164,9 +165,17 @@ export function useAgentRuntime(options: { topicId: string; agentType: 'building
 
     } catch (error: unknown) {
       const errorMsg = error instanceof Error ? error.message : 'LLM request failed';
-      setRunState({ error: errorMsg });
+      encounteredError = true;
+      setRunState({
+        isRunning: false,
+        currentToolName: null,
+        currentToolPath: null,
+        error: errorMsg,
+      });
     } finally {
-      clearRunState();
+      if (!encounteredError) {
+        clearRunState();
+      }
     }
   }
 

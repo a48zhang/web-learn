@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { useEditorStore } from './useEditorStore';
+import { getLocalRecoverySnapshot, parseLocalRecoverySnapshot, useEditorStore } from './useEditorStore';
 
 const getPresignMock = vi.hoisted(() => vi.fn());
 const createTarballMock = vi.hoisted(() => vi.fn());
@@ -81,5 +81,66 @@ describe('useEditorStore.saveToOSS', () => {
 
     expect(toastSuccessMock).not.toHaveBeenCalled();
     expect(toastErrorMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('local recovery snapshots', () => {
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', {
+      getItem: vi.fn(),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+      key: vi.fn(),
+      length: 0,
+    });
+  });
+
+  it('parses legacy raw snapshots', () => {
+    const snapshot = parseLocalRecoverySnapshot(JSON.stringify({ 'src/app.ts': 'console.log("legacy");' }));
+
+    expect(snapshot).toEqual({
+      files: { 'src/app.ts': 'console.log("legacy");' },
+      timestamp: 0,
+    });
+  });
+
+  it('parses structured snapshots with timestamps', () => {
+    const snapshot = parseLocalRecoverySnapshot(JSON.stringify({
+      files: { 'src/app.ts': 'console.log("structured");' },
+      timestamp: 123,
+    }));
+
+    expect(snapshot).toEqual({
+      files: { 'src/app.ts': 'console.log("structured");' },
+      timestamp: 123,
+    });
+  });
+
+  it('prefers the newest local backup over an older snapshot', () => {
+    const getItemMock = vi.mocked(localStorage.getItem);
+    getItemMock.mockImplementation((key: string) => {
+      if (key === 'snapshot-topic-1') {
+        return JSON.stringify({
+          files: { 'src/app.ts': 'console.log("snapshot");' },
+          timestamp: 100,
+        });
+      }
+
+      if (key === 'local-backup-topic-1') {
+        return JSON.stringify({
+          files: { 'src/app.ts': 'console.log("backup");' },
+          timestamp: 200,
+        });
+      }
+
+      return null;
+    });
+
+    expect(getLocalRecoverySnapshot('topic-1')).toEqual({
+      files: { 'src/app.ts': 'console.log("backup");' },
+      timestamp: 200,
+      source: 'local-backup',
+    });
   });
 });

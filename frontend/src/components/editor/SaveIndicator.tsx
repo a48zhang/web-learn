@@ -16,7 +16,10 @@ function SaveIndicator({ topicId }: SaveIndicatorProps) {
     const timer = setTimeout(() => {
       const files = getAllFiles();
       try {
-        localStorage.setItem(`snapshot-${topicId}`, JSON.stringify(files));
+        localStorage.setItem(`snapshot-${topicId}`, JSON.stringify({
+          files,
+          timestamp: Date.now(),
+        }));
         markSaved();
       } catch {
         // Auto-save failed silently — user can retry manually

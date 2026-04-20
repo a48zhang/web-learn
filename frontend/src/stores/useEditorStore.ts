@@ -8,6 +8,71 @@ interface SaveToOSSOptions {
   force?: boolean;
 }
 
+interface LocalRecoverySnapshot {
+  files: Record<string, string>;
+  timestamp: number;
+}
+
+export interface LocalRecoverySnapshotWithSource extends LocalRecoverySnapshot {
+  source: 'snapshot' | 'local-backup';
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function extractFiles(value: unknown): Record<string, string> | null {
+  if (!isPlainObject(value)) return null;
+
+  const files: Record<string, string> = {};
+  for (const [path, content] of Object.entries(value)) {
+    if (typeof content === 'string') {
+      files[path] = content;
+    }
+  }
+
+  return Object.keys(files).length > 0 ? files : null;
+}
+
+export function parseLocalRecoverySnapshot(raw: string | null): LocalRecoverySnapshot | null {
+  if (!raw) return null;
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!isPlainObject(parsed)) return null;
+
+    if ('files' in parsed) {
+      const files = extractFiles(parsed.files);
+      if (!files) return null;
+
+      const timestamp = typeof parsed.timestamp === 'number' && Number.isFinite(parsed.timestamp)
+        ? parsed.timestamp
+        : 0;
+
+      return { files, timestamp };
+    }
+
+    const files = extractFiles(parsed);
+    if (!files) return null;
+
+    return { files, timestamp: 0 };
+  } catch {
+    return null;
+  }
+}
+
+export function getLocalRecoverySnapshot(topicId: string): LocalRecoverySnapshotWithSource | null {
+  const snapshot = parseLocalRecoverySnapshot(localStorage.getItem(`snapshot-${topicId}`));
+  const localBackup = parseLocalRecoverySnapshot(localStorage.getItem(`local-backup-${topicId}`));
+
+  if (!snapshot && !localBackup) return null;
+  if (!snapshot) return { ...localBackup, source: 'local-backup' };
+  if (!localBackup) return { ...snapshot, source: 'snapshot' };
+  if (localBackup.timestamp > snapshot.timestamp) return { ...localBackup, source: 'local-backup' };
+
+  return { ...snapshot, source: 'snapshot' };
+}
+
 interface EditorState {
   files: Record<string, string>;
   fileTree: FileTreeNode[];

@@ -22,7 +22,7 @@ import TerminalToggle from '../components/TerminalToggle';
 import { PreviewPanel } from '../components/preview/PreviewPanel';
 import { bootWebContainer, useWebContainer } from '../hooks/useWebContainer';
 import { useAutoSave } from '../hooks/useAutoSave';
-import { useEditorStore } from '../stores/useEditorStore';
+import { getLocalRecoverySnapshot, useEditorStore } from '../stores/useEditorStore';
 
 function WebsiteEditorPage() {
   const { id } = useParams<{ id: string }>();
@@ -88,15 +88,10 @@ function WebsiteEditorPage() {
 
         // Fallback to localStorage cache
         if (!loaded) {
-          const raw = localStorage.getItem(`snapshot-${id}`);
-          if (raw) {
-            const snapshot = JSON.parse(raw);
-            if (snapshot && Object.keys(snapshot).length > 0) {
-              loadSnapshot(snapshot);
-              console.log('[localStorage] Loaded snapshot from cache');
-            } else {
-              console.warn('[localStorage] Cache is empty — editor will start with no files');
-            }
+          const snapshot = getLocalRecoverySnapshot(id);
+          if (snapshot) {
+            loadSnapshot(snapshot.files);
+            console.log(`[localStorage] Loaded ${snapshot.source} recovery snapshot from cache`);
           } else {
             console.warn('[localStorage] No cached snapshot found — editor will start with no files');
           }

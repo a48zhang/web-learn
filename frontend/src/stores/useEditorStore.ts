@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import type { FileTreeNode } from '@web-learn/shared';
 import { topicGitApi } from '../services/api';
 import { createTarball } from '../utils/tarUtils';
-import { toast } from './useToastStore';
 
 interface SaveToOSSOptions {
   force?: boolean;
@@ -252,11 +251,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       if (!response.ok) throw new Error(`Upload failed: ${response.status}`);
       
       markSaved();
-      toast.success('保存成功');
       return true;
     } catch (e) {
       console.error('Save to OSS failed:', e);
-      toast.error('保存失败，请稍后重试');
       return false;
     }
   },

@@ -18,7 +18,11 @@ export default function EditorActions({ topicId, onRefreshPreview, onSave }: Edi
     setSaving(true);
     try {
       const ok = await onSave();
-      toast.success(ok ? '保存成功' : '没有可保存的内容');
+      if (ok) {
+        toast.success('保存成功');
+      } else {
+        toast.error('保存失败，文件未同步到云端');
+      }
     } catch {
       toast.error('保存失败，文件未同步到云端');
     } finally {
@@ -32,7 +36,7 @@ export default function EditorActions({ topicId, onRefreshPreview, onSave }: Edi
     try {
       const ok = await onSave();
       if (!ok) {
-        toast.warning('没有可发布的文件，请先添加内容');
+        toast.error('保存失败，请先解决网络问题');
         return;
       }
       setShowPublishDialog(true);

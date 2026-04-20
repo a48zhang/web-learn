@@ -117,6 +117,18 @@ describe('local recovery snapshots', () => {
     });
   });
 
+  it('preserves empty structured snapshots', () => {
+    const snapshot = parseLocalRecoverySnapshot(JSON.stringify({
+      files: {},
+      timestamp: 123,
+    }));
+
+    expect(snapshot).toEqual({
+      files: {},
+      timestamp: 123,
+    });
+  });
+
   it('falls back to legacy extraction when files is a literal file name', () => {
     const snapshot = parseLocalRecoverySnapshot(JSON.stringify({
       files: 'literal file content',

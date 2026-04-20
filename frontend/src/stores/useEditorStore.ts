@@ -28,10 +28,12 @@ function extractFiles(value: unknown): Record<string, string> | null {
   for (const [path, content] of Object.entries(value)) {
     if (typeof content === 'string') {
       files[path] = content;
+    } else {
+      return null;
     }
   }
 
-  return Object.keys(files).length > 0 ? files : null;
+  return files;
 }
 
 export function parseLocalRecoverySnapshot(raw: string | null): LocalRecoverySnapshot | null {

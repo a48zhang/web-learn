@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import type { Topic } from '@web-learn/shared';
 import { topicApi, topicGitApi } from '../services/api';
 import { extractTarball } from '../utils/tarUtils';
@@ -24,8 +24,14 @@ import { bootWebContainer, useWebContainer } from '../hooks/useWebContainer';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { getLocalRecoverySnapshot, useEditorStore } from '../stores/useEditorStore';
 
+type EditorLocationState = {
+  initialBuildPrompt?: unknown;
+};
+
 function WebsiteEditorPage() {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  const navigate = useNavigate();
   const { setMeta } = useLayoutMeta();
   const { user } = useAuthStore();
   const [topic, setTopic] = useState<Topic | null>(null);
@@ -44,10 +50,17 @@ function WebsiteEditorPage() {
 
   const { openFile, getAllFiles, loadSnapshot, deleteFile } = useEditorStore();
   const { save: autoSave } = useAutoSave(id ?? '');
+  const locationState = location.state as EditorLocationState | null;
+  const initialBuildPrompt =
+    typeof locationState?.initialBuildPrompt === 'string' ? locationState.initialBuildPrompt : undefined;
 
   const handleRefreshPreview = useCallback(() => {
     setPreviewReloadKey((prev) => prev + 1);
   }, []);
+
+  const handleInitialPromptConsumed = useCallback(() => {
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.pathname, navigate]);
 
   // Eager boot — starts WebContainer immediately, independent of topic data
   useEffect(() => {
@@ -199,7 +212,14 @@ function WebsiteEditorPage() {
               collapsible: true,
               header: 'Agent 对话',
               headerRight: <AgentPanelHeaderRight />,
-              content: <AgentChatContent topicId={id ?? ''} agentType="building" />,
+              content: (
+                <AgentChatContent
+                  topicId={id ?? ''}
+                  agentType="building"
+                  initialPrompt={initialBuildPrompt}
+                  onInitialPromptConsumed={handleInitialPromptConsumed}
+                />
+              ),
             },
             {
               id: 'preview',

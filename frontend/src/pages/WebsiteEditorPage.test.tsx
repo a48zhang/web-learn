@@ -1,5 +1,6 @@
-import { render, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { act, render, waitFor } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import WebsiteEditorPage from './WebsiteEditorPage';
 
@@ -16,6 +17,8 @@ const initWebContainerMock = vi.hoisted(() => vi.fn());
 const useAutoSaveMock = vi.hoisted(() => vi.fn());
 const useAuthStoreMock = vi.hoisted(() => vi.fn());
 const useWebContainerMock = vi.hoisted(() => vi.fn());
+const agentChatContentMock = vi.hoisted(() => vi.fn());
+const locationProbeMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../services/api', () => ({
   topicApi: {
@@ -70,8 +73,18 @@ vi.mock('../components/editor/EditorActions', () => ({
 }));
 
 vi.mock('../components/editor/ResizablePanel', () => ({
-  EditorPanelGroup: ({ panels }: { panels: Array<{ id: string }> }) => (
-    <div data-testid="panel-group">{panels.map((panel) => panel.id).join(',')}</div>
+  EditorPanelGroup: ({
+    panels,
+  }: {
+    panels: Array<{ id: string; content?: ReactNode }>;
+  }) => (
+    <div data-testid="panel-group">
+      {panels.map((panel) => (
+        <div key={panel.id} data-panel-id={panel.id}>
+          {panel.content}
+        </div>
+      ))}
+    </div>
   ),
 }));
 
@@ -84,7 +97,10 @@ vi.mock('../components/editor/CodeEditor', () => ({
 }));
 
 vi.mock('../components/AgentChatContent', () => ({
-  default: () => null,
+  default: (props: unknown) => {
+    agentChatContentMock(props);
+    return null;
+  },
 }));
 
 vi.mock('../components/editor/AgentPanelHeaderRight', () => ({
@@ -107,6 +123,12 @@ vi.mock('../components/preview/PreviewPanel', () => ({
   PreviewPanel: () => null,
 }));
 
+function LocationStateProbe() {
+  const location = useLocation();
+  locationProbeMock(location.state);
+  return null;
+}
+
 describe('WebsiteEditorPage', () => {
   beforeEach(() => {
     getByIdMock.mockReset();
@@ -122,6 +144,8 @@ describe('WebsiteEditorPage', () => {
     useAutoSaveMock.mockReset();
     useAuthStoreMock.mockReset();
     useWebContainerMock.mockReset();
+    agentChatContentMock.mockReset();
+    locationProbeMock.mockReset();
 
     getAllFilesMock.mockReturnValue({});
     useAutoSaveMock.mockReturnValue({ save: vi.fn() });
@@ -171,5 +195,54 @@ describe('WebsiteEditorPage', () => {
     });
 
     expect(localStorage.getItem).not.toHaveBeenCalled();
+  });
+
+  it('passes dashboard prompt state into the agent and clears router state after consumption', async () => {
+    getByIdMock.mockResolvedValueOnce({
+      id: 'topic-1',
+      title: '专题',
+      createdBy: '1',
+      editors: [],
+    });
+    getPresignMock.mockRejectedValueOnce(new Error('presign failed'));
+
+    render(
+      <MemoryRouter
+        initialEntries={[
+          { pathname: '/topics/topic-1/edit', state: { initialBuildPrompt: '做一个物理专题' } },
+        ]}
+        future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+      >
+        <LocationStateProbe />
+        <Routes>
+          <Route path="/topics/:id/edit" element={<WebsiteEditorPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(agentChatContentMock).toHaveBeenCalled();
+    });
+
+    expect(agentChatContentMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        topicId: 'topic-1',
+        agentType: 'building',
+        initialPrompt: '做一个物理专题',
+      })
+    );
+
+    const lastCall = agentChatContentMock.mock.calls.at(-1)?.[0] as
+      | { onInitialPromptConsumed?: () => void }
+      | undefined;
+
+    expect(lastCall?.onInitialPromptConsumed).toEqual(expect.any(Function));
+    await act(async () => {
+      lastCall?.onInitialPromptConsumed?.();
+    });
+
+    await waitFor(() => {
+      expect(locationProbeMock).toHaveBeenLastCalledWith(null);
+    });
   });
 });

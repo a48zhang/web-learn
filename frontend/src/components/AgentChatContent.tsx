@@ -33,6 +33,7 @@ export default function AgentChatContent({
   const modelRef = useRef(model);
   const runStateRef = useRef(runState);
   const onInitialPromptConsumedRef = useRef(onInitialPromptConsumed);
+  const [hydratedSessionKey, setHydratedSessionKey] = useState<string | null>(null);
   const consumedPromptKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -57,33 +58,41 @@ export default function AgentChatContent({
 
   useEffect(() => {
     let cancelled = false;
-    const prompt = initialPrompt?.trim();
-    const consumedPromptKey = prompt ? `${topicId}:${agentType}:${prompt}` : null;
+    const sessionKey = `${topicId}:${agentType}`;
 
     setSessionContext(topicId, agentType);
+    setHydratedSessionKey(null);
 
-    const hydrateAndMaybeStart = async () => {
+    const hydrateSession = async () => {
       await hydrateConversationRef.current();
-
-      if (cancelled || !prompt || !consumedPromptKey) {
-        return;
-      }
-
-      if (consumedPromptKeyRef.current === consumedPromptKey || runStateRef.current.isRunning) {
-        return;
-      }
-
-      consumedPromptKeyRef.current = consumedPromptKey;
-      onInitialPromptConsumedRef.current?.();
-      await runAgentLoopRef.current(prompt, modelRef.current);
+      if (cancelled) return;
+      setHydratedSessionKey(sessionKey);
     };
 
-    void hydrateAndMaybeStart();
+    void hydrateSession();
 
     return () => {
       cancelled = true;
     };
-  }, [topicId, agentType, initialPrompt, setSessionContext]);
+  }, [topicId, agentType, setSessionContext]);
+
+  useEffect(() => {
+    const prompt = initialPrompt?.trim();
+    const sessionKey = `${topicId}:${agentType}`;
+    const consumedPromptKey = prompt ? `${sessionKey}:${prompt}` : null;
+
+    if (!prompt || hydratedSessionKey !== sessionKey || !consumedPromptKey) {
+      return;
+    }
+
+    if (consumedPromptKeyRef.current === consumedPromptKey || runStateRef.current.isRunning) {
+      return;
+    }
+
+    consumedPromptKeyRef.current = consumedPromptKey;
+    onInitialPromptConsumedRef.current?.();
+    void runAgentLoopRef.current(prompt, modelRef.current);
+  }, [initialPrompt, hydratedSessionKey, topicId, agentType]);
 
   // Auto-scroll effect
   useEffect(() => {

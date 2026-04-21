@@ -1,15 +1,15 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import DashboardPage from './DashboardPage';
+import DashboardPage, { buildTopicTitleFromPrompt } from './DashboardPage';
 
 const navigateMock = vi.hoisted(() => vi.fn());
+const createTopicMock = vi.hoisted(() => vi.fn());
 const setMetaMock = vi.hoisted(() => vi.fn());
-const authState = vi.hoisted(() => ({
-  user: { username: 'alice', role: 'user' as const },
-}));
 
-vi.mock('../stores/useAuthStore', () => ({
-  useAuthStore: () => authState,
+vi.mock('../services/api', () => ({
+  topicApi: {
+    create: createTopicMock,
+  },
 }));
 
 vi.mock('react-router-dom', async () => {
@@ -27,22 +27,84 @@ vi.mock('../components/layout/LayoutMetaContext', () => ({
 describe('DashboardPage', () => {
   beforeEach(() => {
     navigateMock.mockReset();
+    createTopicMock.mockReset();
     setMetaMock.mockReset();
-    authState.user = { username: 'alice', role: 'user' };
   });
 
-  it('shows dashboard quick actions for topics', () => {
+  it('renders the ai create entry surface and removes the old dashboard blocks', () => {
     render(<DashboardPage />);
 
-    expect(screen.getByText('控制台')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '开始创建' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '想做什么学习专题？' })).toBeInTheDocument();
+    expect(screen.getByLabelText('描述专题需求')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '开始制作' })).toBeDisabled();
+
+    expect(screen.queryByText('创建专题')).not.toBeInTheDocument();
+    expect(screen.queryByText('我的专题')).not.toBeInTheDocument();
+    expect(screen.queryByText('账户设置')).not.toBeInTheDocument();
+    expect(screen.queryByText('最近活动')).not.toBeInTheDocument();
   });
 
-  it('navigates to topics from quick actions', () => {
+  it('builds a topic title from the normalized prompt', () => {
+    expect(buildTopicTitleFromPrompt('  做一个 高中物理专题  ')).toBe('做一个 高中物理专题');
+    expect(buildTopicTitleFromPrompt('123456789012345678901234567890')).toBe('123456789012345678901234567890');
+    expect(buildTopicTitleFromPrompt('1234567890123456789012345678901')).toBe('123456789012345678901234567890...');
+  });
+
+  it('creates a website topic from the normalized prompt and navigates to the editor', async () => {
+    createTopicMock.mockResolvedValueOnce({ id: 'topic-1' });
+
     render(<DashboardPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: '查看专题' }));
+    fireEvent.change(screen.getByLabelText('描述专题需求'), {
+      target: { value: '  做一个 高中物理电磁感应互动专题  ' },
+    });
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '开始制作' })).not.toBeDisabled();
+    });
 
-    expect(navigateMock).toHaveBeenCalledWith('/topics');
+    fireEvent.click(screen.getByRole('button', { name: '开始制作' }));
+
+    await waitFor(() => {
+      expect(createTopicMock).toHaveBeenCalledWith({
+        title: '做一个 高中物理电磁感应互动专题',
+        description: '做一个 高中物理电磁感应互动专题',
+        type: 'website',
+      });
+    });
+
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith('/topics/topic-1/edit', {
+        state: { initialBuildPrompt: '做一个 高中物理电磁感应互动专题' },
+      });
+    });
+  });
+
+  it('does nothing for a blank prompt', () => {
+    render(<DashboardPage />);
+
+    fireEvent.submit(screen.getByRole('form', { name: 'AI 创建专题' }));
+
+    expect(createTopicMock).not.toHaveBeenCalled();
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it('shows an inline error when topic creation fails', async () => {
+    createTopicMock.mockRejectedValueOnce(new Error('服务暂不可用'));
+
+    render(<DashboardPage />);
+
+    fireEvent.change(screen.getByLabelText('描述专题需求'), {
+      target: { value: '  做一个 高中物理电磁感应互动专题  ' },
+    });
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '开始制作' })).not.toBeDisabled();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: '开始制作' }));
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('做一个 高中物理电磁感应互动专题')).toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent('服务暂不可用');
+    });
   });
 });

@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AgentChatContent from './AgentChatContent';
 import type { AgentCompressedContext, AgentRunState } from '@web-learn/shared';
@@ -26,6 +26,54 @@ describe('AgentChatContent hydration', () => {
     useAgentRuntimeMock.mockReset();
     useAgentStoreMock.mockReset();
     Element.prototype.scrollIntoView = vi.fn();
+  });
+
+  it('hydrates once and auto-starts from an initial prompt once for the mounted session', async () => {
+    const hydrateConversation = vi.fn().mockResolvedValue(undefined);
+    const runAgentLoop = vi.fn().mockResolvedValue(undefined);
+    const onInitialPromptConsumed = vi.fn();
+    const setSessionContext = vi.fn();
+
+    useAgentRuntimeMock.mockReturnValue({
+      runAgentLoop,
+      visibleMessages: [],
+      hydrateConversation,
+    });
+
+    useAgentStoreMock.mockImplementation((selector: (state: MockAgentStoreState) => unknown) =>
+      selector({
+        runState: { isRunning: false, currentToolName: null, currentToolPath: null, error: null },
+        model: 'MiniMax-M2.7',
+        compressedContext: { hasCompressedContext: false },
+        setSessionContext,
+      })
+    );
+
+    const { rerender } = render(
+      <AgentChatContent
+        topicId="topic-1"
+        agentType="building"
+        initialPrompt="做一个物理专题"
+        onInitialPromptConsumed={onInitialPromptConsumed}
+      />
+    );
+    rerender(
+      <AgentChatContent
+        topicId="topic-1"
+        agentType="building"
+        initialPrompt="做一个物理专题"
+        onInitialPromptConsumed={onInitialPromptConsumed}
+      />
+    );
+
+    await waitFor(() => {
+      expect(runAgentLoop).toHaveBeenCalledWith('做一个物理专题', 'MiniMax-M2.7');
+    });
+
+    expect(hydrateConversation).toHaveBeenCalledTimes(1);
+    expect(runAgentLoop).toHaveBeenCalledTimes(1);
+    expect(onInitialPromptConsumed).toHaveBeenCalledTimes(1);
+    expect(setSessionContext).toHaveBeenCalledTimes(1);
   });
 
   it('does not re-hydrate when the runtime recreates the hydrate callback on rerender', () => {

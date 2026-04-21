@@ -9,9 +9,16 @@ interface AgentChatContentProps {
   topicId: string;
   agentType: 'building' | 'learning';
   title?: string;
+  initialPrompt?: string;
+  onInitialPromptConsumed?: () => void;
 }
 
-export default function AgentChatContent({ topicId, agentType }: AgentChatContentProps) {
+export default function AgentChatContent({
+  topicId,
+  agentType,
+  initialPrompt,
+  onInitialPromptConsumed,
+}: AgentChatContentProps) {
   const [input, setInput] = useState('');
   const { runAgentLoop, visibleMessages, hydrateConversation } = useAgentRuntime({ topicId, agentType });
   const runState = useAgentStore((s) => s.runState);
@@ -22,16 +29,61 @@ export default function AgentChatContent({ topicId, agentType }: AgentChatConten
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const hydrateConversationRef = useRef(hydrateConversation);
+  const runAgentLoopRef = useRef(runAgentLoop);
+  const modelRef = useRef(model);
+  const runStateRef = useRef(runState);
+  const onInitialPromptConsumedRef = useRef(onInitialPromptConsumed);
+  const consumedPromptKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     hydrateConversationRef.current = hydrateConversation;
   }, [hydrateConversation]);
 
-  // Load conversation from backend on mount
   useEffect(() => {
+    runAgentLoopRef.current = runAgentLoop;
+  }, [runAgentLoop]);
+
+  useEffect(() => {
+    modelRef.current = model;
+  }, [model]);
+
+  useEffect(() => {
+    runStateRef.current = runState;
+  }, [runState]);
+
+  useEffect(() => {
+    onInitialPromptConsumedRef.current = onInitialPromptConsumed;
+  }, [onInitialPromptConsumed]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const prompt = initialPrompt?.trim();
+    const consumedPromptKey = prompt ? `${topicId}:${agentType}:${prompt}` : null;
+
     setSessionContext(topicId, agentType);
-    void hydrateConversationRef.current();
-  }, [topicId, agentType, setSessionContext]);
+
+    const hydrateAndMaybeStart = async () => {
+      await hydrateConversationRef.current();
+
+      if (cancelled || !prompt || !consumedPromptKey) {
+        return;
+      }
+
+      if (consumedPromptKeyRef.current === consumedPromptKey || runStateRef.current.isRunning) {
+        return;
+      }
+
+      consumedPromptKeyRef.current = consumedPromptKey;
+      onInitialPromptConsumedRef.current?.();
+      await runAgentLoopRef.current(prompt, modelRef.current);
+    };
+
+    void hydrateAndMaybeStart();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [topicId, agentType, initialPrompt, setSessionContext]);
 
   // Auto-scroll effect
   useEffect(() => {

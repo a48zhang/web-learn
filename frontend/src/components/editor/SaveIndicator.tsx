@@ -5,29 +5,9 @@ interface SaveIndicatorProps {
   topicId: string;
 }
 
-function SaveIndicator({ topicId }: SaveIndicatorProps) {
-  const { hasUnsavedChanges, lastSavedAt, markSaved, getAllFiles } = useEditorStore();
+function SaveIndicator({ topicId: _topicId }: SaveIndicatorProps) {
+  const { hasUnsavedChanges, lastSavedAt } = useEditorStore();
   const [, setTick] = useState(0);
-
-  // Auto-save to localStorage when changes are made (debounced)
-  useEffect(() => {
-    if (!hasUnsavedChanges) return;
-
-    const timer = setTimeout(() => {
-      const files = getAllFiles();
-      try {
-        localStorage.setItem(`snapshot-${topicId}`, JSON.stringify({
-          files,
-          timestamp: Date.now(),
-        }));
-        markSaved();
-      } catch {
-        // Auto-save failed silently — user can retry manually
-      }
-    }, 3000);
-
-    return () => clearTimeout(timer);
-  }, [hasUnsavedChanges, topicId, getAllFiles, markSaved]);
 
   // Refresh relative time display every 30 seconds
   useEffect(() => {

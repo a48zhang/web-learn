@@ -170,4 +170,24 @@ describe('local recovery snapshots', () => {
       source: 'local-backup',
     });
   });
+
+  it('returns a local backup when no snapshot exists', () => {
+    const getItemMock = vi.mocked(localStorage.getItem);
+    getItemMock.mockImplementation((key: string) => {
+      if (key === 'local-backup-topic-1') {
+        return JSON.stringify({
+          files: { 'src/app.ts': 'console.log("backup only");' },
+          timestamp: 200,
+        });
+      }
+
+      return null;
+    });
+
+    expect(getLocalRecoverySnapshot('topic-1')).toEqual({
+      files: { 'src/app.ts': 'console.log("backup only");' },
+      timestamp: 200,
+      source: 'local-backup',
+    });
+  });
 });

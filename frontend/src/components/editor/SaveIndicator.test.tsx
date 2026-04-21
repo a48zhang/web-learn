@@ -26,23 +26,13 @@ describe('SaveIndicator', () => {
     vi.useRealTimers();
   });
 
-  it('stores a structured snapshot payload with a timestamp', async () => {
+  it('does not clear unsaved changes after local snapshot debounce', async () => {
     render(<SaveIndicator topicId="topic-1" />);
 
     await act(async () => {
       vi.advanceTimersByTime(3000);
     });
 
-    expect(localStorage.setItem).toHaveBeenCalledTimes(1);
-    expect(localStorage.setItem).toHaveBeenCalledWith(
-      'snapshot-topic-1',
-      expect.stringContaining('"files"')
-    );
-
-    const raw = vi.mocked(localStorage.setItem).mock.calls[0]?.[1] ?? '';
-    expect(JSON.parse(raw)).toEqual({
-      files: { 'src/app.ts': 'console.log("hello");' },
-      timestamp: expect.any(Number),
-    });
+    expect(useEditorStore.getState().hasUnsavedChanges).toBe(true);
   });
 });

@@ -68,7 +68,9 @@ export function getLocalRecoverySnapshot(topicId: string): LocalRecoverySnapshot
   const localBackup = parseLocalRecoverySnapshot(localStorage.getItem(`local-backup-${topicId}`));
 
   if (!snapshot && !localBackup) return null;
-  if (!snapshot) return { ...localBackup, source: 'local-backup' };
+  if (!snapshot) {
+    return localBackup ? { ...localBackup, source: 'local-backup' } : null;
+  }
   if (!localBackup) return { ...snapshot, source: 'snapshot' };
   if (localBackup.timestamp > snapshot.timestamp) return { ...localBackup, source: 'local-backup' };
 

@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiArrowRight } from 'react-icons/fi';
 import { topicApi } from '../services/api';
@@ -25,6 +25,7 @@ function DashboardPage() {
   const [prompt, setPrompt] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const creatingRef = useRef(false);
 
   useEffect(() => {
     setMeta({
@@ -43,10 +44,11 @@ function DashboardPage() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!normalizedPrompt || isCreating) {
+    if (!normalizedPrompt || creatingRef.current) {
       return;
     }
 
+    creatingRef.current = true;
     setIsCreating(true);
     setError(null);
 
@@ -63,6 +65,7 @@ function DashboardPage() {
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, '创建专题失败'));
     } finally {
+      creatingRef.current = false;
       setIsCreating(false);
     }
   };

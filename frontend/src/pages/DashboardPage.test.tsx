@@ -79,6 +79,35 @@ describe('DashboardPage', () => {
     });
   });
 
+  it('prevents duplicate create calls while the request is pending', async () => {
+    let resolveCreate: (value: { id: string }) => void = () => undefined;
+    const createPromise = new Promise<{ id: string }>((resolve) => {
+      resolveCreate = resolve;
+    });
+    createTopicMock.mockReturnValueOnce(createPromise);
+
+    render(<DashboardPage />);
+
+    fireEvent.change(screen.getByLabelText('描述专题需求'), {
+      target: { value: '  做一个 高中物理电磁感应互动专题  ' },
+    });
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '开始制作' })).not.toBeDisabled();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: '开始制作' }));
+    fireEvent.click(screen.getByRole('button', { name: '开始制作' }));
+
+    expect(createTopicMock).toHaveBeenCalledTimes(1);
+
+    resolveCreate({ id: 'topic-1' });
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith('/topics/topic-1/edit', {
+        state: { initialBuildPrompt: '做一个 高中物理电磁感应互动专题' },
+      });
+    });
+  });
+
   it('does nothing for a blank prompt', () => {
     render(<DashboardPage />);
 

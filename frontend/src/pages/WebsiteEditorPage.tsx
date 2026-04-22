@@ -233,6 +233,7 @@ function WebsiteEditorPage() {
                     agentType="building"
                     initialPrompt={initialBuildPrompt}
                     onInitialPromptConsumed={handleInitialPromptConsumed}
+                    isWebContainerReady={isReady}
                   />
                 ),
               },

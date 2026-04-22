@@ -11,6 +11,7 @@ interface AgentChatContentProps {
   title?: string;
   initialPrompt?: string;
   onInitialPromptConsumed?: () => void;
+  isWebContainerReady?: boolean;
 }
 
 export default function AgentChatContent({
@@ -18,6 +19,7 @@ export default function AgentChatContent({
   agentType,
   initialPrompt,
   onInitialPromptConsumed,
+  isWebContainerReady = true,
 }: AgentChatContentProps) {
   const [input, setInput] = useState('');
   const { runAgentLoop, visibleMessages, hydrateConversation } = useAgentRuntime({ topicId, agentType });
@@ -81,7 +83,7 @@ export default function AgentChatContent({
     const sessionKey = `${topicId}:${agentType}`;
     const consumedPromptKey = prompt ? `${sessionKey}:${prompt}` : null;
 
-    if (!prompt || hydratedSessionKey !== sessionKey || !consumedPromptKey) {
+    if (!prompt || !isWebContainerReady || hydratedSessionKey !== sessionKey || !consumedPromptKey) {
       return;
     }
 
@@ -107,7 +109,7 @@ export default function AgentChatContent({
 
   const handleSend = async () => {
     const content = input.trim();
-    if (!content || runState.isRunning) return;
+    if (!content || !isReady) return;
     setInput('');
     if (textareaRef.current) {
       textareaRef.current.style.height = '52px';
@@ -247,8 +249,23 @@ export default function AgentChatContent({
     );
   };
 
+  const isReady = isWebContainerReady && !runState.isRunning;
+  const canSend = isReady && input.trim();
+
   return (
     <div className="flex flex-col flex-1 h-full min-h-0 bg-zinc-950 text-zinc-100 font-sans relative">
+      {/* Loading overlay when WebContainer is not ready */}
+      {!isWebContainerReady && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-zinc-950/90 backdrop-blur-sm">
+          <div className="w-12 h-12 rounded-2xl bg-zinc-800/80 border border-white/10 flex items-center justify-center mb-4">
+            <svg className="w-6 h-6 text-zinc-400 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </div>
+          <p className="text-sm text-zinc-400 font-medium">正在初始化工作环境...</p>
+          <p className="text-xs text-zinc-600 mt-1">WebContainer 启动中，请稍候</p>
+        </div>
+      )}
       {/* Header - Glassmorphism */}
 
       {/* Messages Area */}
@@ -355,13 +372,13 @@ export default function AgentChatContent({
             rows={1}
             style={{ height: '52px', minHeight: '52px' }}
             placeholder="描述你想要的更改..."
-            disabled={runState.isRunning}
+            disabled={!isReady}
           />
           <div className="absolute right-[10px] bottom-[10px]">
             <button
               type="button"
               onClick={handleSend}
-              disabled={runState.isRunning || !input.trim()}
+              disabled={!canSend}
               className="w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed bg-blue-600 hover:bg-blue-500 text-white shadow-sm"
               title="发送"
             >

@@ -2,10 +2,12 @@ import { useCallback, useEffect, useRef } from 'react';
 import Editor from '@monaco-editor/react';
 import { useEditorStore } from '../../stores/useEditorStore';
 import { useWebContainer } from '../../hooks/useWebContainer';
+import { useThemeStore } from '../../stores/useThemeStore';
 
 export default function CodeEditor() {
-  const { activeFile, files, setFileContent, openFiles, closeFile, setActiveFile } = useEditorStore();
+  const { activeFile, files, setFileContent } = useEditorStore();
   const { syncFile } = useWebContainer();
+  const { theme } = useThemeStore();
   const isExternalChange = useRef(false);
 
   const handleChange = useCallback(async (value: string | undefined) => {
@@ -32,49 +34,18 @@ export default function CodeEditor() {
   };
 
   if (!activeFile) {
-    return (
-      <div className="h-full flex items-center justify-center bg-zinc-900 text-zinc-500 text-sm">
-        双击文件树中的文件打开编辑器
-      </div>
-    );
+    return null;
   }
 
   const content = files[activeFile] || '';
 
   return (
-    <div className="h-full flex flex-col bg-zinc-900">
-      {/* Tab bar */}
-      <div className="flex items-center bg-zinc-800 border-b border-zinc-700 overflow-x-auto shrink-0">
-        {openFiles.map((path) => {
-          const name = path.split('/').pop() || path;
-          const isActive = path === activeFile;
-          return (
-            <div
-              key={path}
-              className={`flex items-center gap-1 px-3 py-1.5 text-xs cursor-pointer border-r border-zinc-700 shrink-0 ${
-                isActive ? 'bg-zinc-900 text-white' : 'text-zinc-400 hover:bg-zinc-700'
-              }`}
-              onClick={() => setActiveFile(path)}
-            >
-              <span>{name}</span>
-              <button
-                className="ml-1 text-zinc-500 hover:text-white"
-                onClick={(e) => { e.stopPropagation(); closeFile(path); }}
-                aria-label={`关闭 ${name}`}
-              >
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          );
-        })}
-      </div>
+    <div className="h-full flex flex-col bg-white dark:bg-zinc-900 border-t border-gray-200 dark:border-zinc-800">
       {/* Editor */}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 bg-white dark:bg-zinc-900">
         <Editor
           height="100%"
-          theme="vs-dark"
+          theme={theme === 'dark' ? 'vs-dark' : 'light'}
           path={activeFile}
           defaultLanguage={getLanguage(activeFile)}
           value={content}

@@ -48,12 +48,12 @@ export default function TerminalPanel() {
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-20 bg-zinc-900 border-t border-zinc-700"
+      className="relative z-20 bg-zinc-900 border-t border-zinc-700 shrink-0"
       style={{ height: `${height}px` }}
     >
       {/* Resize handle / header */}
       <div
-        className="flex items-center justify-between px-3 py-1 bg-zinc-800 border-b border-zinc-700 cursor-row-resize select-none"
+        className="flex items-center justify-between px-3 py-1 bg-zinc-800 border-b border-zinc-700 cursor-row-resize select-none h-7"
         onMouseDown={handleMouseDown}
       >
         <span className="text-zinc-400 text-xs font-medium">&gt;_ Terminal</span>
@@ -66,7 +66,7 @@ export default function TerminalPanel() {
         </button>
       </div>
       {/* Terminal container */}
-      <div ref={containerRef} className="w-full h-[calc(100%-28px)]" />
+      <div ref={containerRef} className="w-full" style={{ height: 'calc(100% - 28px)' }} />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { PagePreview } from './PagePreview';
-import { CodePreview } from './CodePreview';
+import CodeEditor from '../editor/CodeEditor';
 import { useEditorStore } from '@/stores/useEditorStore';
 import { usePreviewSync } from '@/hooks/usePreviewSync';
 
@@ -12,41 +12,54 @@ interface PreviewPanelProps {
 }
 
 export function PreviewPanel({ previewUrl, isReady, error, onRefresh, reloadKey }: PreviewPanelProps) {
-  const { previewMode, setPreviewMode } = useEditorStore();
+  const { previewMode, setPreviewMode, openFiles, activeFile, setActiveFile, closeFile } = useEditorStore();
 
   // 自动同步预览内容
   usePreviewSync();
 
   return (
-    <div className="h-full flex flex-col border-l border-gray-200 dark:border-gray-800">
-      <div className="px-2 py-1 border-b border-gray-200 dark:border-gray-800">
-        <div className="inline-flex rounded-md bg-gray-100 dark:bg-zinc-900 p-1">
-          <button
-            type="button"
-            onClick={() => setPreviewMode('page')}
-            className={`px-3 py-1 text-sm rounded-sm transition-colors ${
-              previewMode === 'page'
-                ? 'bg-white text-gray-900 shadow-sm dark:bg-zinc-700 dark:text-white'
-                : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+    <div className="h-full flex flex-col bg-white dark:bg-zinc-900 border-l border-gray-200 dark:border-gray-800">
+      {/* Unified Tab bar */}
+      <div className="flex items-center bg-gray-50 dark:bg-zinc-800 overflow-x-auto shrink-0 select-none border-b border-gray-200 dark:border-gray-800">
+        <div
+          className={`flex items-center gap-1 px-4 py-2 text-[13px] cursor-pointer border-r border-gray-200 dark:border-gray-800 border-b-2 shrink-0 transition-colors ${previewMode === 'page'
+              ? 'bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-400 border-b-blue-600 dark:border-b-blue-400'
+              : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-700 border-b-transparent'
             }`}
-          >
-            页面
-          </button>
-          <button
-            type="button"
-            onClick={() => setPreviewMode('code')}
-            className={`px-3 py-1 text-sm rounded-sm transition-colors ${
-              previewMode === 'code'
-                ? 'bg-white text-gray-900 shadow-sm dark:bg-zinc-700 dark:text-white'
-                : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
-            }`}
-          >
-            代码
-          </button>
+          onClick={() => setPreviewMode('page')}
+        >
+          <span>应用预览</span>
         </div>
+        {openFiles.map((path) => {
+          const name = path.split('/').pop() || path;
+          const isActive = previewMode === 'code' && path === activeFile;
+          return (
+            <div
+              key={path}
+              className={`flex items-center gap-2 px-3 py-2 text-[13px] cursor-pointer border-r border-gray-200 dark:border-gray-800 border-b-2 shrink-0 transition-colors group ${isActive
+                  ? 'bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-400 border-b-blue-600 dark:border-b-blue-400'
+                  : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-700 border-b-transparent'
+                }`}
+              onClick={() => {
+                setActiveFile(path);
+                setPreviewMode('code');
+              }}
+            >
+              <span>{name}</span>
+              <button
+                className={`text-gray-400 dark:text-zinc-500 hover:text-gray-800 dark:hover:text-white rounded w-5 h-5 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-zinc-600 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}
+                onClick={(e) => { e.stopPropagation(); closeFile(path); }}
+              >
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          );
+        })}
       </div>
 
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden bg-white dark:bg-zinc-900">
         {previewMode === 'page' ? (
           <PagePreview
             previewUrl={previewUrl}
@@ -56,7 +69,7 @@ export function PreviewPanel({ previewUrl, isReady, error, onRefresh, reloadKey 
             reloadKey={reloadKey}
           />
         ) : (
-          <CodePreview />
+          <CodeEditor />
         )}
       </div>
     </div>

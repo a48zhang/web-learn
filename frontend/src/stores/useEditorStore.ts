@@ -169,13 +169,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   openFile: (path) => {
     set((state) => {
-      if (state.openFiles.includes(path)) {
-        return { activeFile: path };
+      const updates: Partial<typeof state> = { activeFile: path, previewMode: 'code' };
+      if (!state.openFiles.includes(path)) {
+        updates.openFiles = [...state.openFiles, path];
       }
-      return {
-        openFiles: [...state.openFiles, path],
-        activeFile: path,
-      };
+      return updates;
     });
   },
 
@@ -185,7 +183,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const newActiveFile = state.activeFile === path
         ? (newOpenFiles.length > 0 ? newOpenFiles[newOpenFiles.length - 1] : null)
         : state.activeFile;
-      return { openFiles: newOpenFiles, activeFile: newActiveFile };
+
+      const newMode = newActiveFile ? state.previewMode : 'page';
+      return { openFiles: newOpenFiles, activeFile: newActiveFile, previewMode: newMode };
     });
   },
 
@@ -302,7 +302,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
       const files = getAllFiles();
       if (Object.keys(files).length === 0) return false;
-      
+
       // 生成commit信息
       const changedFiles = getChangedFiles();
       const defaultCommitMessage = `AI修改: 修改了${changedFiles.join('、')}`;
@@ -319,7 +319,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         body: new Blob([tarball], { type: 'application/gzip' }),
       });
       if (!response.ok) throw new Error(`Upload failed: ${response.status}`);
-      
+
       markSaved();
       return true;
     } catch (e) {

@@ -116,7 +116,7 @@ export default function FileTree({ onOpenFile, onDeleteFile }: FileTreeProps) {
           <FiPlus size={14} />
         </button>
       </div>
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
         {fileTree.length > 0 ? (
           fileTree.map((node) => (
             <TreeNode key={node.path} node={node} depth={0} onOpenFile={onOpenFile} onDeleteFile={onDeleteFile} />

@@ -1,5 +1,7 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { FiFolder } from 'react-icons/fi';
+// removed ImperativePanelHandle due to version mismatch using any
 import type { Topic } from '@web-learn/shared';
 import { topicApi, topicGitApi } from '../services/api';
 import { extractTarball } from '../utils/tarUtils';
@@ -12,7 +14,6 @@ import { getBaseBreadcrumbs } from '../utils/breadcrumbs';
 import EditorActions from '../components/editor/EditorActions';
 import { EditorPanelGroup } from '../components/editor/ResizablePanel';
 import FileTree from '../components/editor/FileTree';
-import CodeEditor from '../components/editor/CodeEditor';
 import AgentChatContent from '../components/AgentChatContent';
 import AgentPanelHeaderRight from '../components/editor/AgentPanelHeaderRight';
 import PreviewPanelHeaderRight from '../components/editor/PreviewPanelHeaderRight';
@@ -37,8 +38,21 @@ function WebsiteEditorPage() {
   const [topic, setTopic] = useState<Topic | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showEditor, setShowEditor] = useState(false);
   const [previewReloadKey, setPreviewReloadKey] = useState(0);
+
+  const fileTreePanelRef = useRef<any>(null);
+  const [isFileTreeCollapsed, setIsFileTreeCollapsed] = useState(true);
+
+  const toggleFileTree = () => {
+    const panel = fileTreePanelRef.current;
+    if (panel) {
+      if (isFileTreeCollapsed) {
+        panel.expand();
+      } else {
+        panel.collapse();
+      }
+    }
+  };
 
   const {
     isReady,
@@ -141,12 +155,7 @@ function WebsiteEditorPage() {
 
   const handleOpenFile = useCallback((path: string) => {
     openFile(path);
-    setShowEditor(true);
   }, [openFile]);
-
-  const handleCloseEditor = useCallback(() => {
-    setShowEditor(false);
-  }, []);
 
   const handleDeleteFile = useCallback(async (path: string) => {
     try {
@@ -179,72 +188,79 @@ function WebsiteEditorPage() {
   }
 
   return (
-    <div className="min-h-0 h-full flex flex-col bg-[#1e1e1e]">
-      <div className="flex-1 overflow-hidden">
-        <EditorPanelGroup
-          panels={[
-            {
-              id: 'file-tree',
-              minSize: 15,
-              maxSize: 40,
-              defaultSize: 25,
-              collapsible: true,
-              header: (
-                <div className="flex items-center justify-between w-full">
-                  <span>{showEditor ? '代码编辑器' : '文件树'}</span>
-                  {showEditor && (
-                    <button
-                      onClick={handleCloseEditor}
-                      className="text-zinc-400 hover:text-white text-xs"
-                    >
-                      返回文件树
-                    </button>
-                  )}
-                </div>
-              ),
-              content: showEditor ? <CodeEditor /> : <FileTree onOpenFile={handleOpenFile} onDeleteFile={handleDeleteFile} />,
-            },
-            {
-              id: 'agent-chat',
-              minSize: 30,
-              maxSize: 60,
-              defaultSize: 45,
-              collapsible: true,
-              header: 'Agent 对话',
-              headerRight: <AgentPanelHeaderRight />,
-              content: (
-                <AgentChatContent
-                  topicId={id ?? ''}
-                  agentType="building"
-                  initialPrompt={initialBuildPrompt}
-                  onInitialPromptConsumed={handleInitialPromptConsumed}
-                />
-              ),
-            },
-            {
-              id: 'preview',
-              minSize: 20,
-              maxSize: 50,
-              defaultSize: 30,
-              collapsible: true,
-              header: '应用预览',
-              headerRight: <PreviewPanelHeaderRight previewUrl={previewUrl} onRefresh={handleRefreshPreview} />,
-              content: (
-                <PreviewPanel
-                  previewUrl={previewUrl}
-                  isReady={isReady}
-                  error={wcError}
-                  onRefresh={handleRefreshPreview}
-                  reloadKey={previewReloadKey}
-                />
-              ),
-            },
-          ]}
-        />
+    <div className="min-h-0 h-full flex bg-white dark:bg-[#1e1e1e]">
+      {/* NEW: Left Activity Bar */}
+      <div className="w-12 shrink-0 bg-gray-50 dark:bg-[#333333] flex flex-col items-center py-3 z-10 border-r border-gray-200 dark:border-[#2b2b2b]">
+        <button
+          onClick={toggleFileTree}
+          className={`p-2 rounded-md transition-colors ${isFileTreeCollapsed ? 'text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-[#2b2b2b]' : 'text-blue-600 dark:text-white bg-blue-50 dark:bg-[#2b2b2b]'}`}
+          title="文件资源管理器"
+        >
+          <FiFolder size={22} strokeWidth={1.5} />
+        </button>
       </div>
 
-      <TerminalToggle />
-      <TerminalPanel />
+      <div className="flex-1 overflow-hidden flex flex-col">
+        <div className="flex-1 overflow-hidden min-h-0">
+          <EditorPanelGroup
+            panels={[
+              {
+                id: 'file-tree',
+                minSize: '15%',
+                maxSize: '40%',
+                defaultSize: '0%',
+                collapsible: true,
+                onResize: (size) => setIsFileTreeCollapsed(size < 5),
+                panelRef: fileTreePanelRef,
+                header: (
+                  <div className="flex items-center justify-between w-full">
+                    <span>文件资源管理器</span>
+                  </div>
+                ),
+                content: <FileTree onOpenFile={handleOpenFile} onDeleteFile={handleDeleteFile} />,
+              },
+              {
+                id: 'agent-chat',
+                minSize: '20%',
+                maxSize: '60%',
+                defaultSize: '45%',
+                collapsible: true,
+                header: 'Agent 对话',
+                headerRight: <AgentPanelHeaderRight />,
+                content: (
+                  <AgentChatContent
+                    topicId={id ?? ''}
+                    agentType="building"
+                    initialPrompt={initialBuildPrompt}
+                    onInitialPromptConsumed={handleInitialPromptConsumed}
+                  />
+                ),
+              },
+              {
+                id: 'preview',
+                minSize: '20%',
+                maxSize: '80%',
+                defaultSize: '55%',
+                collapsible: true,
+                header: '工作区',
+                headerRight: <PreviewPanelHeaderRight previewUrl={previewUrl} onRefresh={handleRefreshPreview} />,
+                content: (
+                  <PreviewPanel
+                    previewUrl={previewUrl}
+                    isReady={isReady}
+                    error={wcError}
+                    onRefresh={handleRefreshPreview}
+                    reloadKey={previewReloadKey}
+                  />
+                ),
+              },
+            ]}
+          />
+        </div>
+
+        <TerminalToggle />
+        <TerminalPanel />
+      </div>
     </div>
   );
 }

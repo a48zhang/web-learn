@@ -1,9 +1,23 @@
 import axios from 'axios';
 
+export type RouteAuthMode = 'public' | 'optional' | 'required';
+
+export interface RouteQueryAuthRule {
+  when: Record<string, string>;
+  auth: RouteAuthMode;
+}
+
+export interface ServiceRoutePolicy {
+  path: string;
+  methods: string[];
+  auth: RouteAuthMode;
+  queryRules?: RouteQueryAuthRule[];
+}
+
 export interface RegisterRequest {
   name: string;
   url: string;
-  routes: string[];
+  routes: ServiceRoutePolicy[];
   metadata?: {
     version?: string;
     description?: string;
@@ -13,7 +27,7 @@ export interface RegisterRequest {
 export interface ServiceEntry {
   name: string;
   url: string;
-  routes: string[];
+  routes: ServiceRoutePolicy[];
   lastHeartbeat: string;
   registeredAt: string;
 }

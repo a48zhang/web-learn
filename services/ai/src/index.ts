@@ -22,7 +22,10 @@ import './models';
     startHeartbeat({
       name: 'ai',
       url: `http://${serviceHost}:${config.port}`,
-      routes: ['/api/ai'],
+      routes: [
+        { path: '/api/ai/chat/completions', methods: ['POST'], auth: 'required' },
+        { path: '/api/ai/conversations/:topicId/:agentType', methods: ['GET', 'PUT'], auth: 'required' },
+      ],
       metadata: { description: 'AI service' },
     });
   });

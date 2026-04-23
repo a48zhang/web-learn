@@ -44,7 +44,24 @@ import { runMigrations } from './utils/migrate';
     startHeartbeat({
       name: 'topic-space',
       url: `http://${serviceHost}:${config.port}`,
-      routes: ['/api/topics'],
+      routes: [
+        { path: '/api/topics', methods: ['GET'], auth: 'optional' },
+        { path: '/api/topics/:id', methods: ['GET'], auth: 'optional' },
+        {
+          path: '/api/topics/:id/git/presign',
+          methods: ['GET'],
+          auth: 'optional',
+          queryRules: [
+            { when: { op: 'upload' }, auth: 'required' },
+            { when: { op: 'download' }, auth: 'optional' },
+            { when: { op: 'publish' }, auth: 'optional' },
+          ],
+        },
+        { path: '/api/topics', methods: ['POST'], auth: 'required' },
+        { path: '/api/topics/:id', methods: ['PUT'], auth: 'required' },
+        { path: '/api/topics/:id/status', methods: ['PATCH'], auth: 'required' },
+        { path: '/api/topics/:id', methods: ['DELETE'], auth: 'required' },
+      ],
       metadata: { description: 'Topic space service' },
     });
   });

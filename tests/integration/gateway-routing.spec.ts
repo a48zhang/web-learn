@@ -1,5 +1,5 @@
-import { api, authHeader } from '../shared/testClient';
-import { registerUser, loginUser, reset, seed, close } from '../shared/testDb';
+import { api } from '../shared/testClient';
+import { reset, seed, close } from '../shared/testDb';
 
 beforeAll(async () => {
   await reset();
@@ -18,8 +18,8 @@ describe('Gateway Routing', () => {
         password: 'Admin123!',
       });
       expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.token).toBeDefined();
+      expect(res.data.success).toBe(true);
+      expect(res.data.data.token).toBeDefined();
     });
 
     it('routes /api/auth/register to auth service', async () => {
@@ -29,15 +29,15 @@ describe('Gateway Routing', () => {
         password: 'Routing123!',
       });
       expect(res.status).toBe(201);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.token).toBeDefined();
+      expect(res.data.success).toBe(true);
+      expect(res.data.data.token).toBeDefined();
     });
 
     it('routes /api/topics to topic-space service', async () => {
       const res = await api.get('/api/topics');
       expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.data.success).toBe(true);
+      expect(Array.isArray(res.data.data)).toBe(true);
     });
 
     it('returns 404 for unknown routes', async () => {
@@ -50,8 +50,8 @@ describe('Gateway Routing', () => {
     it('preserves status codes from downstream services', async () => {
       const res = await api.get('/health');
       expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.service).toBe('gateway');
+      expect(res.data.success).toBe(true);
+      expect(res.data.service).toBe('gateway');
     });
   });
 });

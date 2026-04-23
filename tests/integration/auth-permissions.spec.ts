@@ -17,7 +17,7 @@ describe('Auth & Permissions', () => {
         title: 'Unauthorized Topic',
       });
       expect(res.status).toBe(401);
-      expect(res.body.success).toBe(false);
+      expect(res.data.success).toBe(false);
     });
 
     it('returns 401 for invalid token', async () => {
@@ -47,7 +47,7 @@ describe('Auth & Permissions', () => {
     it('allows GET /api/topics without authentication', async () => {
       const res = await api.get('/api/topics');
       expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
+      expect(res.data.success).toBe(true);
     });
 
     it('allows GET /api/topics/:id for published topics', async () => {
@@ -56,14 +56,14 @@ describe('Auth & Permissions', () => {
         email: 'admin@test.com',
         password: 'Admin123!',
       });
-      const token = loginRes.body.data.token;
+      const token = loginRes.data.data.token;
 
       const createRes = await api.post(
         '/api/topics',
         { title: 'Public Topic' },
         { headers: headersWithAuth(token) }
       );
-      const topicId = createRes.body.data.id;
+      const topicId = createRes.data.data.id;
 
       // Publish it
       await api.patch(
@@ -75,8 +75,37 @@ describe('Auth & Permissions', () => {
       // Now read without auth
       const res = await api.get(`/api/topics/${topicId}`);
       expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.title).toBe('Public Topic');
+      expect(res.data.success).toBe(true);
+      expect(res.data.data.title).toBe('Public Topic');
+    });
+
+    it('treats invalid token as anonymous access on optional topic detail route', async () => {
+      const loginRes = await api.post('/api/auth/login', {
+        email: 'admin@test.com',
+        password: 'Admin123!',
+      });
+      const token = loginRes.data.data.token;
+
+      const createRes = await api.post(
+        '/api/topics',
+        { title: 'Public Topic With Invalid Token' },
+        { headers: headersWithAuth(token) }
+      );
+      const topicId = createRes.data.data.id;
+
+      await api.patch(
+        `/api/topics/${topicId}/status`,
+        { status: 'published' },
+        { headers: headersWithAuth(token) }
+      );
+
+      const res = await api.get(`/api/topics/${topicId}`, {
+        headers: { Authorization: 'Bearer invalidtoken123' },
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.data.success).toBe(true);
+      expect(res.data.data.title).toBe('Public Topic With Invalid Token');
     });
 
     it('allows POST /api/auth/register without authentication', async () => {
@@ -86,7 +115,7 @@ describe('Auth & Permissions', () => {
         password: 'Newpub123!',
       });
       expect(res.status).toBe(201);
-      expect(res.body.success).toBe(true);
+      expect(res.data.success).toBe(true);
     });
 
     it('allows POST /api/auth/login without authentication', async () => {
@@ -95,7 +124,7 @@ describe('Auth & Permissions', () => {
         password: 'Admin123!',
       });
       expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
+      expect(res.data.success).toBe(true);
     });
   });
 
@@ -110,7 +139,7 @@ describe('Auth & Permissions', () => {
         email: 'admin@test.com',
         password: 'Admin123!',
       });
-      const token = loginRes.body.data.token;
+      const token = loginRes.data.data.token;
 
       const res = await api.post(
         '/api/topics',
@@ -118,8 +147,8 @@ describe('Auth & Permissions', () => {
         { headers: headersWithAuth(token) }
       );
       expect(res.status).toBe(201);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.title).toBe('Auth Topic');
+      expect(res.data.success).toBe(true);
+      expect(res.data.data.title).toBe('Auth Topic');
     });
 
     it('denies topic deletion without auth', async () => {

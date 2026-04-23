@@ -17,7 +17,7 @@ export interface VerifyResponse {
 }
 
 export async function verifyToken(token: string): Promise<VerifyResponse> {
-  const authUrl = getProxyTargetWithoutCounter('/api/auth');
+  const authUrl = getProxyTargetWithoutCounter('/api/auth/login', 'POST');
   if (!authUrl) {
     return { success: false, error: 'Auth service not available' };
   }

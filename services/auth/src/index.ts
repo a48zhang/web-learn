@@ -44,7 +44,12 @@ import { startHeartbeat } from '@web-learn/shared';
     startHeartbeat({
       name: 'auth',
       url: `http://${serviceHost}:${config.port}`,
-      routes: ['/api/auth', '/api/users'],
+      routes: [
+        { path: '/api/auth/login', methods: ['POST'], auth: 'public' },
+        { path: '/api/auth/register', methods: ['POST'], auth: 'public' },
+        { path: '/api/users/me', methods: ['GET', 'PUT'], auth: 'required' },
+        { path: '/api/users/me/change-password', methods: ['POST'], auth: 'required' },
+      ],
       metadata: { description: 'Authentication service' },
     });
   });

@@ -4,7 +4,7 @@ import { createProxyMiddleware } from 'http-proxy-middleware';
 import type { Options } from 'http-proxy-middleware';
 import type * as http from 'http';
 import type { Request } from 'express';
-import type { ServiceEntry } from '@web-learn/shared';
+import type { RouteAuthMode, RouteQueryAuthRule, ServiceEntry } from '@web-learn/shared';
 
 const USER_CONTEXT_HEADERS = ['x-user-id', 'x-user-username', 'x-user-email', 'x-user-role'];
 
@@ -20,12 +20,17 @@ const forwardUserContextHeaders = (proxyReq: http.ClientRequest, req: Request) =
 export const proxyEvents = new EventEmitter();
 
 interface ProxyGroup {
+  path: string;
+  methods: string[];
+  auth: RouteAuthMode;
+  queryRules?: RouteQueryAuthRule[];
   targets: string[];
   proxies: any[];
   counter: number;
+  score: number;
 }
 
-const proxyGroups: Record<string, ProxyGroup> = {};
+const proxyGroups = new Map<string, ProxyGroup>();
 
 let appRef: Application | null = null;
 let dynamicMiddleware: ((req: any, res: any, next: any) => void) | null = null;
@@ -45,36 +50,92 @@ const createProxy = (targetUrl: string) => {
   } as Options);
 };
 
+const normalizePath = (path: string): string => {
+  if (!path || path === '/') return '/';
+  return path.endsWith('/') ? path.slice(0, -1) : path;
+};
+
+const splitPath = (path: string): string[] => normalizePath(path).split('/').filter(Boolean);
+
+const matchesRoutePath = (routePath: string, actualPath: string): boolean => {
+  const routeSegments = splitPath(routePath);
+  const actualSegments = splitPath(actualPath);
+  if (routeSegments.length !== actualSegments.length) return false;
+
+  return routeSegments.every((segment, index) => segment.startsWith(':') || segment === actualSegments[index]);
+};
+
+const routeScore = (path: string): number => {
+  const segments = splitPath(path);
+  const staticSegments = segments.filter((segment) => !segment.startsWith(':')).length;
+  return staticSegments * 100 + segments.length;
+};
+
+const matchesMethod = (group: ProxyGroup, method: string): boolean => group.methods.includes(method.toUpperCase());
+
+const matchQueryValue = (actual: unknown, expected: string): boolean => {
+  if (Array.isArray(actual)) {
+    return actual.includes(expected);
+  }
+  return actual === expected;
+};
+
+const resolveAuthMode = (group: ProxyGroup, query: Request['query']): RouteAuthMode => {
+  for (const rule of group.queryRules ?? []) {
+    const matched = Object.entries(rule.when as Record<string, string>)
+      .every(([key, value]) => matchQueryValue(query[key], value));
+    if (matched) {
+      return rule.auth;
+    }
+  }
+  return group.auth;
+};
+
+const getSortedGroups = (): ProxyGroup[] => (
+  Array.from(proxyGroups.values()).sort((a, b) => b.score - a.score)
+);
+
 const createDynamicMiddleware = () => {
   return (req: any, res: any, next: any) => {
-    const fullPath = req.baseUrl + req.path;
-    const keys = Object.keys(proxyGroups);
-    // Match route prefix
-    for (const route of keys) {
-      if (fullPath.startsWith(route)) {
-        const group = proxyGroups[route];
-        if (group && group.proxies.length > 0) {
-          console.log(`[gateway] proxy match: ${fullPath} -> ${group.targets[group.counter % group.targets.length]}`);
-          const idx = group.counter % group.proxies.length;
-          group.counter++;
-          return group.proxies[idx](req, res, next);
-        }
+    const fullPath = normalizePath(req.baseUrl + req.path);
+
+    for (const group of getSortedGroups()) {
+      if (matchesRoutePath(group.path, fullPath) && matchesMethod(group, req.method) && group.proxies.length > 0) {
+        console.log(`[gateway] proxy match: ${fullPath} ${req.method} -> ${group.targets[group.counter % group.targets.length]}`);
+        const idx = group.counter % group.proxies.length;
+        group.counter++;
+        return group.proxies[idx](req, res, next);
       }
     }
-    console.log(`[gateway] dynamic middleware: no match for ${fullPath}, proxyGroups keys: [${keys.join(', ')}]`);
+    console.log(`[gateway] dynamic middleware: no match for ${fullPath} ${req.method}`);
     return next();
   };
 };
 
-const buildRouteTargets = (services: ServiceEntry[]): Record<string, string[]> => {
-  const routeTargets: Record<string, string[]> = {};
+const buildRouteTargets = (services: ServiceEntry[]): Map<string, ProxyGroup> => {
+  const routeTargets = new Map<string, ProxyGroup>();
   for (const service of services) {
     for (const route of service.routes) {
-      if (!routeTargets[route]) {
-        routeTargets[route] = [];
+      const methods = route.methods.map((method: string) => method.toUpperCase()).sort();
+      const key = `${route.path}|${methods.join(',')}`;
+      const existing = routeTargets.get(key);
+
+      if (!existing) {
+        routeTargets.set(key, {
+          path: route.path,
+          methods,
+          auth: route.auth,
+          queryRules: route.queryRules,
+          targets: [service.url],
+          proxies: [],
+          counter: 0,
+          score: routeScore(route.path),
+        });
+        continue;
       }
-      if (!routeTargets[route].includes(service.url)) {
-        routeTargets[route].push(service.url);
+
+      if (!existing.targets.includes(service.url)) {
+        existing.targets.push(service.url);
       }
     }
   }
@@ -92,11 +153,12 @@ export const registerProxyMiddleware = (app: Application): void => {
 export const mountProxies = (services: ServiceEntry[]): void => {
   const routeTargets = buildRouteTargets(services);
 
-  console.log(`[gateway] mountProxies: received ${services.length} services, ${Object.keys(routeTargets).length} route groups`);
-  for (const [route, urls] of Object.entries(routeTargets) as [string, string[]][]) {
-    console.log(`[gateway]   route: ${route} -> ${urls.join(', ')}`);
-    const proxies = urls.map(createProxy);
-    proxyGroups[route] = { targets: urls, proxies, counter: 0 };
+  proxyGroups.clear();
+  console.log(`[gateway] mountProxies: received ${services.length} services, ${routeTargets.size} route groups`);
+  for (const [key, group] of routeTargets.entries()) {
+    console.log(`[gateway]   route: ${group.path} [${group.methods.join(',')}] -> ${group.targets.join(', ')}`);
+    group.proxies = group.targets.map(createProxy);
+    proxyGroups.set(key, group);
   }
 };
 
@@ -104,34 +166,35 @@ export const updateProxyGroups = (services: ServiceEntry[]): void => {
   const routeTargets = buildRouteTargets(services);
   let newRoutesDetected = false;
 
-  for (const [route, urls] of Object.entries(routeTargets)) {
-    if (!proxyGroups[route]) {
+  for (const key of routeTargets.keys()) {
+    if (!proxyGroups.has(key)) {
       newRoutesDetected = true;
-      console.log(`[gateway] New route ${route} detected, will rebuild dynamic middleware`);
+      console.log(`[gateway] New route ${key} detected, will rebuild dynamic middleware`);
     }
   }
 
-  for (const [route, urls] of Object.entries(routeTargets) as [string, string[]][]) {
-    if (!proxyGroups[route]) {
-      const proxies = urls.map(createProxy);
-      proxyGroups[route] = { targets: urls, proxies, counter: 0 };
+  for (const [key, nextGroup] of routeTargets.entries()) {
+    const currentGroup = proxyGroups.get(key);
+    if (!currentGroup) {
+      nextGroup.proxies = nextGroup.targets.map(createProxy);
+      proxyGroups.set(key, nextGroup);
     } else {
       const urlsChanged =
-        urls.length !== proxyGroups[route].targets.length ||
-        urls.some((u, i) => u !== proxyGroups[route].targets[i]);
+        nextGroup.targets.length !== currentGroup.targets.length ||
+        nextGroup.targets.some((u, i) => u !== currentGroup.targets[i]);
       if (urlsChanged) {
-        proxyGroups[route].targets = urls;
-        proxyGroups[route].proxies = urls.map(createProxy);
-        proxyGroups[route].counter = 0;
-        console.log(`[gateway] Updated proxy group for ${route}: ${urls.length} targets`);
+        currentGroup.targets = nextGroup.targets;
+        currentGroup.proxies = nextGroup.targets.map(createProxy);
+        currentGroup.counter = 0;
+        console.log(`[gateway] Updated proxy group for ${currentGroup.path}: ${nextGroup.targets.length} targets`);
       }
     }
   }
 
-  for (const route of Object.keys(proxyGroups)) {
-    if (!routeTargets[route]) {
-      delete proxyGroups[route];
-      console.log(`[gateway] Removed proxy group for ${route}`);
+  for (const key of Array.from(proxyGroups.keys())) {
+    if (!routeTargets.has(key)) {
+      proxyGroups.delete(key);
+      console.log(`[gateway] Removed proxy group for ${key}`);
     }
   }
 
@@ -141,19 +204,23 @@ export const updateProxyGroups = (services: ServiceEntry[]): void => {
   }
 };
 
-// Used by auth verification (read-only, no side effects)
-export const getProxyTargetWithoutCounter = (route: string): string | undefined => {
-  const group = proxyGroups[route];
-  if (!group || group.targets.length === 0) return undefined;
-  // Return the first target without modifying counter
-  return group.targets[0];
+const findMatchingGroup = (method: string, path: string): ProxyGroup | undefined => (
+  getSortedGroups().find((group) => matchesRoutePath(group.path, normalizePath(path)) && matchesMethod(group, method))
+);
+
+export const findRoutePolicy = (
+  method: string,
+  path: string,
+  query: Request['query'],
+): { auth: RouteAuthMode } | undefined => {
+  const group = findMatchingGroup(method, path);
+  if (!group) return undefined;
+  return { auth: resolveAuthMode(group, query) };
 };
 
-// Used by proxy middleware (with round-robin counter)
-export const getProxyTarget = (route: string): string | undefined => {
-  const group = proxyGroups[route];
+// Used by auth verification (read-only, no side effects)
+export const getProxyTargetWithoutCounter = (path: string, method = 'GET'): string | undefined => {
+  const group = findMatchingGroup(method, path);
   if (!group || group.targets.length === 0) return undefined;
-  const idx = group.counter % group.targets.length;
-  group.counter++;
-  return group.targets[idx];
+  return group.targets[0];
 };

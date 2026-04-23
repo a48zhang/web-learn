@@ -10,4 +10,10 @@ export {
   startHeartbeat,
   stopHeartbeat,
 } from './service-registry';
-export type { RegisterRequest, ServiceEntry } from './service-registry';
+export type {
+  RegisterRequest,
+  ServiceEntry,
+  ServiceRoutePolicy,
+  RouteAuthMode,
+  RouteQueryAuthRule,
+} from './service-registry';

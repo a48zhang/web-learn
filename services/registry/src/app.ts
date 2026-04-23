@@ -2,7 +2,10 @@ import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { ServiceRegistry } from './registry';
+import type { RouteAuthMode, ServiceRoutePolicy } from '@web-learn/shared';
 import type { RegisterRequest } from './registry';
+
+const VALID_AUTH_MODES: readonly RouteAuthMode[] = ['public', 'optional', 'required'];
 
 const globalLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -24,10 +27,35 @@ app.get('/health', (_req: Request, res: Response) => {
   res.json({ success: true, service: 'registry', timestamp: new Date().toISOString() });
 });
 
+const isValidRoutePolicy = (route: unknown): route is ServiceRoutePolicy => {
+  if (!route || typeof route !== 'object') return false;
+  const candidate = route as ServiceRoutePolicy;
+  return (
+    typeof candidate.path === 'string' &&
+    Array.isArray(candidate.methods) &&
+    candidate.methods.every((method) => typeof method === 'string') &&
+    VALID_AUTH_MODES.includes(candidate.auth) &&
+    (
+      candidate.queryRules === undefined ||
+      (
+        Array.isArray(candidate.queryRules) &&
+        candidate.queryRules.every((rule) =>
+          !!rule &&
+          typeof rule === 'object' &&
+          rule.when !== null &&
+          typeof rule.when === 'object' &&
+          Object.values(rule.when).every((value) => typeof value === 'string') &&
+          VALID_AUTH_MODES.includes(rule.auth)
+        )
+      )
+    )
+  );
+};
+
 app.post('/register', (req: Request, res: Response) => {
   const { name, url, routes, metadata } = req.body as RegisterRequest;
-  if (!name || !url || !routes || !Array.isArray(routes)) {
-    return res.status(400).json({ success: false, error: 'Missing required fields: name, url, routes' });
+  if (!name || !url || !Array.isArray(routes) || !routes.every(isValidRoutePolicy)) {
+    return res.status(400).json({ success: false, error: 'Missing or invalid required fields: name, url, routes' });
   }
   const entry = registry.register({ name, url, routes, metadata });
   res.json({ success: true, data: entry });

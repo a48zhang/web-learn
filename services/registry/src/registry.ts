@@ -1,17 +1,11 @@
-export interface RegisterRequest {
-  name: string;
-  url: string;
-  routes: string[];
-  metadata?: {
-    version?: string;
-    description?: string;
-  };
-}
+import type { RouteAuthMode, ServiceRoutePolicy, RegisterRequest } from '@web-learn/shared';
+
+export type { RouteAuthMode, ServiceRoutePolicy, RegisterRequest };
 
 export interface ServiceEntry {
   name: string;
   url: string;
-  routes: string[];
+  routes: ServiceRoutePolicy[];
   metadata?: RegisterRequest['metadata'];
   lastHeartbeat: Date;
   registeredAt: Date;

@@ -9,9 +9,9 @@ const MODELS: Array<{ label: string; id: string; desc: string; logoUrl: string }
     logoUrl: 'https://avatars.githubusercontent.com/u/194880281?v=4'
   },
   {
-    label: 'Qwen 3.6 Plus',
-    id: 'qwen3.6-plus',
-    desc: '通义千问最新版本，长逻辑和编程能力卓越',
+    label: 'Qwen 3',
+    id: 'qwen3',
+    desc: '通义千问推理模型，长逻辑和编程能力卓越',
     logoUrl: 'https://avatars.githubusercontent.com/u/141221163?v=4'
   },
   {

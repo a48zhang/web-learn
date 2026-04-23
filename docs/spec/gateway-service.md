@@ -18,7 +18,7 @@ Gateway 通过 Service Registry 动态发现下游服务，不使用硬编码路
 
 **启动流程：**
 1. 连接 Registry (`REGISTRY_URL`)，最多等待 30 秒
-2. 获取已注册服务列表，为每个服务的路由前缀创建代理
+2. 获取已注册服务列表，为每个服务的 `ServiceRoutePolicy` 路由条目创建代理（分段级匹配，支持 `:param` 参数段）
 3. 每 10 秒轮询 Registry，更新代理组
 
 **负载均衡：** 同一服务的多个实例自动按 round-robin 分发请求。
@@ -32,7 +32,8 @@ Gateway 通过 Service Registry 动态发现下游服务，不使用硬编码路
 **认证与用户上下文注入**
 
 **JWT 验证：**
-- Gateway `authMiddleware` 验证 JWT Bearer Token
+- Gateway `authVerificationMiddleware` 根据服务注册的路由策略（`public`/`optional`/`required`）决定认证行为，替代了旧的硬编码 `publicPaths` 列表
+- 支持 `queryRules`：基于查询参数覆盖认证模式（如 `?op=upload` → `required`）
 - 强制 HS256 算法，防止算法混淆攻击
 - 验证通过后注入用户上下文到请求头
 

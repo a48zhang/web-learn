@@ -51,10 +51,24 @@ In-memory service registry with heartbeat-based liveness detection.
 
 **Registration payload:**
 ```typescript
+type RouteAuthMode = 'public' | 'optional' | 'required';
+
+interface RouteQueryAuthRule {
+  when: Record<string, string>;  // query params to match, e.g. { op: 'upload' }
+  auth: RouteAuthMode;           // override auth mode when query matches
+}
+
+interface ServiceRoutePolicy {
+  path: string;                  // route path with optional params: "/api/topics/:id"
+  methods: string[];             // HTTP methods: ["GET", "POST"]
+  auth: RouteAuthMode;           // auth requirement for this route
+  queryRules?: RouteQueryAuthRule[];  // query-param-based auth overrides
+}
+
 interface RegisterRequest {
   name: string;       // unique service identifier: "auth", "ai", "topic-space"
   url: string;        // service base URL: "http://auth:3001"
-  routes: string[];   // gateway route prefixes: ["/api/auth", "/api/users"]
+  routes: ServiceRoutePolicy[];  // per-route policies with method + auth
   metadata?: {
     version?: string;
     description?: string;
@@ -79,13 +93,24 @@ function stopHeartbeat(): void;
 Replaces hardcoded proxy configuration with dynamic service discovery.
 
 - **Startup:** Poll registry (up to 30s), then build proxies from returned services
+- **Route matching:** Segment-level path matching — route and actual path must have the same number of segments, with static segments requiring exact match and `:param` segments matching any value. Replaces the old `startsWith` prefix matching.
+- **Route scoring:** Routes with more static segments score higher, ensuring `/api/topics/:id/git/presign` matches before `/api/topics/:id`. Groups are sorted by score (most specific first).
 - **Round-robin:** For routes served by multiple instances, cycle through proxy targets
 - **Periodic sync:** Every 10s, refresh registry and update proxy groups
 - **Registry disconnect:** Continue with last known registry state, retry sync
 
+### Auth Policy Enforcement
+
+The gateway auth middleware (`authVerificationMiddleware.ts`) no longer uses hardcoded `publicPaths`/`publicReadPaths` arrays. Instead, it resolves auth behavior per request from the service-reported route policies:
+
+- **`public`:** No auth required, always pass through
+- **`optional`:** Verify token if present; invalid token treated as anonymous access (not rejected)
+- **`required`:** Valid token required; reject with 401 if missing or invalid, 503 if auth service unavailable
+- **`queryRules`:** Query-parameter-based auth overrides (e.g., `?op=download` → `public`, `?op=upload` → `required`)
+
 ### Auth Client Integration
 
-`authClient.ts` no longer reads `AUTH_SERVICE_URL` env var. Instead, it uses the gateway's registry cache to find the auth service URL.
+`authClient.ts` no longer reads `AUTH_SERVICE_URL` env var. Instead, it uses route-matched proxy lookup (`getProxyTargetWithoutCounter`) to find the auth service URL.
 
 ## Constraints
 

@@ -56,7 +56,7 @@ PUT    /api/ai/conversations/:topicId/:agentType - 替换会话状态（需认�
         "parameters": {
           "type": "object",
           "properties": {
-            "topic_id": { "type": "integer", "description": "专题ID" }
+            "topic_id": { "type": "string", "description": "专题ID" }
           },
           "required": ["topic_id"]
         }
@@ -70,7 +70,7 @@ PUT    /api/ai/conversations/:topicId/:agentType - 替换会话状态（需认�
         "parameters": {
           "type": "object",
           "properties": {
-            "topic_id": { "type": "integer", "description": "专题ID" }
+            "topic_id": { "type": "string", "description": "专题ID" }
           },
           "required": ["topic_id"]
         }
@@ -84,7 +84,7 @@ PUT    /api/ai/conversations/:topicId/:agentType - 替换会话状态（需认�
         "parameters": {
           "type": "object",
           "properties": {
-            "topic_id": { "type": "integer", "description": "专题ID" },
+            "topic_id": { "type": "string", "description": "专题ID" },
             "file_path": { "type": "string", "description": "文件路径" }
           },
           "required": ["topic_id", "file_path"]
@@ -99,7 +99,7 @@ PUT    /api/ai/conversations/:topicId/:agentType - 替换会话状态（需认�
         "parameters": {
           "type": "object",
           "properties": {
-            "topic_id": { "type": "integer", "description": "专题ID" },
+            "topic_id": { "type": "string", "description": "专题ID" },
             "keyword": { "type": "string", "description": "搜索关键词" },
             "limit": { "type": "integer", "description": "返回最大条数（默认50，最大200）" },
             "offset": { "type": "integer", "description": "跳过条数（默认0）" }

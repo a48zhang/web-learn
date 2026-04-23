@@ -258,10 +258,10 @@ Response (streaming):
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `files_snapshot` | JSON | 当前文件快照（用于保存和恢复） |
-| `chat_history` | JSON | 对话历史记录 |
 | `published_url` | string | 发布后的外部URL（可选） |
 | `share_link` | string | 分享链接（可选） |
+
+> 注：文件存储使用 Git-on-OSS tarball 方案（`topics/{topicId}.tar.gz`），不再使用数据库 JSON 快照；对话历史由 `ai_agent_conversations` + `ai_agent_messages` 表持久化，不存储在 Topic 模型上。
 
 ---
 

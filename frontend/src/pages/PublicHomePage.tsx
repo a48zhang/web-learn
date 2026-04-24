@@ -30,6 +30,7 @@ const registerSchema = z.object({
 });
 
 type AuthMode = 'login' | 'register';
+type AuthIntent = 'create' | null;
 type LoginFormValues = z.infer<typeof loginSchema>;
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
@@ -56,8 +57,8 @@ function PublicHomePage() {
   } = useAuthStore();
   const [prompt, setPrompt] = useState('');
   const [dialogMode, setDialogMode] = useState<AuthMode | null>(null);
+  const [authIntent, setAuthIntent] = useState<AuthIntent>(null);
   const [queuedPrompt, setQueuedPrompt] = useState<string | null>(null);
-  const [allowAuthenticatedStay, setAllowAuthenticatedStay] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const creatingRef = useRef(false);
@@ -71,10 +72,10 @@ function PublicHomePage() {
   }, [setMeta]);
 
   useEffect(() => {
-    if (isAuthenticated && !allowAuthenticatedStay) {
+    if (isAuthenticated && authIntent !== 'create') {
       navigate('/dashboard', { replace: true });
     }
-  }, [allowAuthenticatedStay, isAuthenticated, navigate]);
+  }, [authIntent, isAuthenticated, navigate]);
 
   const normalizedPrompt = normalizePrompt(prompt);
   const composerDisabled = !normalizedPrompt || isCreating || isAuthLoading;
@@ -106,19 +107,26 @@ function PublicHomePage() {
     }
   };
 
-  const openAuthDialog = (mode: AuthMode, nextQueuedPrompt?: string) => {
+  const openAuthDialog = (
+    mode: AuthMode,
+    intent: AuthIntent = null,
+    nextQueuedPrompt?: string
+  ) => {
     setDialogMode(mode);
+    setAuthIntent(intent);
     setCreateError(null);
-    if (nextQueuedPrompt) {
+    if (intent === 'create' && nextQueuedPrompt) {
       setQueuedPrompt(nextQueuedPrompt);
-      setAllowAuthenticatedStay(true);
+      return;
     }
+
+    setQueuedPrompt(null);
   };
 
   const closeAuthDialog = () => {
     setDialogMode(null);
+    setAuthIntent(null);
     setQueuedPrompt(null);
-    setAllowAuthenticatedStay(false);
   };
 
   const handlePromptSubmit = async () => {
@@ -131,11 +139,12 @@ function PublicHomePage() {
       return;
     }
 
-    openAuthDialog('register', normalizedPrompt);
+    openAuthDialog('register', 'create', normalizedPrompt);
   };
 
   const handleAuthSuccess = async () => {
-    const nextPrompt = queuedPrompt ?? normalizedPrompt;
+    const shouldContinueCreate = authIntent === 'create' && Boolean(queuedPrompt);
+    const nextPrompt = shouldContinueCreate ? queuedPrompt : null;
     setDialogMode(null);
 
     if (nextPrompt) {
@@ -143,6 +152,7 @@ function PublicHomePage() {
       return;
     }
 
+    setAuthIntent(null);
     navigate('/dashboard', { replace: true });
   };
 

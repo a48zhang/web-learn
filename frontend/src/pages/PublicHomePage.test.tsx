@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -5,15 +6,59 @@ import PublicHomePage from './PublicHomePage';
 
 const navigateMock = vi.hoisted(() => vi.fn());
 const createTopicMock = vi.hoisted(() => vi.fn());
-const loginMock = vi.hoisted(() => vi.fn());
-const registerMock = vi.hoisted(() => vi.fn());
 const setMetaMock = vi.hoisted(() => vi.fn());
 const toastSuccessMock = vi.hoisted(() => vi.fn());
 const toastErrorMock = vi.hoisted(() => vi.fn());
-const authState = vi.hoisted(() => ({
-  isAuthenticated: false,
-  isLoading: false,
-}));
+
+type AuthSnapshot = {
+  isAuthenticated: boolean;
+  isLoading: boolean;
+};
+
+const authStore = vi.hoisted(() => {
+  let snapshot: AuthSnapshot = {
+    isAuthenticated: false,
+    isLoading: false,
+  };
+  const listeners = new Set<() => void>();
+  const emit = () => {
+    listeners.forEach((listener) => listener());
+  };
+
+  return {
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    getSnapshot: () => snapshot,
+    reset: () => {
+      snapshot = {
+        isAuthenticated: false,
+        isLoading: false,
+      };
+      emit();
+    },
+    setState: (nextState: Partial<AuthSnapshot>) => {
+      snapshot = {
+        ...snapshot,
+        ...nextState,
+      };
+      emit();
+    },
+  };
+});
+
+const loginMock = vi.hoisted(() =>
+  vi.fn(async () => {
+    authStore.setState({ isAuthenticated: true, isLoading: false });
+  })
+);
+
+const registerMock = vi.hoisted(() =>
+  vi.fn(async () => {
+    authStore.setState({ isAuthenticated: true, isLoading: false });
+  })
+);
 
 vi.mock('../services/api', () => ({
   topicApi: {
@@ -22,11 +67,14 @@ vi.mock('../services/api', () => ({
 }));
 
 vi.mock('../stores/useAuthStore', () => ({
-  useAuthStore: () => ({
-    ...authState,
-    login: loginMock,
-    register: registerMock,
-  }),
+  useAuthStore: () => {
+    const snapshot = useSyncExternalStore(authStore.subscribe, authStore.getSnapshot);
+    return {
+      ...snapshot,
+      login: loginMock,
+      register: registerMock,
+    };
+  },
 }));
 
 vi.mock('../stores/useToastStore', () => ({
@@ -50,12 +98,11 @@ vi.mock('react-router-dom', async () => {
 
 describe('PublicHomePage', () => {
   beforeEach(() => {
-    authState.isAuthenticated = false;
-    authState.isLoading = false;
+    authStore.reset();
     navigateMock.mockReset();
     createTopicMock.mockReset();
-    loginMock.mockReset();
-    registerMock.mockReset();
+    loginMock.mockClear();
+    registerMock.mockClear();
     setMetaMock.mockReset();
     toastSuccessMock.mockReset();
     toastErrorMock.mockReset();
@@ -93,10 +140,7 @@ describe('PublicHomePage', () => {
     expect(navigateMock).not.toHaveBeenCalled();
   });
 
-  it('continues topic creation after successful auth and navigates to the editor with the prompt', async () => {
-    registerMock.mockImplementation(async () => {
-      authState.isAuthenticated = true;
-    });
+  it('continues topic creation after successful auth without redirecting to dashboard first', async () => {
     createTopicMock.mockResolvedValueOnce({ id: 'topic-1' });
 
     render(
@@ -138,10 +182,45 @@ describe('PublicHomePage', () => {
       });
     });
 
+    expect(navigateMock).not.toHaveBeenCalledWith('/dashboard', { replace: true });
+
     await waitFor(() => {
       expect(navigateMock).toHaveBeenCalledWith('/topics/topic-1/edit', {
         state: { initialBuildPrompt: '做一个 中国古代史互动专题' },
       });
     });
+  });
+
+  it('does not create a topic when header auth succeeds without create intent', async () => {
+    render(
+      <MemoryRouter>
+        <PublicHomePage />
+      </MemoryRouter>
+    );
+
+    fireEvent.change(screen.getByLabelText('描述专题需求'), {
+      target: { value: '做一个不会自动创建的专题' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '登录' }));
+
+    const dialog = await screen.findByRole('dialog', { name: '登录对话框' });
+
+    fireEvent.change(screen.getByLabelText('邮箱地址'), {
+      target: { value: 'tester@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText('密码'), {
+      target: { value: 'password123' },
+    });
+    fireEvent.click(within(dialog).getByRole('button', { name: '登录' }));
+
+    await waitFor(() => {
+      expect(loginMock).toHaveBeenCalledWith('tester@example.com', 'password123');
+    });
+
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith('/dashboard', { replace: true });
+    });
+
+    expect(createTopicMock).not.toHaveBeenCalled();
   });
 });

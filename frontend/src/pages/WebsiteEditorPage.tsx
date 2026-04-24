@@ -24,6 +24,7 @@ import { PreviewPanel } from '../components/preview/PreviewPanel';
 import { bootWebContainer, useWebContainer } from '../hooks/useWebContainer';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { getLocalRecoverySnapshot, useEditorStore } from '../stores/useEditorStore';
+import { reactSeed } from '../templates/reactSeed';
 
 type EditorLocationState = {
   initialBuildPrompt?: unknown;
@@ -62,7 +63,7 @@ function WebsiteEditorPage() {
     deleteFile: deleteFileWC,
   } = useWebContainer();
 
-  const { openFile, getAllFiles, loadSnapshot, deleteFile } = useEditorStore();
+  const { openFile, getAllFiles, loadSnapshot, deleteFile, saveToOSS } = useEditorStore();
   const { save: autoSave } = useAutoSave(id ?? '');
   const locationState = location.state as EditorLocationState | null;
   const initialBuildPrompt =
@@ -118,7 +119,14 @@ function WebsiteEditorPage() {
             loadSnapshot(snapshot.files);
             console.log(`[localStorage] Loaded ${snapshot.source} recovery snapshot from cache`);
           } else {
-            console.warn('[localStorage] No cached snapshot found — editor will start with no files');
+            // Both OSS and local recovery are empty — seed the built-in React scaffold
+            console.log('[seed] No OSS or local files found — loading React seed scaffold');
+            loadSnapshot(reactSeed);
+            // Persist the seed to OSS once (fire-and-forget; useAutoSave backs up to
+            // localStorage if this fails, and the next manual/build-agent save will retry)
+            saveToOSS(id, 'Initial project scaffold', { force: true }).catch((e) => {
+              console.warn('[seed] Failed to persist seed to OSS (will retry on next save):', e);
+            });
           }
         }
 
@@ -144,7 +152,7 @@ function WebsiteEditorPage() {
     return () => {
       setMeta({ topBarRightSlot: undefined });
     };
-  }, [id, setMeta, loadSnapshot, handleRefreshPreview]);
+  }, [id, setMeta, loadSnapshot, saveToOSS, handleRefreshPreview]);
 
   // Initialize WebContainer once topic is loaded
   useEffect(() => {

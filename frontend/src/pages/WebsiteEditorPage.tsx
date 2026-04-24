@@ -40,6 +40,7 @@ function WebsiteEditorPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [previewReloadKey, setPreviewReloadKey] = useState(0);
+  const seededRef = useRef<string | null>(null);
 
   const fileTreePanelRef = useRef<any>(null);
   const [isFileTreeCollapsed, setIsFileTreeCollapsed] = useState(true);
@@ -118,9 +119,10 @@ function WebsiteEditorPage() {
           if (snapshot) {
             loadSnapshot(snapshot.files);
             console.log(`[localStorage] Loaded ${snapshot.source} recovery snapshot from cache`);
-          } else {
+          } else if (seededRef.current !== id) {
             // Both OSS and local recovery are empty — seed the built-in React scaffold
             console.log('[seed] No OSS or local files found — loading React seed scaffold');
+            seededRef.current = id;
             loadSnapshot(reactSeed);
             // Persist the seed to OSS once (fire-and-forget; useAutoSave backs up to
             // localStorage if this fails, and the next manual/build-agent save will retry)

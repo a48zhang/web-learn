@@ -15,6 +15,12 @@ const BUILDING_BASE_PROMPT = `你是 Web Learn 专题构建助手。你的职责
 - 确保代码完整可运行
 - 注重用户体验和交互设计
 
+工作区说明：
+- 工作区（/home/project）已包含一个基础的 React 18 + TypeScript + Vite 脚手架
+- 已存在的文件包括：package.json、index.html、tsconfig.json、vite.config.ts 以及 src/* 目录下的源文件
+- 优先编辑已有文件，而非重新创建项目结构或配置
+- 仅在用户需求明确需要时才修改 package.json、vite.config.ts 或 tsconfig.json（例如添加新依赖）
+
 工作流程：
 1. 理解需求
 2. 规划结构（如果用户需要）

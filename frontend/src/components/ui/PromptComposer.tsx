@@ -30,6 +30,7 @@ export default function PromptComposer({
           aria-label={textareaLabel}
           value={value}
           onChange={(event) => onChange(event.target.value)}
+          disabled={disabled}
           className="min-h-28 w-full resize-none bg-transparent text-base text-slate-100 outline-none placeholder:text-slate-500 sm:text-lg"
           placeholder={placeholder}
         />

@@ -39,4 +39,19 @@ describe('PromptComposer', () => {
     expect(onChange).toHaveBeenCalledWith('revise landing hero');
     expect(onSubmit).toHaveBeenCalledTimes(1);
   });
+
+  it('disables both the textarea and submit button when disabled', () => {
+    render(
+      <PromptComposer
+        value="locked"
+        onChange={vi.fn()}
+        onSubmit={vi.fn()}
+        submitLabel="发送"
+        disabled
+      />
+    );
+
+    expect(screen.getByLabelText('描述你的需求')).toBeDisabled();
+    expect(screen.getByRole('button', { name: '发送' })).toBeDisabled();
+  });
 });

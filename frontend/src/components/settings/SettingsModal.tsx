@@ -21,75 +21,29 @@ const tabs: { id: ActiveTab; label: string }[] = [
 
 export default function SettingsModal({ isOpen, onClose, triggerRef }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<ActiveTab>('profile');
-  const modalRef = useRef<HTMLDivElement>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
 
-  // Reset active tab and focus when modal opens
+  // Reset active tab when modal opens.
   useEffect(() => {
     if (isOpen) {
       setActiveTab('profile');
-      // Focus the close button after a tick so the modal is in the DOM
-      requestAnimationFrame(() => closeBtnRef.current?.focus());
     }
   }, [isOpen]);
 
-  // Restore focus on close
   const handleClose = useCallback(() => {
     onClose();
-    // Restore focus to the element that opened the modal
-    if (triggerRef?.current) {
-      requestAnimationFrame(() => triggerRef.current?.focus());
-    }
-  }, [onClose, triggerRef]);
-
-  // Close on escape key
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        handleClose();
-      }
-    };
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [isOpen, handleClose]);
-
-  // Trap focus inside modal
-  useEffect(() => {
-    if (!isOpen || !modalRef.current) return;
-
-    const handleTabKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Tab') return;
-
-      const focusable = modalRef.current!.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
-      if (focusable.length === 0) return;
-
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-
-      if (e.shiftKey) {
-        if (document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        }
-      } else {
-        if (document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    };
-
-    document.addEventListener('keydown', handleTabKey);
-    return () => document.removeEventListener('keydown', handleTabKey);
-  }, [isOpen]);
+  }, [onClose]);
 
   if (!isOpen) return null;
 
   return (
-    <ModalFrame onClose={handleClose} ariaLabelledBy="settings-modal-title">
-      <SurfaceCard ref={modalRef} className="w-full max-w-md overflow-hidden">
+    <ModalFrame
+      onClose={handleClose}
+      ariaLabelledBy="settings-modal-title"
+      initialFocusRef={closeBtnRef}
+      restoreFocusRef={triggerRef}
+    >
+      <SurfaceCard className="w-full max-w-md overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-4 py-4">
           <h2 id="settings-modal-title" className="text-lg font-semibold text-slate-50">账户设置</h2>

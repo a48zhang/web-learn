@@ -4,9 +4,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import LoginPage from './LoginPage';
 
 const loginMock = vi.hoisted(() => vi.fn());
+const navigateMock = vi.hoisted(() => vi.fn());
 const successMock = vi.hoisted(() => vi.fn());
 const errorMock = vi.hoisted(() => vi.fn());
 const authState = vi.hoisted(() => ({ isLoading: false }));
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+
+  return {
+    ...actual,
+    useNavigate: () => navigateMock,
+  };
+});
 
 vi.mock('../stores/useAuthStore', () => ({
   useAuthStore: () => ({
@@ -25,31 +35,27 @@ vi.mock('../stores/useToastStore', () => ({
 describe('LoginPage', () => {
   beforeEach(() => {
     loginMock.mockReset();
+    navigateMock.mockReset();
     successMock.mockReset();
     errorMock.mockReset();
     authState.isLoading = false;
   });
 
-  it('renders a standalone login form inside the shared auth card', () => {
-    const { container } = render(
+  it('renders the login form with the register cross-link', () => {
+    render(
       <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <LoginPage />
       </MemoryRouter>
     );
 
-    expect(container.firstChild).toHaveClass('bg-slate-950');
-    expect(screen.getByText('Web Learn Account')).toBeInTheDocument();
-    expect(screen.getByText('登录后继续学习与创作')).toBeInTheDocument();
-
-    const heading = screen.getByRole('heading', { name: '登录您的账户', level: 1 });
-    const authCard = heading.closest('div[class*="glass-surface"]');
-
-    expect(authCard).toHaveClass('glass-surface', 'rounded-panel', 'shadow-panel');
-    expect(authCard).toContainElement(screen.getByRole('link', { name: '注册新账户' }));
-    expect(authCard).toContainElement(screen.getByRole('button', { name: '登录' }).closest('form'));
+    expect(screen.getByRole('heading', { name: '登录您的账户', level: 1 })).toBeInTheDocument();
+    expect(screen.getByLabelText('邮箱地址')).toBeInTheDocument();
+    expect(screen.getByLabelText('密码')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '注册新账户' })).toHaveAttribute('href', '/register');
+    expect(screen.getByRole('button', { name: '登录' })).toBeEnabled();
   });
 
-  it('uses a dark spinner color while loading', () => {
+  it('shows a disabled loading state while auth is in progress', () => {
     authState.isLoading = true;
 
     render(
@@ -58,10 +64,10 @@ describe('LoginPage', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByRole('button', { name: '登录中...' }).querySelector('svg')).toHaveClass('text-slate-950');
+    expect(screen.getByRole('button', { name: '登录中...' })).toBeDisabled();
   });
 
-  it('submits credentials and shows success feedback', async () => {
+  it('submits credentials, shows success feedback, and navigates to dashboard', async () => {
     loginMock.mockResolvedValue(undefined);
 
     render(
@@ -79,6 +85,7 @@ describe('LoginPage', () => {
     });
     expect(successMock).toHaveBeenCalledWith('登录成功！');
     expect(errorMock).not.toHaveBeenCalled();
+    expect(navigateMock).toHaveBeenCalledWith('/dashboard');
   });
 
   it('shows backend error feedback when login fails', async () => {
@@ -106,5 +113,6 @@ describe('LoginPage', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('邮箱或密码错误');
     expect(errorMock).toHaveBeenCalledWith('邮箱或密码错误');
     expect(successMock).not.toHaveBeenCalled();
+    expect(navigateMock).not.toHaveBeenCalled();
   });
 });

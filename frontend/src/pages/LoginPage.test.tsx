@@ -38,6 +38,8 @@ describe('LoginPage', () => {
     );
 
     expect(container.firstChild).toHaveClass('bg-slate-950');
+    expect(screen.getByText('Web Learn Account')).toBeInTheDocument();
+    expect(screen.getByText('登录后继续学习与创作')).toBeInTheDocument();
 
     const heading = screen.getByRole('heading', { name: '登录您的账户', level: 1 });
     const authCard = heading.closest('div[class*="glass-surface"]');
@@ -101,6 +103,7 @@ describe('LoginPage', () => {
     await waitFor(() => {
       expect(screen.getByText('邮箱或密码错误')).toBeInTheDocument();
     });
+    expect(screen.getByRole('alert')).toHaveTextContent('邮箱或密码错误');
     expect(errorMock).toHaveBeenCalledWith('邮箱或密码错误');
     expect(successMock).not.toHaveBeenCalled();
   });

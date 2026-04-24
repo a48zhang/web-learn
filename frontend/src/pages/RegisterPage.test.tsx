@@ -38,6 +38,8 @@ describe('RegisterPage', () => {
     );
 
     expect(container.firstChild).toHaveClass('bg-slate-950');
+    expect(screen.getByText('Join Web Learn')).toBeInTheDocument();
+    expect(screen.getByText('创建账户，直接开始使用')).toBeInTheDocument();
 
     const heading = screen.getByRole('heading', { name: '创建新账户', level: 1 });
     const authCard = heading.closest('div[class*="glass-surface"]');
@@ -124,6 +126,7 @@ describe('RegisterPage', () => {
     await waitFor(() => {
       expect(screen.getByText('邮箱已被使用')).toBeInTheDocument();
     });
+    expect(screen.getByRole('alert')).toHaveTextContent('邮箱已被使用');
     expect(errorMock).toHaveBeenCalledWith('邮箱已被使用');
     expect(successMock).not.toHaveBeenCalled();
   });

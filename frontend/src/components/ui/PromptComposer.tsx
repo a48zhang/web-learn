@@ -6,6 +6,8 @@ interface PromptComposerProps {
   onSubmit: () => void;
   disabled?: boolean;
   submitLabel: string;
+  textareaLabel?: string;
+  placeholder?: string;
   className?: string;
   cardClassName?: string;
 }
@@ -16,6 +18,8 @@ export default function PromptComposer({
   onSubmit,
   disabled = false,
   submitLabel,
+  textareaLabel = '描述你的需求',
+  placeholder = '描述你想完成的内容...',
   className = '',
   cardClassName = '',
 }: PromptComposerProps) {
@@ -23,11 +27,11 @@ export default function PromptComposer({
     <div className={`mx-auto flex w-full justify-center px-4 sm:px-6 ${className}`.trim()}>
       <SurfaceCard className={`w-full max-w-3xl p-4 sm:p-5 ${cardClassName}`.trim()}>
         <textarea
-          aria-label="描述专题需求"
+          aria-label={textareaLabel}
           value={value}
           onChange={(event) => onChange(event.target.value)}
           className="min-h-28 w-full resize-none bg-transparent text-base text-slate-100 outline-none placeholder:text-slate-500 sm:text-lg"
-          placeholder="描述你想制作的专题..."
+          placeholder={placeholder}
         />
         <div className="mt-3 flex justify-end">
           <button

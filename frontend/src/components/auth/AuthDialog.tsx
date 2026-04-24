@@ -19,8 +19,8 @@ export default function AuthDialog({ isOpen, mode, onClose, children }: AuthDial
   }
 
   return (
-    <ModalFrame onClose={onClose}>
-      <div data-auth-mode={mode} aria-label={`${modeLabels[mode]}对话框`}>
+    <ModalFrame onClose={onClose} ariaLabel={`${modeLabels[mode]}对话框`}>
+      <div data-auth-mode={mode}>
         {children}
       </div>
     </ModalFrame>

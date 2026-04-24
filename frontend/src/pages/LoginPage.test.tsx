@@ -35,8 +35,12 @@ describe('LoginPage', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByTestId('auth-form-card')).toBeInTheDocument();
-    expect(screen.getByTestId('auth-form-card')).toHaveTextContent('登录您的账户');
+    const heading = screen.getByRole('heading', { name: '登录您的账户', level: 1 });
+    const authCard = heading.closest('div[class*="glass-surface"]');
+
+    expect(authCard).toHaveClass('glass-surface', 'rounded-panel', 'shadow-panel');
+    expect(authCard).toContainElement(screen.getByRole('link', { name: '注册新账户' }));
+    expect(authCard).toContainElement(screen.getByRole('button', { name: '登录' }).closest('form'));
   });
 
   it('submits credentials and shows success feedback', async () => {

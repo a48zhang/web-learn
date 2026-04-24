@@ -9,7 +9,7 @@ interface AuthFormCardProps {
 
 export default function AuthFormCard({ title, subtitle, children }: AuthFormCardProps) {
   return (
-    <SurfaceCard className="w-full max-w-md p-6 sm:p-8" data-testid="auth-form-card">
+    <SurfaceCard className="w-full max-w-md p-6 sm:p-8">
       <div className="mb-6 space-y-2 text-center">
         <h1 className="font-display text-3xl font-bold tracking-tight text-slate-50">{title}</h1>
         <div className="text-sm text-slate-400">{subtitle}</div>

@@ -9,6 +9,8 @@ const getPresignMock = vi.hoisted(() => vi.fn());
 const extractTarballMock = vi.hoisted(() => vi.fn());
 const setMetaMock = vi.hoisted(() => vi.fn());
 const loadSnapshotMock = vi.hoisted(() => vi.fn());
+const saveToOSSMock = vi.hoisted(() => vi.fn());
+const getLocalRecoverySnapshotMock = vi.hoisted(() => vi.fn());
 const getAllFilesMock = vi.hoisted(() => vi.fn());
 const openFileMock = vi.hoisted(() => vi.fn());
 const deleteFileMock = vi.hoisted(() => vi.fn());
@@ -19,6 +21,13 @@ const useAuthStoreMock = vi.hoisted(() => vi.fn());
 const useWebContainerMock = vi.hoisted(() => vi.fn());
 const agentChatContentMock = vi.hoisted(() => vi.fn());
 const locationProbeMock = vi.hoisted(() => vi.fn());
+
+const mockReactSeed = vi.hoisted(() =>
+  Object.freeze({
+    'package.json': '{}',
+    'src/App.tsx': 'export default function App() {}',
+  })
+);
 
 vi.mock('../services/api', () => ({
   topicApi: {
@@ -42,13 +51,18 @@ vi.mock('../stores/useAuthStore', () => ({
 }));
 
 vi.mock('../stores/useEditorStore', () => ({
-  getLocalRecoverySnapshot: vi.fn(),
+  getLocalRecoverySnapshot: getLocalRecoverySnapshotMock,
   useEditorStore: () => ({
     openFile: openFileMock,
     getAllFiles: getAllFilesMock,
     loadSnapshot: loadSnapshotMock,
     deleteFile: deleteFileMock,
+    saveToOSS: saveToOSSMock,
   }),
+}));
+
+vi.mock('../templates/reactSeed', () => ({
+  reactSeed: mockReactSeed,
 }));
 
 vi.mock('../hooks/useWebContainer', () => ({
@@ -136,6 +150,8 @@ describe('WebsiteEditorPage', () => {
     extractTarballMock.mockReset();
     setMetaMock.mockReset();
     loadSnapshotMock.mockReset();
+    saveToOSSMock.mockReset().mockResolvedValue(undefined);
+    getLocalRecoverySnapshotMock.mockReset();
     getAllFilesMock.mockReset();
     openFileMock.mockReset();
     deleteFileMock.mockReset();
@@ -243,6 +259,149 @@ describe('WebsiteEditorPage', () => {
 
     await waitFor(() => {
       expect(locationProbeMock).toHaveBeenLastCalledWith(null);
+    });
+  });
+
+  it('seeds with reactSeed when OSS download fails and no local recovery snapshot exists', async () => {
+    getByIdMock.mockResolvedValueOnce({
+      id: 'topic-seed',
+      title: 'New Topic',
+      createdBy: '1',
+      editors: [],
+    });
+    getPresignMock.mockRejectedValueOnce(new Error('presign failed'));
+    getLocalRecoverySnapshotMock.mockReturnValueOnce(undefined);
+    saveToOSSMock.mockResolvedValueOnce(undefined);
+
+    render(
+      <MemoryRouter
+        initialEntries={['/topics/topic-seed/edit']}
+        future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+      >
+        <Routes>
+          <Route path="/topics/:id/edit" element={<WebsiteEditorPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(loadSnapshotMock).toHaveBeenCalledWith(mockReactSeed);
+    });
+
+    expect(saveToOSSMock).toHaveBeenCalledWith('topic-seed', 'Initial project scaffold', {
+      force: true,
+    });
+  });
+
+  it('skips seed when OSS files exist', async () => {
+    const ossFiles = { 'src/existing.ts': 'content' };
+    getByIdMock.mockResolvedValueOnce({
+      id: 'topic-oss',
+      title: 'Existing Topic',
+      createdBy: '1',
+      editors: [],
+    });
+    getPresignMock.mockResolvedValueOnce({ url: 'https://example.com/download.tgz' });
+    extractTarballMock.mockResolvedValueOnce(ossFiles);
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      arrayBuffer: async () => new ArrayBuffer(0),
+    } as Response);
+
+    render(
+      <MemoryRouter
+        initialEntries={['/topics/topic-oss/edit']}
+        future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+      >
+        <Routes>
+          <Route path="/topics/:id/edit" element={<WebsiteEditorPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(loadSnapshotMock).toHaveBeenCalledWith(ossFiles);
+    });
+
+    expect(loadSnapshotMock).not.toHaveBeenCalledWith(mockReactSeed);
+    expect(saveToOSSMock).not.toHaveBeenCalled();
+  });
+
+  it('skips seed when local recovery snapshot exists', async () => {
+    const localFiles = { 'src/local.ts': 'content' };
+    getByIdMock.mockResolvedValueOnce({
+      id: 'topic-local',
+      title: 'Local Topic',
+      createdBy: '1',
+      editors: [],
+    });
+    getPresignMock.mockRejectedValueOnce(new Error('presign failed'));
+    getLocalRecoverySnapshotMock.mockReturnValueOnce({
+      files: localFiles,
+      timestamp: 123,
+      source: 'auto',
+    });
+
+    render(
+      <MemoryRouter
+        initialEntries={['/topics/topic-local/edit']}
+        future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+      >
+        <Routes>
+          <Route path="/topics/:id/edit" element={<WebsiteEditorPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(loadSnapshotMock).toHaveBeenCalledWith(localFiles);
+    });
+
+    expect(loadSnapshotMock).not.toHaveBeenCalledWith(mockReactSeed);
+    expect(saveToOSSMock).not.toHaveBeenCalled();
+  });
+
+  it('passes initialBuildPrompt to AgentChatContent after seed bootstrap', async () => {
+    getByIdMock.mockResolvedValueOnce({
+      id: 'topic-seed-prompt',
+      title: 'Seed Prompt Topic',
+      createdBy: '1',
+      editors: [],
+    });
+    getPresignMock.mockRejectedValueOnce(new Error('presign failed'));
+    getLocalRecoverySnapshotMock.mockReturnValueOnce(undefined);
+    saveToOSSMock.mockResolvedValueOnce(undefined);
+
+    render(
+      <MemoryRouter
+        initialEntries={[
+          {
+            pathname: '/topics/topic-seed-prompt/edit',
+            state: { initialBuildPrompt: 'build a portfolio site' },
+          },
+        ]}
+        future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+      >
+        <Routes>
+          <Route path="/topics/:id/edit" element={<WebsiteEditorPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    // Verify seed was applied
+    await waitFor(() => {
+      expect(loadSnapshotMock).toHaveBeenCalledWith(mockReactSeed);
+    });
+
+    // Verify the prompt still reaches AgentChatContent in the seed bootstrap scenario
+    await waitFor(() => {
+      expect(agentChatContentMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          topicId: 'topic-seed-prompt',
+          agentType: 'building',
+          initialPrompt: 'build a portfolio site',
+        })
+      );
     });
   });
 });

@@ -1,173 +1,536 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { topicApi } from '../services/api';
 import { useAuthStore } from '../stores/useAuthStore';
-import type { Topic } from '@web-learn/shared';
-import { LoadingOverlay } from '../components/Loading';
+import { toast } from '../stores/useToastStore';
+import { getApiErrorMessage } from '../utils/errors';
 import { useLayoutMeta } from '../components/layout/LayoutMetaContext';
+import PromptComposer from '../components/ui/PromptComposer';
+import AuthDialog from '../components/auth/AuthDialog';
+import AuthFormCard from '../components/auth/AuthFormCard';
+
+const MAX_TOPIC_TITLE_CHARS = 30;
+
+const loginSchema = z.object({
+  email: z.string().email('请输入有效的邮箱地址'),
+  password: z.string().min(6, '密码至少需要6个字符'),
+});
+
+const registerSchema = z.object({
+  username: z.string().min(2, '用户名至少需要2个字符'),
+  email: z.string().email('请输入有效的邮箱地址'),
+  password: z.string().min(6, '密码至少需要6个字符'),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: '两次输入的密码不一致',
+  path: ['confirmPassword'],
+});
+
+type AuthMode = 'login' | 'register';
+type LoginFormValues = z.infer<typeof loginSchema>;
+type RegisterFormValues = z.infer<typeof registerSchema>;
+
+const normalizePrompt = (prompt: string) => prompt.replace(/\s+/g, ' ').trim();
+
+const buildTopicTitleFromPrompt = (prompt: string) => {
+  const normalizedPrompt = normalizePrompt(prompt);
+  const characters = Array.from(normalizedPrompt);
+  if (characters.length <= MAX_TOPIC_TITLE_CHARS) {
+    return normalizedPrompt;
+  }
+
+  return `${characters.slice(0, MAX_TOPIC_TITLE_CHARS).join('')}...`;
+};
 
 function PublicHomePage() {
-  const { isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
   const { setMeta } = useLayoutMeta();
-  const [topics, setTopics] = useState<Topic[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    isAuthenticated,
+    isLoading: isAuthLoading,
+    login,
+    register,
+  } = useAuthStore();
+  const [prompt, setPrompt] = useState('');
+  const [dialogMode, setDialogMode] = useState<AuthMode | null>(null);
+  const [queuedPrompt, setQueuedPrompt] = useState<string | null>(null);
+  const [allowAuthenticatedStay, setAllowAuthenticatedStay] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const creatingRef = useRef(false);
 
   useEffect(() => {
     setMeta({
-      pageTitle: 'WebLearn - 互动式学习平台',
+      pageTitle: 'WebLearn',
       breadcrumbSegments: [],
       sideNavSlot: null,
     });
   }, [setMeta]);
 
   useEffect(() => {
-    const fetchTopics = async () => {
-      try {
-        const data = await topicApi.getAll();
-        setTopics(data.filter(t => t.status === 'published').slice(0, 6));
-      } catch {
-        // Silently fail — page still shows hero section
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchTopics();
-  }, []);
+    if (isAuthenticated && !allowAuthenticatedStay) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [allowAuthenticatedStay, isAuthenticated, navigate]);
 
-  // Redirect authenticated users to dashboard
-  if (isAuthenticated) {
-    return null;
-  }
+  const normalizedPrompt = normalizePrompt(prompt);
+  const composerDisabled = !normalizedPrompt || isCreating || isAuthLoading;
+
+  const createTopicFromPrompt = async (nextPrompt: string) => {
+    if (!nextPrompt || creatingRef.current) {
+      return;
+    }
+
+    creatingRef.current = true;
+    setIsCreating(true);
+    setCreateError(null);
+
+    try {
+      const topic = await topicApi.create({
+        title: buildTopicTitleFromPrompt(nextPrompt),
+        description: nextPrompt,
+        type: 'website',
+      });
+
+      navigate(`/topics/${topic.id}/edit`, {
+        state: { initialBuildPrompt: nextPrompt },
+      });
+    } catch (err: unknown) {
+      setCreateError(getApiErrorMessage(err, '创建专题失败'));
+    } finally {
+      creatingRef.current = false;
+      setIsCreating(false);
+    }
+  };
+
+  const openAuthDialog = (mode: AuthMode, nextQueuedPrompt?: string) => {
+    setDialogMode(mode);
+    setCreateError(null);
+    if (nextQueuedPrompt) {
+      setQueuedPrompt(nextQueuedPrompt);
+      setAllowAuthenticatedStay(true);
+    }
+  };
+
+  const closeAuthDialog = () => {
+    setDialogMode(null);
+    setQueuedPrompt(null);
+    setAllowAuthenticatedStay(false);
+  };
+
+  const handlePromptSubmit = async () => {
+    if (!normalizedPrompt) {
+      return;
+    }
+
+    if (isAuthenticated) {
+      await createTopicFromPrompt(normalizedPrompt);
+      return;
+    }
+
+    openAuthDialog('register', normalizedPrompt);
+  };
+
+  const handleAuthSuccess = async () => {
+    const nextPrompt = queuedPrompt ?? normalizedPrompt;
+    setDialogMode(null);
+
+    if (nextPrompt) {
+      await createTopicFromPrompt(nextPrompt);
+      return;
+    }
+
+    navigate('/dashboard', { replace: true });
+  };
 
   return (
-    <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl sm:text-5xl font-bold mb-4">
+    <div className="min-h-screen bg-slate-950 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.18),_transparent_35%),linear-gradient(180deg,_#020617_0%,_#0f172a_100%)] text-slate-100">
+      <header className="px-4 py-4 sm:px-6">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between rounded-full border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-xl">
+          <Link to="/" className="font-display text-lg font-semibold tracking-[0.18em] text-slate-50">
             WebLearn
-          </h1>
-          <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-            创建、发布和浏览互动式学习专题。教师可以轻松搭建网站型专题，学生能够沉浸式地探索知识。
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              to="/register"
-              className="bg-white text-blue-600 font-semibold px-6 py-3 rounded-md hover:bg-blue-50 transition-colors"
-            >
-              免费注册
-            </Link>
-            <Link
-              to="/login"
-              className="border-2 border-white text-white font-semibold px-6 py-3 rounded-md hover:bg-white/10 transition-colors"
+          </Link>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => openAuthDialog('login')}
+              className="rounded-full px-4 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-slate-50"
             >
               登录
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-16 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold text-gray-900 text-center mb-12">
-            为什么选择 WebLearn？
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                所见即所得编辑器
-              </h3>
-              <p className="text-gray-600">
-                内置代码编辑器和实时预览，AI 助手辅助生成网页，无需外部工具。
-              </p>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                AI 学习助手
-              </h3>
-              <p className="text-gray-600">
-                每个专题都配有 AI 助手，帮助学生理解内容、解答疑问。
-              </p>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                完全公开浏览
-              </h3>
-              <p className="text-gray-600">
-                无需注册即可浏览已发布的专题内容，先体验后注册。
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Published Topics Section */}
-      <section className="py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-900">
-              热门专题
-            </h2>
-            <Link
-              to="/topics"
-              className="text-blue-600 hover:text-blue-500 font-medium"
+            </button>
+            <button
+              type="button"
+              onClick={() => openAuthDialog('register')}
+              className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-primary-soft"
             >
-              查看全部 →
-            </Link>
+              注册
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="flex min-h-[calc(100vh-5.5rem)] items-center px-4 pb-10 pt-6 sm:px-6">
+        <div className="mx-auto flex w-full max-w-4xl flex-col items-center">
+          <div className="mb-8 max-w-2xl text-center">
+            <p className="text-sm font-medium uppercase tracking-[0.28em] text-primary">
+              Prompt To Topic
+            </p>
+            <h1 className="mt-4 font-display text-4xl font-bold tracking-tight text-slate-50 sm:text-5xl">
+              从一句需求开始创建互动专题
+            </h1>
+            <p className="mt-4 text-base text-slate-300 sm:text-lg">
+              输入你想做的专题方向，登录后立即进入编辑器继续生成和修改。
+            </p>
           </div>
 
-          {loading ? (
-            <LoadingOverlay message="加载专题中..." />
-          ) : topics.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              暂无已发布的专题
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {topics.map((topic) => (
-                <Link
-                  key={topic.id}
-                  to={`/topics/${topic.id}`}
-                  className="block bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
-                >
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    {topic.title}
-                  </h3>
-                  {topic.description && (
-                    <p className="text-gray-600 text-sm line-clamp-2 mb-3">
-                      {topic.description}
-                    </p>
-                  )}
-                  <span className="text-xs text-gray-500">
-                    {new Date(topic.createdAt).toLocaleDateString('zh-CN')}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          )}
+          <div className="w-full max-w-3xl">
+            <PromptComposer
+              value={prompt}
+              onChange={(value) => {
+                setPrompt(value);
+                if (createError) {
+                  setCreateError(null);
+                }
+              }}
+              onSubmit={() => {
+                void handlePromptSubmit();
+              }}
+              disabled={composerDisabled}
+              submitLabel={isCreating ? '创建中...' : '开始创建'}
+              textareaLabel="描述专题需求"
+              placeholder="例如：做一个中国古代史互动专题，包含时间线、地图和关键人物故事"
+              cardClassName="border border-white/10 bg-slate-900/80 shadow-[0_24px_80px_rgba(2,6,23,0.45)] backdrop-blur-xl"
+            />
+            {createError ? (
+              <p role="alert" className="mt-3 text-center text-sm text-rose-300">
+                {createError}
+              </p>
+            ) : null}
+          </div>
         </div>
-      </section>
+      </main>
 
-      {/* CTA Section */}
-      <section className="py-16 bg-blue-50">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            准备好开始了吗？
-          </h2>
-          <p className="text-gray-600 mb-6">
-            免费创建账户，开始搭建你的互动学习专题。
-          </p>
+      <AuthFlowDialog
+        mode={dialogMode}
+        isLoading={isAuthLoading}
+        onClose={closeAuthDialog}
+        onModeChange={setDialogMode}
+        onSuccess={handleAuthSuccess}
+        onLogin={login}
+        onRegister={register}
+      />
+    </div>
+  );
+}
+
+interface AuthFlowDialogProps {
+  mode: AuthMode | null;
+  isLoading: boolean;
+  onClose: () => void;
+  onModeChange: (mode: AuthMode) => void;
+  onSuccess: () => Promise<void>;
+  onLogin: (email: string, password: string) => Promise<void>;
+  onRegister: (username: string, email: string, password: string) => Promise<void>;
+}
+
+function AuthFlowDialog({
+  mode,
+  isLoading,
+  onClose,
+  onModeChange,
+  onSuccess,
+  onLogin,
+  onRegister,
+}: AuthFlowDialogProps) {
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (mode) {
+      setError(null);
+    }
+  }, [mode]);
+
+  const handleLogin = async (data: LoginFormValues) => {
+    setError(null);
+    try {
+      await onLogin(data.email, data.password);
+      toast.success('登录成功！');
+      await onSuccess();
+    } catch (err: unknown) {
+      const errorMsg = getApiErrorMessage(err, '登录失败，请检查您的邮箱和密码');
+      setError(errorMsg);
+      toast.error(errorMsg);
+    }
+  };
+
+  const handleRegister = async (data: RegisterFormValues) => {
+    setError(null);
+    try {
+      await onRegister(data.username, data.email, data.password);
+      toast.success('注册成功！');
+      await onSuccess();
+    } catch (err: unknown) {
+      const errorMsg = getApiErrorMessage(err, '注册失败，请稍后重试');
+      setError(errorMsg);
+      toast.error(errorMsg);
+    }
+  };
+
+  return (
+    <AuthDialog isOpen={mode !== null} mode={mode ?? 'login'} onClose={onClose}>
+      {mode === 'login' ? (
+        <LoginDialogCard
+          error={error}
+          isLoading={isLoading}
+          onSubmit={handleLogin}
+          onSwitchToRegister={() => onModeChange('register')}
+        />
+      ) : mode === 'register' ? (
+        <RegisterDialogCard
+          error={error}
+          isLoading={isLoading}
+          onSubmit={handleRegister}
+          onSwitchToLogin={() => onModeChange('login')}
+        />
+      ) : null}
+    </AuthDialog>
+  );
+}
+
+interface LoginDialogCardProps {
+  error: string | null;
+  isLoading: boolean;
+  onSubmit: (data: LoginFormValues) => Promise<void>;
+  onSwitchToRegister: () => void;
+}
+
+function LoginDialogCard({
+  error,
+  isLoading,
+  onSubmit,
+  onSwitchToRegister,
+}: LoginDialogCardProps) {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
+
+  return (
+    <AuthFormCard
+      title="登录继续创建"
+      subtitle={(
+        <>
+          还没有账户？{' '}
           <button
-            onClick={() => navigate('/register')}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-md transition-colors"
+            type="button"
+            onClick={onSwitchToRegister}
+            className="font-medium text-primary transition-colors hover:text-primary-soft"
           >
             立即注册
           </button>
+        </>
+      )}
+    >
+      <form className="mt-8 space-y-6" onSubmit={handleSubmit((data) => void onSubmit(data))}>
+        {error ? (
+          <div className="rounded-md border border-red-500/40 bg-red-500/10 px-4 py-3 text-red-200">
+            {error}
+          </div>
+        ) : null}
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="public-home-login-email" className="mb-1 block text-sm font-medium text-slate-200">
+              邮箱地址
+            </label>
+            <input
+              id="public-home-login-email"
+              {...register('email')}
+              type="email"
+              className="block w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
+              placeholder="请输入邮箱地址"
+              aria-describedby="public-home-login-email-error"
+            />
+            {errors.email ? (
+              <p id="public-home-login-email-error" className="mt-1 text-sm text-red-300">
+                {errors.email.message}
+              </p>
+            ) : null}
+          </div>
+          <div>
+            <label htmlFor="public-home-login-password" className="mb-1 block text-sm font-medium text-slate-200">
+              密码
+            </label>
+            <input
+              id="public-home-login-password"
+              {...register('password')}
+              type="password"
+              className="block w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
+              placeholder="请输入密码"
+              aria-describedby="public-home-login-password-error"
+            />
+            {errors.password ? (
+              <p id="public-home-login-password-error" className="mt-1 text-sm text-red-300">
+                {errors.password.message}
+              </p>
+            ) : null}
+          </div>
         </div>
-      </section>
-    </div>
+
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="flex w-full justify-center rounded-md border border-primary/40 bg-primary px-4 py-2.5 text-sm font-medium text-slate-950 transition-colors hover:bg-primary-soft focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isLoading ? '登录中...' : '登录'}
+        </button>
+      </form>
+    </AuthFormCard>
+  );
+}
+
+interface RegisterDialogCardProps {
+  error: string | null;
+  isLoading: boolean;
+  onSubmit: (data: RegisterFormValues) => Promise<void>;
+  onSwitchToLogin: () => void;
+}
+
+function RegisterDialogCard({
+  error,
+  isLoading,
+  onSubmit,
+  onSwitchToLogin,
+}: RegisterDialogCardProps) {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      username: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+    },
+  });
+
+  return (
+    <AuthFormCard
+      title="注册后开始创建"
+      subtitle={(
+        <>
+          已有账户？{' '}
+          <button
+            type="button"
+            onClick={onSwitchToLogin}
+            className="font-medium text-primary transition-colors hover:text-primary-soft"
+          >
+            去登录
+          </button>
+        </>
+      )}
+    >
+      <form className="mt-8 space-y-6" onSubmit={handleSubmit((data) => void onSubmit(data))}>
+        {error ? (
+          <div className="rounded-md border border-red-500/40 bg-red-500/10 px-4 py-3 text-red-200">
+            {error}
+          </div>
+        ) : null}
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="public-home-register-username" className="mb-1 block text-sm font-medium text-slate-200">
+              用户名
+            </label>
+            <input
+              id="public-home-register-username"
+              {...register('username')}
+              type="text"
+              className="block w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
+              placeholder="请输入用户名"
+              aria-describedby="public-home-register-username-error"
+            />
+            {errors.username ? (
+              <p id="public-home-register-username-error" className="mt-1 text-sm text-red-300">
+                {errors.username.message}
+              </p>
+            ) : null}
+          </div>
+          <div>
+            <label htmlFor="public-home-register-email" className="mb-1 block text-sm font-medium text-slate-200">
+              邮箱地址
+            </label>
+            <input
+              id="public-home-register-email"
+              {...register('email')}
+              type="email"
+              className="block w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
+              placeholder="请输入邮箱地址"
+              aria-describedby="public-home-register-email-error"
+            />
+            {errors.email ? (
+              <p id="public-home-register-email-error" className="mt-1 text-sm text-red-300">
+                {errors.email.message}
+              </p>
+            ) : null}
+          </div>
+          <div>
+            <label htmlFor="public-home-register-password" className="mb-1 block text-sm font-medium text-slate-200">
+              密码
+            </label>
+            <input
+              id="public-home-register-password"
+              {...register('password')}
+              type="password"
+              className="block w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
+              placeholder="请输入密码 (至少6个字符)"
+              aria-describedby="public-home-register-password-error"
+            />
+            {errors.password ? (
+              <p id="public-home-register-password-error" className="mt-1 text-sm text-red-300">
+                {errors.password.message}
+              </p>
+            ) : null}
+          </div>
+          <div>
+            <label htmlFor="public-home-register-confirm-password" className="mb-1 block text-sm font-medium text-slate-200">
+              确认密码
+            </label>
+            <input
+              id="public-home-register-confirm-password"
+              {...register('confirmPassword')}
+              type="password"
+              className="block w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
+              placeholder="请再次输入密码"
+              aria-describedby="public-home-register-confirm-password-error"
+            />
+            {errors.confirmPassword ? (
+              <p id="public-home-register-confirm-password-error" className="mt-1 text-sm text-red-300">
+                {errors.confirmPassword.message}
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="flex w-full justify-center rounded-md border border-primary/40 bg-primary px-4 py-2.5 text-sm font-medium text-slate-950 transition-colors hover:bg-primary-soft focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isLoading ? '注册中...' : '注册'}
+        </button>
+      </form>
+    </AuthFormCard>
   );
 }
 

@@ -36,12 +36,7 @@ function App() {
       <LayoutMetaProvider>
         <Routes>
           {/* Public routes */}
-          <Route
-            path="/"
-            element={
-              isAuthenticated ? <Navigate to="/dashboard" replace /> : <PublicHomePage />
-            }
-          />
+          <Route path="/" element={<PublicHomePage />} />
           <Route
             path="/login"
             element={

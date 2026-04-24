@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import ProfileTab from './ProfileTab';
 import PasswordTab from './PasswordTab';
 import ThemeTab from './ThemeTab';
+import ModalFrame from '../ui/ModalFrame';
+import SurfaceCard from '../ui/SurfaceCard';
 
 type ActiveTab = 'profile' | 'password' | 'theme';
 
@@ -83,37 +85,20 @@ export default function SettingsModal({ isOpen, onClose, triggerRef }: SettingsM
     return () => document.removeEventListener('keydown', handleTabKey);
   }, [isOpen]);
 
-  // Close on outside click
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
-      handleClose();
-    }
-  };
-
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4"
-      onClick={handleBackdropClick}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="settings-modal-title"
-    >
-      <div
-        ref={modalRef}
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-md"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <ModalFrame onClose={handleClose} ariaLabelledBy="settings-modal-title">
+      <SurfaceCard ref={modalRef} className="w-full max-w-md overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 id="settings-modal-title" className="text-lg font-semibold text-gray-900 dark:text-gray-100">账户设置</h2>
+        <div className="flex items-center justify-between border-b border-border px-4 py-4">
+          <h2 id="settings-modal-title" className="text-lg font-semibold text-slate-50">账户设置</h2>
           <button
             ref={closeBtnRef}
             type="button"
             onClick={handleClose}
             aria-label="关闭"
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"
+            className="rounded-full p-1 text-slate-400 transition-colors hover:bg-surface-3 hover:text-slate-200"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -122,7 +107,7 @@ export default function SettingsModal({ isOpen, onClose, triggerRef }: SettingsM
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-gray-200 dark:border-gray-700">
+        <div className="flex border-b border-border">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -130,8 +115,8 @@ export default function SettingsModal({ isOpen, onClose, triggerRef }: SettingsM
               onClick={() => setActiveTab(tab.id)}
               className={`flex-1 py-3 text-sm font-medium transition-colors ${
                 activeTab === tab.id
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                  ? 'border-b-2 border-primary-strong text-primary'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               {tab.label}
@@ -145,7 +130,7 @@ export default function SettingsModal({ isOpen, onClose, triggerRef }: SettingsM
           {activeTab === 'password' && <PasswordTab onClose={handleClose} />}
           {activeTab === 'theme' && <ThemeTab />}
         </div>
-      </div>
-    </div>
+      </SurfaceCard>
+    </ModalFrame>
   );
 }

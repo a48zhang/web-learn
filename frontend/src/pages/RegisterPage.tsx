@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { useAuthStore } from '../stores/useAuthStore';
 import { toast } from '../stores/useToastStore';
 import { getApiErrorMessage } from '../utils/errors';
+import AuthFormCard from '../components/auth/AuthFormCard';
 
 const registerSchema = z.object({
   username: z.string().min(2, '用户名至少需要2个字符'),
@@ -52,91 +53,87 @@ function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            创建新账户
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12 sm:px-6 lg:px-8">
+      <AuthFormCard
+        title="创建新账户"
+        subtitle={(
+          <>
             或者{' '}
-            <Link
-              to="/login"
-              className="font-medium text-blue-600 hover:text-blue-500"
-            >
+            <Link to="/login" className="font-medium text-primary transition-colors hover:text-primary-strong">
               登录已有账户
             </Link>
-          </p>
-        </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
+          </>
+        )}
+      >
+        <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+            <div className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
               {error}
             </div>
           )}
           <div className="space-y-4">
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="username" className="mb-1 block text-sm font-medium text-slate-200">
                 用户名
               </label>
               <input
                 id="username"
                 {...register('username')}
                 type="text"
-                className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="block w-full rounded-2xl border border-border bg-surface-2 px-3 py-2.5 text-sm text-slate-50 outline-none transition-colors placeholder:text-slate-500 focus:border-primary-strong focus:ring-2 focus:ring-primary/30"
                 placeholder="请输入用户名"
                 aria-describedby="username-error"
               />
               {errors.username && (
-                <p id="username-error" className="mt-1 text-sm text-red-600">{errors.username.message}</p>
+                <p id="username-error" className="mt-1 text-sm text-red-300">{errors.username.message}</p>
               )}
             </div>
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="email" className="mb-1 block text-sm font-medium text-slate-200">
                 邮箱地址
               </label>
               <input
                 id="email"
                 {...register('email')}
                 type="email"
-                className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="block w-full rounded-2xl border border-border bg-surface-2 px-3 py-2.5 text-sm text-slate-50 outline-none transition-colors placeholder:text-slate-500 focus:border-primary-strong focus:ring-2 focus:ring-primary/30"
                 placeholder="请输入邮箱地址"
                 aria-describedby="email-error"
               />
               {errors.email && (
-                <p id="email-error" className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+                <p id="email-error" className="mt-1 text-sm text-red-300">{errors.email.message}</p>
               )}
             </div>
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="password" className="mb-1 block text-sm font-medium text-slate-200">
                 密码
               </label>
               <input
                 id="password"
                 {...register('password')}
                 type="password"
-                className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="block w-full rounded-2xl border border-border bg-surface-2 px-3 py-2.5 text-sm text-slate-50 outline-none transition-colors placeholder:text-slate-500 focus:border-primary-strong focus:ring-2 focus:ring-primary/30"
                 placeholder="请输入密码 (至少6个字符)"
                 aria-describedby="password-error"
               />
               {errors.password && (
-                <p id="password-error" className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+                <p id="password-error" className="mt-1 text-sm text-red-300">{errors.password.message}</p>
               )}
             </div>
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="confirmPassword" className="mb-1 block text-sm font-medium text-slate-200">
                 确认密码
               </label>
               <input
                 id="confirmPassword"
                 {...register('confirmPassword')}
                 type="password"
-                className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="block w-full rounded-2xl border border-border bg-surface-2 px-3 py-2.5 text-sm text-slate-50 outline-none transition-colors placeholder:text-slate-500 focus:border-primary-strong focus:ring-2 focus:ring-primary/30"
                 placeholder="请再次输入密码"
                 aria-describedby="confirmPassword-error"
               />
               {errors.confirmPassword && (
-                <p id="confirmPassword-error" className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>
+                <p id="confirmPassword-error" className="mt-1 text-sm text-red-300">{errors.confirmPassword.message}</p>
               )}
             </div>
           </div>
@@ -145,7 +142,7 @@ function RegisterPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="group relative flex w-full justify-center rounded-2xl bg-primary-strong px-4 py-2.5 text-sm font-medium text-slate-950 transition-colors hover:bg-primary disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-slate-300"
             >
               {isLoading ? (
                 <>
@@ -163,7 +160,7 @@ function RegisterPage() {
             </button>
           </div>
         </form>
-      </div>
+      </AuthFormCard>
     </div>
   );
 }

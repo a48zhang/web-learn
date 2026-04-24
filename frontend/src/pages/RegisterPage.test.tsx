@@ -28,6 +28,17 @@ describe('RegisterPage', () => {
     errorMock.mockReset();
   });
 
+  it('renders register mode labels through the shared auth surface', () => {
+    render(
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <RegisterPage />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByTestId('auth-form-card')).toBeInTheDocument();
+    expect(screen.getByTestId('auth-form-card')).toHaveTextContent('创建新账户');
+  });
+
   it('submits registration successfully', async () => {
     registerMock.mockResolvedValue(undefined);
 

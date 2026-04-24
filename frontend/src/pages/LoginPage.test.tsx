@@ -28,6 +28,17 @@ describe('LoginPage', () => {
     errorMock.mockReset();
   });
 
+  it('renders a standalone login form inside the shared auth card', () => {
+    render(
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <LoginPage />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByTestId('auth-form-card')).toBeInTheDocument();
+    expect(screen.getByTestId('auth-form-card')).toHaveTextContent('登录您的账户');
+  });
+
   it('submits credentials and shows success feedback', async () => {
     loginMock.mockResolvedValue(undefined);
 

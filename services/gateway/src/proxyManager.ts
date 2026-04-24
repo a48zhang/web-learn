@@ -7,8 +7,10 @@ import type { Request } from 'express';
 import type { RouteAuthMode, RouteQueryAuthRule, ServiceEntry } from '@web-learn/shared';
 
 const USER_CONTEXT_HEADERS = ['x-user-id', 'x-user-username', 'x-user-email', 'x-user-role'];
+export const DEFAULT_PROXY_TIMEOUT = 30000;
+export const AI_PROXY_TIMEOUT = 0;
 
-const forwardUserContextHeaders = (proxyReq: http.ClientRequest, req: Request) => {
+export const forwardUserContextHeaders = (proxyReq: http.ClientRequest, req: Request) => {
   for (const header of USER_CONTEXT_HEADERS) {
     const value = req.headers[header];
     if (value !== undefined) {
@@ -35,11 +37,15 @@ const proxyGroups = new Map<string, ProxyGroup>();
 let appRef: Application | null = null;
 let dynamicMiddleware: ((req: any, res: any, next: any) => void) | null = null;
 
-const createProxy = (targetUrl: string) => {
-  return createProxyMiddleware({
+const isAiRoutePath = (routePath: string) => routePath.startsWith('/api/ai');
+
+export const createProxyOptions = (targetUrl: string, routePath: string): Options => {
+  const proxyTimeout = isAiRoutePath(routePath) ? AI_PROXY_TIMEOUT : DEFAULT_PROXY_TIMEOUT;
+
+  return {
     target: targetUrl,
     changeOrigin: true,
-    proxyTimeout: 30000,
+    proxyTimeout,
     on: {
       proxyReq: (proxyReq, req) => forwardUserContextHeaders(proxyReq, req as Request),
     },
@@ -47,7 +53,11 @@ const createProxy = (targetUrl: string) => {
       const fullPath = ((req as Request).baseUrl || '') + path;
       return fullPath;
     },
-  } as Options);
+  };
+};
+
+const createProxy = (targetUrl: string, routePath: string) => {
+  return createProxyMiddleware(createProxyOptions(targetUrl, routePath));
 };
 
 const normalizePath = (path: string): string => {
@@ -157,7 +167,7 @@ export const mountProxies = (services: ServiceEntry[]): void => {
   console.log(`[gateway] mountProxies: received ${services.length} services, ${routeTargets.size} route groups`);
   for (const [key, group] of routeTargets.entries()) {
     console.log(`[gateway]   route: ${group.path} [${group.methods.join(',')}] -> ${group.targets.join(', ')}`);
-    group.proxies = group.targets.map(createProxy);
+    group.proxies = group.targets.map((targetUrl) => createProxy(targetUrl, group.path));
     proxyGroups.set(key, group);
   }
 };
@@ -176,7 +186,7 @@ export const updateProxyGroups = (services: ServiceEntry[]): void => {
   for (const [key, nextGroup] of routeTargets.entries()) {
     const currentGroup = proxyGroups.get(key);
     if (!currentGroup) {
-      nextGroup.proxies = nextGroup.targets.map(createProxy);
+      nextGroup.proxies = nextGroup.targets.map((targetUrl) => createProxy(targetUrl, nextGroup.path));
       proxyGroups.set(key, nextGroup);
     } else {
       const urlsChanged =
@@ -184,7 +194,7 @@ export const updateProxyGroups = (services: ServiceEntry[]): void => {
         nextGroup.targets.some((u, i) => u !== currentGroup.targets[i]);
       if (urlsChanged) {
         currentGroup.targets = nextGroup.targets;
-        currentGroup.proxies = nextGroup.targets.map(createProxy);
+        currentGroup.proxies = nextGroup.targets.map((targetUrl) => createProxy(targetUrl, currentGroup.path));
         currentGroup.counter = 0;
         console.log(`[gateway] Updated proxy group for ${currentGroup.path}: ${nextGroup.targets.length} targets`);
       }

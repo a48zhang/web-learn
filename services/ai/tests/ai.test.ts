@@ -61,6 +61,22 @@ jest.mock('jsonwebtoken', () => ({
 
 import app from '../src/app';
 
+const authenticateUser = () => {
+  (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
+  mockUserModel.findByPk.mockResolvedValue({
+    id: 9,
+    username: 'student',
+    email: 'student@example.com',
+    role: 'user',
+  });
+};
+
+async function* streamChunks(chunks: any[]) {
+  for (const chunk of chunks) {
+    yield chunk;
+  }
+}
+
 describe('GET /health', () => {
   it('returns healthy status', async () => {
     const res = await request(app).get('/health');
@@ -83,13 +99,7 @@ describe('AI API', () => {
   });
 
   it('allows authenticated chat requests', async () => {
-    (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
-    mockUserModel.findByPk.mockResolvedValue({
-      id: 9,
-      username: 'student',
-      email: 'student@example.com',
-      role: 'student',
-    });
+    authenticateUser();
     mockCreate.mockResolvedValue({
       id: 'chatcmpl-1',
       object: 'chat.completion',
@@ -109,13 +119,7 @@ describe('AI API', () => {
   });
 
   it('rejects invalid messages payload', async () => {
-    (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
-    mockUserModel.findByPk.mockResolvedValue({
-      id: 9,
-      username: 'student',
-      email: 'student@example.com',
-      role: 'student',
-    });
+    authenticateUser();
 
     const response = await request(app)
       .post('/api/ai/chat/completions')
@@ -128,13 +132,7 @@ describe('AI API', () => {
   });
 
   it('rejects message list exceeding 100 messages', async () => {
-    (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
-    mockUserModel.findByPk.mockResolvedValue({
-      id: 9,
-      username: 'student',
-      email: 'student@example.com',
-      role: 'student',
-    });
+    authenticateUser();
 
     const response = await request(app)
       .post('/api/ai/chat/completions')
@@ -147,13 +145,7 @@ describe('AI API', () => {
   });
 
   it('rejects invalid message role', async () => {
-    (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
-    mockUserModel.findByPk.mockResolvedValue({
-      id: 9,
-      username: 'student',
-      email: 'student@example.com',
-      role: 'student',
-    });
+    authenticateUser();
 
     const response = await request(app)
       .post('/api/ai/chat/completions')
@@ -166,13 +158,7 @@ describe('AI API', () => {
   });
 
   it('rejects too long message content', async () => {
-    (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
-    mockUserModel.findByPk.mockResolvedValue({
-      id: 9,
-      username: 'student',
-      email: 'student@example.com',
-      role: 'student',
-    });
+    authenticateUser();
 
     const response = await request(app)
       .post('/api/ai/chat/completions')
@@ -185,13 +171,7 @@ describe('AI API', () => {
   });
 
   it('rejects empty messages array', async () => {
-    (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
-    mockUserModel.findByPk.mockResolvedValue({
-      id: 9,
-      username: 'student',
-      email: 'student@example.com',
-      role: 'student',
-    });
+    authenticateUser();
 
     const response = await request(app)
       .post('/api/ai/chat/completions')
@@ -204,13 +184,7 @@ describe('AI API', () => {
   });
 
   it('forwards tools and tool_choice to LLM', async () => {
-    (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
-    mockUserModel.findByPk.mockResolvedValue({
-      id: 9,
-      username: 'teacher',
-      email: 'teacher@example.com',
-      role: 'teacher',
-    });
+    authenticateUser();
     mockCreate.mockResolvedValue({
       id: 'chatcmpl-2',
       object: 'chat.completion',
@@ -236,7 +210,70 @@ describe('AI API', () => {
 
     expect(response.status).toBe(200);
     expect(mockCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ tools, tool_choice: 'auto' })
+      expect.objectContaining({ tools, tool_choice: 'auto' }),
+      undefined
     );
+  });
+
+  it('streams chat completion chunks as SSE when stream=true', async () => {
+    authenticateUser();
+    mockCreate.mockResolvedValue(
+      streamChunks([
+        { id: 'chunk-1', object: 'chat.completion.chunk', choices: [{ index: 0, delta: { content: '你' } }] },
+        { id: 'chunk-1', object: 'chat.completion.chunk', choices: [{ index: 0, delta: { content: '好' }, finish_reason: 'stop' }] },
+      ])
+    );
+
+    const response = await request(app)
+      .post('/api/ai/chat/completions')
+      .set('Authorization', 'Bearer token')
+      .send({
+        stream: true,
+        messages: [{ role: 'user', content: 'hello' }],
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.headers['content-type']).toContain('text/event-stream');
+    expect(response.text).toContain('data: {"id":"chunk-1"');
+    expect(response.text).toContain('data: [DONE]');
+    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ stream: true }), expect.any(Object));
+  });
+
+  it('rejects non-boolean stream values', async () => {
+    authenticateUser();
+
+    const response = await request(app)
+      .post('/api/ai/chat/completions')
+      .set('Authorization', 'Bearer token')
+      .send({
+        stream: 'yes',
+        messages: [{ role: 'user', content: 'hello' }],
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('stream must be a boolean when provided');
+  });
+
+  it('keeps non-streaming chat completion responses as JSON', async () => {
+    authenticateUser();
+    mockCreate.mockResolvedValue({
+      id: 'chatcmpl-json',
+      object: 'chat.completion',
+      model: 'test-model',
+      choices: [{ index: 0, message: { role: 'assistant', content: 'ok' }, finish_reason: 'stop' }],
+    });
+
+    const response = await request(app)
+      .post('/api/ai/chat/completions')
+      .set('Authorization', 'Bearer token')
+      .send({
+        stream: false,
+        messages: [{ role: 'user', content: 'hello' }],
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.headers['content-type']).toContain('application/json');
+    expect(response.body.choices[0].message.content).toBe('ok');
+    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ stream: false }), undefined);
   });
 });

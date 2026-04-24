@@ -154,4 +154,114 @@ describe('useAgentRuntime', () => {
       error: 'Failed to save build changes to OSS',
     });
   });
+
+  it('streams assistant text into a single visible message before completion resolves', async () => {
+    chatWithToolsMock.mockImplementationOnce(async (_messages, _tools, onStream) => {
+      onStream?.('你');
+      onStream?.('好');
+
+      return {
+        choices: [{
+          message: {
+            role: 'assistant',
+            content: '你好',
+          },
+        }],
+      };
+    });
+
+    const { result } = renderHook(() => useAgentRuntime({ topicId: 'topic-1', agentType: 'building' }));
+
+    await act(async () => {
+      await result.current.runAgentLoop('say hello');
+    });
+
+    expect(chatWithToolsMock).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.any(Array),
+      expect.any(Function),
+      undefined
+    );
+    expect(useAgentStore.getState().visibleMessages).toHaveLength(2);
+    expect(useAgentStore.getState().visibleMessages[1]).toMatchObject({
+      role: 'assistant',
+      content: '你好',
+    });
+  });
+
+  it('executes tool calls after streaming content has been assembled', async () => {
+    chatWithToolsMock
+      .mockImplementationOnce(async (_messages, _tools, onStream) => {
+        onStream?.('planning');
+
+        return {
+          choices: [{
+            message: {
+              role: 'assistant',
+              content: 'planning',
+              tool_calls: [{
+                id: 'tool-1',
+                type: 'function',
+                function: {
+                  name: 'write_file',
+                  arguments: JSON.stringify({ path: 'src/app.ts', content: 'hello' }),
+                },
+              }],
+            },
+          }],
+        };
+      })
+      .mockResolvedValueOnce({
+        choices: [{
+          message: {
+            role: 'assistant',
+            content: 'done',
+          },
+        }],
+      });
+
+    const { result } = renderHook(() => useAgentRuntime({ topicId: 'topic-1', agentType: 'building' }));
+
+    await act(async () => {
+      await result.current.runAgentLoop('update the file');
+    });
+
+    expect(executeToolMock).toHaveBeenCalledTimes(1);
+    expect(useAgentStore.getState().visibleMessages[1]).toMatchObject({
+      role: 'assistant',
+      content: 'planning',
+      tools: [
+        expect.objectContaining({
+          id: 'tool-1',
+          name: 'write_file',
+          state: 'success',
+        }),
+      ],
+    });
+  });
+
+  it('preserves partial streamed content when the streaming request fails', async () => {
+    chatWithToolsMock.mockImplementationOnce(async (_messages, _tools, onStream) => {
+      onStream?.('partial');
+      throw new Error('stream broke');
+    });
+
+    const { result } = renderHook(() => useAgentRuntime({ topicId: 'topic-1', agentType: 'building' }));
+
+    await act(async () => {
+      await result.current.runAgentLoop('say hello');
+    });
+
+    expect(useAgentStore.getState().visibleMessages).toHaveLength(2);
+    expect(useAgentStore.getState().visibleMessages[1]).toMatchObject({
+      role: 'assistant',
+      content: 'partial',
+    });
+    expect(useAgentStore.getState().runState).toEqual({
+      isRunning: false,
+      currentToolName: null,
+      currentToolPath: null,
+      error: 'stream broke',
+    });
+  });
 });

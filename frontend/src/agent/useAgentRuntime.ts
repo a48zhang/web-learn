@@ -63,7 +63,34 @@ export function useAgentRuntime(options: { topicId: string; agentType: 'building
       setRunState({ isRunning: true, error: null });
 
       for (let i = 0; i < MAX_TOOL_LOOPS; i++) {
-        const completion = await chatWithTools(internalMessages, openAITools, undefined, model);
+        let streamedAssistantMessageStarted = false;
+        const handleStreamChunk = (chunk: string) => {
+          if (!chunk) {
+            return;
+          }
+
+          if (!streamedAssistantMessageStarted) {
+            streamedAssistantMessageStarted = true;
+            addVisibleMessage({
+              role: 'assistant',
+              content: chunk,
+            } as AgentMessage);
+            return;
+          }
+
+          updateLastMessage((msg) => {
+            if (msg.role !== 'assistant') {
+              return msg;
+            }
+
+            return {
+              ...msg,
+              content: `${msg.content || ''}${chunk}`,
+            };
+          });
+        };
+
+        const completion = await chatWithTools(internalMessages, openAITools, handleStreamChunk, model);
         const choice = completion.choices[0];
         const message = choice.message;
 
@@ -94,11 +121,19 @@ export function useAgentRuntime(options: { topicId: string; agentType: 'building
 
         // Add message to view if it has content (like <think>) or tools
         if (assistantContent || tools.length > 0) {
-          addVisibleMessage({
-            role: 'assistant',
-            content: assistantContent,
-            ...(tools.length > 0 ? { tools } : {})
-          } as AgentMessage);
+          if (streamedAssistantMessageStarted) {
+            updateLastMessage((msg) => ({
+              ...msg,
+              content: assistantContent || msg.content || '',
+              ...(tools.length > 0 ? { tools } : {}),
+            }));
+          } else {
+            addVisibleMessage({
+              role: 'assistant',
+              content: assistantContent,
+              ...(tools.length > 0 ? { tools } : {})
+            } as AgentMessage);
+          }
         }
 
         if (!hasToolCalls) {

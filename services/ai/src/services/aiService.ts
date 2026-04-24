@@ -10,30 +10,49 @@ const client = config.ai.apiKey
     })
   : null;
 
+type ChatWithLLMOptions = {
+  stream?: boolean;
+  signal?: AbortSignal;
+};
+
+export type ChatWithLLMResult =
+  | OpenAI.Chat.Completions.ChatCompletion
+  | AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>;
+
 export const chatWithLLM = async (
   messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[],
   tools?: OpenAI.Chat.Completions.ChatCompletionTool[],
   toolChoice?: string,
-  model?: string
-): Promise<OpenAI.Chat.Completions.ChatCompletion> => {
+  model?: string,
+  options: ChatWithLLMOptions = {}
+): Promise<ChatWithLLMResult> => {
   if (!client || !config.ai.apiKey) {
     throw new Error('OPENAI_API_KEY is not configured');
   }
 
   const selectedModel = model ?? config.ai.model ?? 'MiniMax-M2.7';
-
-  const params: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
+  const baseParams = {
     model: selectedModel,
     messages,
-    stream: false,
+    ...(tools && tools.length > 0 ? { tools } : {}),
+    ...(tools && tools.length > 0 && toolChoice ? { tool_choice: toolChoice as any } : {}),
   };
 
-  if (tools && tools.length > 0) {
-    params.tools = tools;
-    if (toolChoice) {
-      params.tool_choice = toolChoice as any;
-    }
+  if (options.stream) {
+    return await client.chat.completions.create(
+      {
+        ...baseParams,
+        stream: true,
+      } as OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming,
+      options.signal ? { signal: options.signal } : undefined
+    );
   }
 
-  return await client.chat.completions.create(params);
+  return await client.chat.completions.create(
+    {
+      ...baseParams,
+      stream: false,
+    } as OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming,
+    options.signal ? { signal: options.signal } : undefined
+  );
 };

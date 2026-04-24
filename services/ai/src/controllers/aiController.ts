@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import OpenAI from 'openai';
 import { AuthenticatedRequest as AuthRequest } from '@web-learn/shared';
 import { chatWithLLM } from '../services/aiService';
 
@@ -43,17 +44,29 @@ const validateMessages = (messages: unknown): string | null => {
   return null;
 };
 
+const validateStreamFlag = (stream: unknown): string | null => {
+  if (stream === undefined || typeof stream === 'boolean') {
+    return null;
+  }
+  return 'stream must be a boolean when provided';
+};
+
+const writeSseData = (res: Response, payload: unknown) => {
+  res.write(`data: ${typeof payload === 'string' ? payload : JSON.stringify(payload)}\n\n`);
+};
+
 export const chat = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) {
       return res.status(401).json({ success: false, error: 'Not authorized' });
     }
 
-    const { messages, tools, tool_choice, model } = req.body as {
+    const { messages, tools, tool_choice, model, stream } = req.body as {
       messages: any[];
       tools?: any[];
       tool_choice?: string;
       model?: string;
+      stream?: unknown;
     };
 
     const messagesError = validateMessages(messages);
@@ -61,7 +74,54 @@ export const chat = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ success: false, error: messagesError });
     }
 
-    const completion = await chatWithLLM(messages, tools, tool_choice, model);
+    const streamError = validateStreamFlag(stream);
+    if (streamError) {
+      return res.status(400).json({ success: false, error: streamError });
+    }
+
+    if (stream === true) {
+      const abortController = new AbortController();
+      req.on('close', () => abortController.abort());
+
+      try {
+        const streamResponse = await chatWithLLM(messages, tools, tool_choice, model, {
+          stream: true,
+          signal: abortController.signal,
+        });
+
+        res.status(200);
+        res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-cache, no-transform');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('X-Accel-Buffering', 'no');
+        if (typeof res.flushHeaders === 'function') {
+          res.flushHeaders();
+        }
+
+        for await (const chunk of streamResponse as AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>) {
+          writeSseData(res, chunk);
+        }
+
+        writeSseData(res, '[DONE]');
+        res.end();
+        return;
+      } catch (error: any) {
+        console.error('LLM streaming proxy error:', error);
+        if (!res.headersSent) {
+          return res.status(500).json({
+            success: false,
+            error: error?.message || 'Internal server error',
+          });
+        }
+
+        writeSseData(res, { error: error?.message || 'Internal server error' });
+        writeSseData(res, '[DONE]');
+        res.end();
+        return;
+      }
+    }
+
+    const completion = await chatWithLLM(messages, tools, tool_choice, model, { stream: false });
     return res.json(completion);
   } catch (error: any) {
     console.error('LLM proxy error:', error);

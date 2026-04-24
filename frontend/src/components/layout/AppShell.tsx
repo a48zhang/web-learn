@@ -11,26 +11,26 @@ interface AppShellProps {
 export default function AppShell({ children }: AppShellProps) {
   const { meta } = useLayoutMeta();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const hasTopBarContent =
+    meta.breadcrumbSegments.length > 0 ||
+    (meta.actions && meta.actions.length > 0) ||
+    meta.topBarRightSlot;
 
   return (
-    <div className="h-screen bg-gray-50 dark:bg-gray-950 flex flex-col overflow-hidden">
-      <TopNav onMenuClick={() => setDrawerOpen(true)} />
-      {(meta.breadcrumbSegments.length > 0 || (meta.actions && meta.actions.length > 0) || meta.topBarRightSlot) && (
-        <div className="px-4 py-2 flex items-center justify-between bg-white dark:bg-zinc-900 border-b border-gray-200 dark:border-zinc-800 shrink-0 shadow-sm z-10">
+    <div className="flex h-screen flex-col overflow-hidden bg-background text-slate-100">
+      <TopNav data-shell-theme="dark-workspace" onMenuClick={() => setDrawerOpen(true)} />
+      {hasTopBarContent && (
+        <div className="glass-surface relative z-10 shrink-0 border-x-0 border-b border-t-0 px-4 py-3 shadow-panel">
           <BreadcrumbBar segments={meta.breadcrumbSegments} />
-          {meta.topBarRightSlot && (
-            <div className="flex items-center gap-2 shrink-0 ml-4">
+          {(meta.topBarRightSlot || (meta.actions && meta.actions.length > 0)) && (
+            <div className="mt-3 flex items-center justify-end gap-2">
               {meta.topBarRightSlot}
-            </div>
-          )}
-          {!meta.topBarRightSlot && meta.actions && meta.actions.length > 0 && (
-            <div className="flex items-center gap-2 shrink-0 ml-4">
-              {meta.actions.map((action) => (
+              {!meta.topBarRightSlot && meta.actions?.map((action) => (
                 <button
                   key={action.label}
                   type="button"
                   onClick={action.onClick}
-                  className="bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-zinc-600 rounded-md px-3 py-1.5 text-sm transition-colors"
+                  className="rounded-full border border-border bg-surface-3 px-3 py-1.5 text-sm font-medium text-slate-100 transition-colors hover:border-primary/50 hover:bg-surface-2"
                 >
                   {action.label}
                 </button>
@@ -39,11 +39,11 @@ export default function AppShell({ children }: AppShellProps) {
           )}
         </div>
       )}
-      <div className="flex flex-1 min-h-0 overflow-hidden relative z-0">
+      <div className="relative z-0 flex min-h-0 flex-1 overflow-hidden">
         <LeftNav isOpen={drawerOpen} onClose={() => setDrawerOpen(false)}>
           {meta.sideNavSlot}
         </LeftNav>
-        <main className="flex-1 min-w-0 min-h-0 overflow-y-auto">
+        <main className="min-h-0 min-w-0 flex-1 overflow-y-auto bg-transparent">
           {children}
         </main>
       </div>

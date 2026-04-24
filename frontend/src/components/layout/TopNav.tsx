@@ -3,6 +3,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 
 interface TopNavProps {
   onMenuClick: () => void;
+  'data-shell-theme'?: string;
 }
 
 interface NavLinkItem {
@@ -10,7 +11,7 @@ interface NavLinkItem {
   to: string;
 }
 
-export default function TopNav({ onMenuClick }: TopNavProps) {
+export default function TopNav({ onMenuClick, 'data-shell-theme': shellTheme }: TopNavProps) {
   const location = useLocation();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
@@ -32,20 +33,24 @@ export default function TopNav({ onMenuClick }: TopNavProps) {
     (location.pathname.startsWith(to + '/') && to !== '/');
 
   return (
-    <header className="h-16 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm flex items-center px-4 sm:px-6 justify-between">
+    <header
+      data-testid="top-nav"
+      data-shell-theme={shellTheme}
+      className="glass-surface flex h-14 items-center justify-between border-x-0 border-t-0 border-b border-border/80 px-4 sm:px-6"
+    >
       <div className="flex items-center gap-6">
-        <Link to="/dashboard" className="font-bold text-blue-600 text-lg">
+        <Link to="/dashboard" className="font-display text-lg font-bold tracking-tight text-slate-50">
           WebLearn
         </Link>
-        <nav className="hidden md:flex items-center gap-4">
+        <nav className="hidden items-center gap-2 md:flex">
           {navLinks.map((link) => (
             <Link
               key={link.to}
               to={link.to}
               className={
                 isActive(link.to)
-                  ? 'text-blue-600 border-b-2 border-blue-600 pb-0.5 text-sm font-medium'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 text-sm'
+                  ? 'rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary'
+                  : 'rounded-full px-3 py-1.5 text-sm text-slate-400 transition-colors hover:bg-surface-2 hover:text-slate-100'
               }
             >
               {link.label}
@@ -57,10 +62,11 @@ export default function TopNav({ onMenuClick }: TopNavProps) {
       <div className="flex items-center gap-3">
         {isAuthenticated && user ? (
           <>
-            <span className="hidden md:inline text-sm text-gray-700 dark:text-gray-300">{user.username}</span>
+            <span className="hidden text-sm text-slate-300 md:inline">{user.username}</span>
             <button
+              type="button"
               onClick={logout}
-              className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hidden md:inline"
+              className="hidden text-sm text-slate-400 transition-colors hover:text-slate-100 md:inline"
             >
               退出
             </button>
@@ -68,7 +74,8 @@ export default function TopNav({ onMenuClick }: TopNavProps) {
         ) : null}
 
         <button
-          className="md:hidden p-2 rounded-md text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+          type="button"
+          className="rounded-full p-2 text-slate-300 transition-colors hover:bg-surface-2 hover:text-slate-50 md:hidden"
           onClick={onMenuClick}
           aria-label="打开菜单"
         >

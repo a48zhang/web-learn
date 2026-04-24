@@ -5,8 +5,14 @@ import AppShell from './AppShell';
 import { LayoutMetaProvider } from './LayoutMetaContext';
 
 vi.mock('./TopNav', () => ({
-  default: ({ onMenuClick }: { onMenuClick: () => void }) => (
-    <nav data-testid="top-nav">
+  default: ({
+    onMenuClick,
+    'data-shell-theme': shellTheme,
+  }: {
+    onMenuClick: () => void;
+    'data-shell-theme'?: string;
+  }) => (
+    <nav data-testid="top-nav" data-shell-theme={shellTheme}>
       <button onClick={onMenuClick}>Menu</button>
     </nav>
   ),
@@ -39,6 +45,20 @@ describe('AppShell', () => {
     );
     expect(screen.getByText('Page Content')).toBeInTheDocument();
     expect(screen.getByTestId('top-nav')).toBeInTheDocument();
+  });
+
+  it('renders the redesigned shell chrome classes', () => {
+    render(
+      <MemoryRouter>
+        <LayoutMetaProvider>
+          <AppShell>
+            <div>Page Content</div>
+          </AppShell>
+        </LayoutMetaProvider>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByTestId('top-nav')).toHaveAttribute('data-shell-theme', 'dark-workspace');
   });
 
   it('does not render left nav when sideNavSlot is null', () => {

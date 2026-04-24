@@ -9,22 +9,22 @@ export default function BreadcrumbBar({ segments }: BreadcrumbBarProps) {
   if (segments.length === 0) return null;
 
   return (
-    <nav className="px-4 py-2 text-sm flex items-center flex-wrap gap-1 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700">
+    <nav className="flex flex-wrap items-center gap-1 px-1 text-sm text-slate-300">
       {segments.map((segment, index) => {
         const isLast = index === segments.length - 1;
         return (
           <span key={index} className="flex items-center gap-1">
             {index > 0 && (
-              <span className="text-gray-400 dark:text-gray-500 mx-2">/</span>
+              <span className="mx-2 font-mono text-border">/</span>
             )}
             {segment.label === '' ? (
-              <span className="inline-block h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              <span className="inline-block h-4 w-20 animate-pulse rounded-full bg-surface-3" />
             ) : isLast || !segment.to ? (
-              <span className="text-gray-900 dark:text-gray-100 font-medium">{segment.label}</span>
+              <span className="font-medium text-slate-50">{segment.label}</span>
             ) : (
               <Link
                 to={segment.to}
-                className="text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+                className="transition-colors hover:text-primary"
               >
                 {segment.label}
               </Link>

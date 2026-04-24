@@ -20,35 +20,32 @@ export default function LeftNav({ isOpen, onClose, children }: LeftNavProps) {
 
   return (
     <>
-      {/* Desktop sidebar */}
       {children && (
-        <aside className="hidden lg:block w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex-shrink-0">
+        <aside className="glass-surface hidden w-72 flex-shrink-0 border-y-0 border-l-0 border-r lg:block">
           {children}
         </aside>
       )}
 
-      {/* Mobile drawer */}
       <div className="lg:hidden">
-        {/* Overlay */}
         {isOpen && (
           <div
-            className="fixed inset-0 z-40 bg-black/40"
+            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
             onClick={onClose}
             aria-hidden="true"
           />
         )}
 
-        {/* Drawer */}
         <div
-          className={`fixed left-0 top-0 bottom-0 z-50 bg-white dark:bg-gray-900 w-[84vw] max-w-xs shadow-xl flex flex-col transition-transform duration-300 ${
+          className={`fixed bottom-0 left-0 top-0 z-50 flex w-[84vw] max-w-xs flex-col border-r border-border bg-surface shadow-panel transition-transform duration-300 ${
             isOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-            <span className="font-semibold text-gray-800 dark:text-gray-200">菜单</span>
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <span className="font-display text-base font-semibold text-slate-100">菜单</span>
             <button
+              type="button"
               onClick={onClose}
-              className="p-1 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="rounded-full p-1 text-slate-400 transition-colors hover:bg-surface-3 hover:text-slate-100"
               aria-label="关闭菜单"
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -56,7 +53,7 @@ export default function LeftNav({ isOpen, onClose, children }: LeftNavProps) {
               </svg>
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="custom-scrollbar flex-1 overflow-y-auto p-4">
             {children}
           </div>
         </div>

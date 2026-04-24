@@ -6,11 +6,12 @@ import RegisterPage from './RegisterPage';
 const registerMock = vi.hoisted(() => vi.fn());
 const successMock = vi.hoisted(() => vi.fn());
 const errorMock = vi.hoisted(() => vi.fn());
+const authState = vi.hoisted(() => ({ isLoading: false }));
 
 vi.mock('../stores/useAuthStore', () => ({
   useAuthStore: () => ({
     register: registerMock,
-    isLoading: false,
+    isLoading: authState.isLoading,
   }),
 }));
 
@@ -26,14 +27,17 @@ describe('RegisterPage', () => {
     registerMock.mockReset();
     successMock.mockReset();
     errorMock.mockReset();
+    authState.isLoading = false;
   });
 
   it('renders register mode labels through the shared auth surface', () => {
-    render(
+    const { container } = render(
       <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <RegisterPage />
       </MemoryRouter>
     );
+
+    expect(container.firstChild).toHaveClass('bg-slate-950');
 
     const heading = screen.getByRole('heading', { name: '创建新账户', level: 1 });
     const authCard = heading.closest('div[class*="glass-surface"]');
@@ -63,6 +67,18 @@ describe('RegisterPage', () => {
     });
     expect(successMock).toHaveBeenCalledWith('注册成功！');
     expect(errorMock).not.toHaveBeenCalled();
+  });
+
+  it('uses a dark spinner color while loading', () => {
+    authState.isLoading = true;
+
+    render(
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <RegisterPage />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole('button', { name: '注册中...' }).querySelector('svg')).toHaveClass('text-slate-950');
   });
 
   it('shows confirm password validation and blocks submission', async () => {

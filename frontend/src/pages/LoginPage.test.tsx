@@ -6,11 +6,12 @@ import LoginPage from './LoginPage';
 const loginMock = vi.hoisted(() => vi.fn());
 const successMock = vi.hoisted(() => vi.fn());
 const errorMock = vi.hoisted(() => vi.fn());
+const authState = vi.hoisted(() => ({ isLoading: false }));
 
 vi.mock('../stores/useAuthStore', () => ({
   useAuthStore: () => ({
     login: loginMock,
-    isLoading: false,
+    isLoading: authState.isLoading,
   }),
 }));
 
@@ -26,14 +27,17 @@ describe('LoginPage', () => {
     loginMock.mockReset();
     successMock.mockReset();
     errorMock.mockReset();
+    authState.isLoading = false;
   });
 
   it('renders a standalone login form inside the shared auth card', () => {
-    render(
+    const { container } = render(
       <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <LoginPage />
       </MemoryRouter>
     );
+
+    expect(container.firstChild).toHaveClass('bg-slate-950');
 
     const heading = screen.getByRole('heading', { name: '登录您的账户', level: 1 });
     const authCard = heading.closest('div[class*="glass-surface"]');
@@ -41,6 +45,18 @@ describe('LoginPage', () => {
     expect(authCard).toHaveClass('glass-surface', 'rounded-panel', 'shadow-panel');
     expect(authCard).toContainElement(screen.getByRole('link', { name: '注册新账户' }));
     expect(authCard).toContainElement(screen.getByRole('button', { name: '登录' }).closest('form'));
+  });
+
+  it('uses a dark spinner color while loading', () => {
+    authState.isLoading = true;
+
+    render(
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <LoginPage />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole('button', { name: '登录中...' }).querySelector('svg')).toHaveClass('text-slate-950');
   });
 
   it('submits credentials and shows success feedback', async () => {

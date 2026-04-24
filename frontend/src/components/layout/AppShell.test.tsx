@@ -1,36 +1,43 @@
 import { render, screen } from '@testing-library/react';
+import { useEffect } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import AppShell from './AppShell';
-import { LayoutMetaProvider } from './LayoutMetaContext';
+import { LayoutMetaProvider, useLayoutMeta } from './LayoutMetaContext';
 
-vi.mock('./TopNav', () => ({
-  default: ({
-    onMenuClick,
-    'data-shell-theme': shellTheme,
-  }: {
-    onMenuClick: () => void;
-    'data-shell-theme'?: string;
-  }) => (
-    <nav data-testid="top-nav" data-shell-theme={shellTheme}>
-      <button onClick={onMenuClick}>Menu</button>
-    </nav>
-  ),
-}));
-
-vi.mock('./LeftNav', () => ({
-  default: ({ children, isOpen }: { children: React.ReactNode; isOpen: boolean }) =>
-    children ? <aside data-testid="left-nav" data-open={isOpen}>{children}</aside> : null,
-}));
-
-vi.mock('./BreadcrumbBar', () => ({
-  default: ({ segments }: { segments: unknown[] }) =>
-    segments.length > 0 ? <div data-testid="breadcrumb-bar" /> : null,
+const { logout } = vi.hoisted(() => ({
+  logout: vi.fn(),
 }));
 
 vi.mock('../../stores/useAuthStore', () => ({
-  useAuthStore: () => ({ user: null }),
+  useAuthStore: (selector: (state: {
+    user: null;
+    logout: typeof logout;
+    isAuthenticated: boolean;
+  }) => unknown) => selector({
+    user: null,
+    logout,
+    isAuthenticated: false,
+  }),
 }));
+
+function LayoutMetaFixture() {
+  const { setMeta } = useLayoutMeta();
+
+  useEffect(() => {
+    setMeta({
+      breadcrumbSegments: [
+        { label: '控制台', to: '/dashboard' },
+        { label: '专题列表' },
+      ],
+      actions: [
+        { label: '刷新', onClick: vi.fn() },
+      ],
+    });
+  }, [setMeta]);
+
+  return null;
+}
 
 describe('AppShell', () => {
   it('renders children inside main content area', () => {
@@ -48,9 +55,10 @@ describe('AppShell', () => {
   });
 
   it('renders the redesigned shell chrome classes', () => {
-    render(
+    const { container } = render(
       <MemoryRouter>
         <LayoutMetaProvider>
+          <LayoutMetaFixture />
           <AppShell>
             <div>Page Content</div>
           </AppShell>
@@ -58,11 +66,15 @@ describe('AppShell', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByTestId('top-nav')).toHaveAttribute('data-shell-theme', 'dark-workspace');
+    expect(container.firstChild).toHaveClass('bg-background', 'text-slate-100');
+    expect(screen.getByTestId('top-nav')).toHaveClass('glass-surface', 'h-14', 'border-b', 'border-border/80');
+    expect(screen.getByRole('main')).toHaveClass('bg-transparent');
+    expect(screen.getByText('专题列表')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '刷新' })).toHaveClass('bg-surface-3', 'border-border');
   });
 
   it('does not render left nav when sideNavSlot is null', () => {
-    render(
+    const { container } = render(
       <MemoryRouter>
         <LayoutMetaProvider>
           <AppShell>
@@ -71,6 +83,7 @@ describe('AppShell', () => {
         </LayoutMetaProvider>
       </MemoryRouter>
     );
-    expect(screen.queryByTestId('left-nav')).toBeNull();
+
+    expect(container.querySelector('aside')).toBeNull();
   });
 });

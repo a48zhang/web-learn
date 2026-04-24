@@ -3,7 +3,6 @@ import { useAuthStore } from '../../stores/useAuthStore';
 
 interface TopNavProps {
   onMenuClick: () => void;
-  'data-shell-theme'?: string;
 }
 
 interface NavLinkItem {
@@ -11,7 +10,7 @@ interface NavLinkItem {
   to: string;
 }
 
-export default function TopNav({ onMenuClick, 'data-shell-theme': shellTheme }: TopNavProps) {
+export default function TopNav({ onMenuClick }: TopNavProps) {
   const location = useLocation();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
@@ -35,7 +34,6 @@ export default function TopNav({ onMenuClick, 'data-shell-theme': shellTheme }: 
   return (
     <header
       data-testid="top-nav"
-      data-shell-theme={shellTheme}
       className="glass-surface flex h-14 items-center justify-between border-x-0 border-t-0 border-b border-border/80 px-4 sm:px-6"
     >
       <div className="flex items-center gap-6">

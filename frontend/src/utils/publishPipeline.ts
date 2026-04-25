@@ -1,6 +1,6 @@
 import { getWebContainer } from '../agent/webcontainer';
 import { topicApi, topicGitApi } from '../services/api';
-import { createTarball } from './tarUtils';
+import { createBinaryTarball } from './tarUtils';
 import { readDistFiles } from './readDistFiles';
 
 export type PublishPhase = 'building' | 'uploading';
@@ -33,7 +33,7 @@ export async function publishTopic(
   }
 
   onProgress?.('uploading');
-  const tarball = createTarball(distFiles);
+  const tarball = createBinaryTarball(distFiles);
   const { url } = await topicGitApi.getPresign(topicId, 'publish');
 
   const uploadResponse = await fetch(url, {

@@ -1,4 +1,4 @@
-import { extractTarball } from './tarUtils';
+import { extractBinaryTarball } from './tarUtils';
 
 const MIME_MAP: Record<string, string> = {
   '.js': 'text/javascript',
@@ -30,8 +30,9 @@ function getMime(path: string): string {
 export async function buildPublishedHtml(
   buffer: ArrayBuffer
 ): Promise<{ html: string; blobUrls: string[] }> {
-  const files = extractTarball(buffer);
-  const indexHtml = files['index.html'];
+  const files = extractBinaryTarball(buffer);
+  const indexHtmlBytes = files['index.html'];
+  const indexHtml = indexHtmlBytes ? new TextDecoder().decode(indexHtmlBytes) : undefined;
   if (!indexHtml) {
     throw new Error('index.html not found in published files');
   }
@@ -39,7 +40,7 @@ export async function buildPublishedHtml(
   const blobUrlMap: Record<string, string> = {};
   for (const [path, content] of Object.entries(files)) {
     if (path === 'index.html') continue;
-    const blob = new Blob([content], { type: getMime(path) });
+    const blob = new Blob([new Uint8Array(content)], { type: getMime(path) });
     blobUrlMap[path] = URL.createObjectURL(blob);
   }
 

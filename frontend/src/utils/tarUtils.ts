@@ -1,8 +1,48 @@
-// Minimal POSIX tar packer/unpacker for browser use
-// No external dependencies, uses TextEncoder/TextDecoder
+// Minimal POSIX tar packer/unpacker for browser use.
+// No external dependencies, uses TextEncoder/TextDecoder.
 
 const TEXT_ENCODER = new TextEncoder();
 const TEXT_DECODER = new TextDecoder();
+const MAX_TAR_NAME_BYTES = 100;
+
+export type TarFileContent = string | Uint8Array;
+
+function normalizeTarPath(path: string): string {
+  let normalized = path;
+  while (normalized.startsWith('./')) {
+    normalized = normalized.slice(2);
+  }
+
+  if (!normalized) {
+    throw new Error('Tar path must not be empty');
+  }
+  if (normalized.includes('\0')) {
+    throw new Error('Tar path must not contain NUL bytes');
+  }
+  if (normalized.includes('\\')) {
+    throw new Error('Tar path must not contain backslashes');
+  }
+  if (normalized.startsWith('/')) {
+    throw new Error('Tar path must be relative');
+  }
+  if (normalized.includes('//')) {
+    throw new Error('Tar path must not contain repeated slashes');
+  }
+
+  const segments = normalized.split('/');
+  for (const segment of segments) {
+    if (!segment || segment === '.' || segment === '..') {
+      throw new Error('Tar path must not contain dot segments');
+    }
+  }
+
+  const encoded = TEXT_ENCODER.encode(normalized);
+  if (encoded.length > MAX_TAR_NAME_BYTES) {
+    throw new Error(`Tar path is too long for the current tar format: ${normalized}`);
+  }
+
+  return normalized;
+}
 
 function writeOctal(value: number, length: number): Uint8Array {
   const octal = value.toString(8).padStart(length, '0');
@@ -12,7 +52,10 @@ function writeOctal(value: number, length: number): Uint8Array {
 function writeString(value: string, maxLength: number): Uint8Array {
   const bytes = new Uint8Array(maxLength);
   const encoded = TEXT_ENCODER.encode(value);
-  bytes.set(encoded.subarray(0, Math.min(maxLength, encoded.length)));
+  if (encoded.length > maxLength) {
+    throw new Error(`String is too long for tar header: ${value}`);
+  }
+  bytes.set(encoded);
   return bytes;
 }
 
@@ -68,11 +111,16 @@ function padTo512(bytes: Uint8Array): Uint8Array {
 }
 
 export function createTarball(files: Record<string, string>): ArrayBuffer {
+  return createBinaryTarball(files);
+}
+
+export function createBinaryTarball(files: Record<string, TarFileContent>): ArrayBuffer {
   const chunks: Uint8Array[] = [];
 
   for (const [path, content] of Object.entries(files)) {
-    const contentBytes = TEXT_ENCODER.encode(content);
-    const header = createTarHeader(path, contentBytes.length);
+    const normalizedPath = normalizeTarPath(path);
+    const contentBytes = typeof content === 'string' ? TEXT_ENCODER.encode(content) : content;
+    const header = createTarHeader(normalizedPath, contentBytes.length);
     chunks.push(header);
     chunks.push(padTo512(contentBytes));
   }
@@ -92,8 +140,17 @@ export function createTarball(files: Record<string, string>): ArrayBuffer {
 }
 
 export function extractTarball(buffer: ArrayBuffer): Record<string, string> {
-  const bytes = new Uint8Array(buffer);
+  const binaryFiles = extractBinaryTarball(buffer);
   const files: Record<string, string> = {};
+  for (const [path, content] of Object.entries(binaryFiles)) {
+    files[path] = TEXT_DECODER.decode(content);
+  }
+  return files;
+}
+
+export function extractBinaryTarball(buffer: ArrayBuffer): Record<string, Uint8Array> {
+  const bytes = new Uint8Array(buffer);
+  const files: Record<string, Uint8Array> = {};
   let offset = 0;
 
   while (offset + 512 <= bytes.length) {
@@ -113,16 +170,19 @@ export function extractTarball(buffer: ArrayBuffer): Record<string, string> {
     // Read file name (100 bytes, null-terminated)
     let nameEnd = 0;
     while (nameEnd < 100 && header[nameEnd] !== 0) nameEnd++;
-    const fileName = TEXT_DECODER.decode(header.subarray(0, nameEnd)).trim();
+    const fileName = normalizeTarPath(TEXT_DECODER.decode(header.subarray(0, nameEnd)).trim());
     if (!fileName) continue;
 
     // Read file size (12 bytes, octal)
     const sizeStr = TEXT_DECODER.decode(header.subarray(124, 136)).trim();
     const size = parseInt(sizeStr, 8);
+    if (!Number.isFinite(size) || size < 0) {
+      throw new Error(`Invalid tar file size for ${fileName}`);
+    }
 
     // Read file content
     if (offset + size > bytes.length) break;
-    const content = TEXT_DECODER.decode(bytes.subarray(offset, offset + size));
+    const content = bytes.slice(offset, offset + size);
     files[fileName] = content;
 
     // Skip padding

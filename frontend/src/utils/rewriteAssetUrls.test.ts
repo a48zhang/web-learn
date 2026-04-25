@@ -1,11 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createTarball } from './tarUtils';
+import { createBinaryTarball, createTarball } from './tarUtils';
 import { buildPublishedHtml } from './rewriteAssetUrls';
 
 describe('buildPublishedHtml', () => {
+  const createdBlobs: Blob[] = [];
+
   beforeEach(() => {
+    createdBlobs.length = 0;
     Object.defineProperty(globalThis.URL, 'createObjectURL', {
-      value: vi.fn(() => 'blob:test-url'),
+      value: vi.fn((blob: Blob) => {
+        createdBlobs.push(blob);
+        return 'blob:test-url';
+      }),
       writable: true,
     });
   });
@@ -22,5 +28,19 @@ describe('buildPublishedHtml', () => {
     expect(result.html).not.toContain('/assets/index.css');
     expect(result.html).not.toContain('/assets/index.js');
     expect(result.blobUrls).toHaveLength(2);
+  });
+
+  it('keeps binary asset bytes intact when creating blob URLs', async () => {
+    const imageBytes = new Uint8Array([0, 255, 128, 64]);
+    const tarball = createBinaryTarball({
+      'index.html': '<img src="/assets/image.png">',
+      'assets/image.png': imageBytes,
+    });
+
+    await buildPublishedHtml(tarball);
+
+    expect(createdBlobs).toHaveLength(1);
+    expect(createdBlobs[0].type).toBe('image/png');
+    await expect(createdBlobs[0].arrayBuffer()).resolves.toEqual(imageBytes.buffer);
   });
 });

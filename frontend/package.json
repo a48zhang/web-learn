@@ -25,6 +25,7 @@
     "@web-learn/shared": "workspace:*",
     "@webcontainer/api": "^1.6.1",
     "axios": "^1.6.7",
+    "framer-motion": "^12.38.0",
     "openai": "^6.33.0",
     "react": "^18.2.0",
     "react-dnd": "^16.0.1",

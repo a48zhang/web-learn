@@ -290,19 +290,43 @@ function AuthFlowDialog({
 
   return (
     <AuthDialog isOpen={mode !== null} mode={mode ?? 'login'} onClose={onClose}>
+      <div className="flex w-full max-w-sm mx-auto mb-6 rounded-full bg-slate-900/50 p-1 border border-white/5 relative z-10 overflow-hidden backdrop-blur-sm">
+        <div
+          className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full bg-primary transition-transform duration-300 ease-in-out ${
+            mode === 'register' ? 'translate-x-full left-1' : 'translate-x-0 left-1'
+          }`}
+        />
+        <button
+          type="button"
+          onClick={() => onModeChange('login')}
+          className={`flex-1 rounded-full py-2 text-sm font-medium transition-colors relative z-10 ${
+            mode === 'login' ? 'text-slate-950' : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          登录
+        </button>
+        <button
+          type="button"
+          onClick={() => onModeChange('register')}
+          className={`flex-1 rounded-full py-2 text-sm font-medium transition-colors relative z-10 ${
+            mode === 'register' ? 'text-slate-950' : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          注册
+        </button>
+      </div>
+
       {mode === 'login' ? (
         <LoginDialogCard
           error={error}
           isLoading={isLoading}
           onSubmit={handleLogin}
-          onSwitchToRegister={() => onModeChange('register')}
         />
       ) : mode === 'register' ? (
         <RegisterDialogCard
           error={error}
           isLoading={isLoading}
           onSubmit={handleRegister}
-          onSwitchToLogin={() => onModeChange('login')}
         />
       ) : null}
     </AuthDialog>
@@ -313,14 +337,12 @@ interface LoginDialogCardProps {
   error: string | null;
   isLoading: boolean;
   onSubmit: (data: LoginFormValues) => Promise<void>;
-  onSwitchToRegister: () => void;
 }
 
 function LoginDialogCard({
   error,
   isLoading,
   onSubmit,
-  onSwitchToRegister,
 }: LoginDialogCardProps) {
   const {
     register,
@@ -335,22 +357,8 @@ function LoginDialogCard({
   });
 
   return (
-    <AuthFormCard
-      title="登录继续创建"
-      subtitle={(
-        <>
-          还没有账户？{' '}
-          <button
-            type="button"
-            onClick={onSwitchToRegister}
-            className="font-medium text-primary transition-colors hover:text-primary-soft"
-          >
-            立即注册
-          </button>
-        </>
-      )}
-    >
-      <form className="mt-8 space-y-6" onSubmit={handleSubmit((data) => void onSubmit(data))}>
+    <AuthFormCard title="登录继续创建">
+      <form className="mt-2 space-y-6" onSubmit={handleSubmit((data) => void onSubmit(data))}>
         {error ? (
           <div className="rounded-md border border-red-500/40 bg-red-500/10 px-4 py-3 text-red-200">
             {error}
@@ -411,14 +419,12 @@ interface RegisterDialogCardProps {
   error: string | null;
   isLoading: boolean;
   onSubmit: (data: RegisterFormValues) => Promise<void>;
-  onSwitchToLogin: () => void;
 }
 
 function RegisterDialogCard({
   error,
   isLoading,
   onSubmit,
-  onSwitchToLogin,
 }: RegisterDialogCardProps) {
   const {
     register,
@@ -435,22 +441,8 @@ function RegisterDialogCard({
   });
 
   return (
-    <AuthFormCard
-      title="注册后开始创建"
-      subtitle={(
-        <>
-          已有账户？{' '}
-          <button
-            type="button"
-            onClick={onSwitchToLogin}
-            className="font-medium text-primary transition-colors hover:text-primary-soft"
-          >
-            去登录
-          </button>
-        </>
-      )}
-    >
-      <form className="mt-8 space-y-6" onSubmit={handleSubmit((data) => void onSubmit(data))}>
+    <AuthFormCard title="注册后开始创建">
+      <form className="mt-2 space-y-6" onSubmit={handleSubmit((data) => void onSubmit(data))}>
         {error ? (
           <div className="rounded-md border border-red-500/40 bg-red-500/10 px-4 py-3 text-red-200">
             {error}

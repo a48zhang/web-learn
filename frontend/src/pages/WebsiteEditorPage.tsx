@@ -40,6 +40,7 @@ function WebsiteEditorPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [previewReloadKey, setPreviewReloadKey] = useState(0);
+  const [filesLoaded, setFilesLoaded] = useState(false);
   const seededRef = useRef<string | null>(null);
 
   const fileTreePanelRef = useRef<any>(null);
@@ -132,6 +133,8 @@ function WebsiteEditorPage() {
           }
         }
 
+        setFilesLoaded(true);
+
         setMeta({
           pageTitle: `编辑：${topicData.title}`,
           breadcrumbSegments: [
@@ -156,12 +159,12 @@ function WebsiteEditorPage() {
     };
   }, [id, setMeta, loadSnapshot, saveToOSS, handleRefreshPreview]);
 
-  // Initialize WebContainer once topic is loaded
+  // Initialize WebContainer after files are loaded into EditorStore
   useEffect(() => {
-    if (!topic || !id) return;
+    if (!filesLoaded || !topic || !id) return;
     const currentFiles = getAllFiles();
     initWC(Object.keys(currentFiles).length > 0 ? currentFiles : undefined);
-  }, [topic, id, initWC, getAllFiles]);
+  }, [filesLoaded, topic, id, initWC, getAllFiles]);
 
   const handleOpenFile = useCallback((path: string) => {
     openFile(path);

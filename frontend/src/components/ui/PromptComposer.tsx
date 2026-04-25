@@ -33,6 +33,12 @@ export default function PromptComposer({
           disabled={disabled}
           className="min-h-28 w-full resize-none bg-transparent text-base text-slate-100 outline-none placeholder:text-slate-500 sm:text-lg"
           placeholder={placeholder}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey && !disabled) {
+              e.preventDefault();
+              onSubmit();
+            }
+          }}
         />
         <div className="mt-3 flex justify-end">
           <button

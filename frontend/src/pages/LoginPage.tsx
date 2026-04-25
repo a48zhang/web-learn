@@ -126,9 +126,9 @@ function LoginPage() {
 
   return (
     <StandaloneAuthPageShell
-      eyebrow="Web Learn Account"
-      heroTitle="登录后继续学习与创作"
-      description="使用您的账户进入控制台、管理内容，并继续之前的工作进度。"
+      eyebrow="WebLearn"
+      heroTitle="欢迎回来"
+      description=""
       backgroundClassName="bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.24),_transparent_30%),radial-gradient(circle_at_bottom_left,_rgba(59,130,246,0.18),_transparent_32%),linear-gradient(180deg,_#020617_0%,_#0f172a_52%,_#020617_100%)]"
       eyebrowClassName="text-cyan-200/80"
     >
@@ -199,9 +199,6 @@ function LoginPage() {
 
               <div className="space-y-3">
                 <AuthSubmitButton idleLabel="登录" loadingLabel="登录中..." isLoading={isLoading} />
-                <p className="text-center text-xs leading-5 text-slate-400">
-                  登录即表示您将继续使用现有账户数据与权限。
-                </p>
               </div>
             </form>
           </AuthFormCard>

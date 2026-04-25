@@ -76,7 +76,7 @@ function DashboardPage() {
         <div className="w-full">
           <div className="mb-6 text-center">
             <h1 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
-              想做什么学习专题？
+              今天想做什么
             </h1>
           </div>
 

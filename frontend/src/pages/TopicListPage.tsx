@@ -156,7 +156,7 @@ function TopicListPage() {
             <EmptyState
               icon="folder"
               title="还没有专题"
-              description="创建您的第一个专题，开始组织教学内容"
+              description="创建第一个专题"
               action={{
                 label: '创建专题',
                 onClick: () => navigate('/topics/create'),

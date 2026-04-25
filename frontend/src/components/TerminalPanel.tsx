@@ -56,7 +56,7 @@ export default function TerminalPanel() {
         className="flex items-center justify-between px-3 py-1 bg-zinc-800 border-b border-zinc-700 cursor-row-resize select-none h-7"
         onMouseDown={handleMouseDown}
       >
-        <span className="text-zinc-400 text-xs font-medium">&gt;_ Terminal</span>
+        <span className="text-zinc-400 text-xs font-medium">&gt;_ 终端</span>
         <button
           type="button"
           onClick={() => setOpen(false)}

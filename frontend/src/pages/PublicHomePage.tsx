@@ -78,7 +78,8 @@ function PublicHomePage() {
   }, [authIntent, isAuthenticated, navigate]);
 
   const normalizedPrompt = normalizePrompt(prompt);
-  const composerDisabled = !normalizedPrompt || isCreating || isAuthLoading;
+  const isComposerDisabled = isCreating || isAuthLoading;
+  const isSubmitDisabled = !normalizedPrompt || isCreating || isAuthLoading;
 
   const createTopicFromPrompt = async (nextPrompt: string) => {
     if (!nextPrompt || creatingRef.current) {
@@ -186,14 +187,11 @@ function PublicHomePage() {
         <div className="mx-auto flex w-full max-w-4xl flex-col items-center">
           <div className="mb-8 max-w-2xl text-center">
             <p className="text-sm font-medium uppercase tracking-[0.28em] text-primary">
-              Prompt To Topic
+              从想法到成品
             </p>
             <h1 className="mt-4 font-display text-4xl font-bold tracking-tight text-slate-50 sm:text-5xl">
               从一句需求开始创建互动专题
             </h1>
-            <p className="mt-4 text-base text-slate-300 sm:text-lg">
-              输入你想做的专题方向，登录后立即进入编辑器继续生成和修改。
-            </p>
           </div>
 
           <div className="w-full max-w-3xl">
@@ -208,7 +206,8 @@ function PublicHomePage() {
               onSubmit={() => {
                 void handlePromptSubmit();
               }}
-              disabled={composerDisabled}
+              disabled={isComposerDisabled}
+              submitDisabled={isSubmitDisabled}
               submitLabel={isCreating ? '创建中...' : '开始创建'}
               textareaLabel="描述专题需求"
               placeholder="例如：做一个中国古代史互动专题，包含时间线、地图和关键人物故事"

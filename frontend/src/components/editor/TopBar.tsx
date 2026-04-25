@@ -80,7 +80,7 @@ export default function TopBar({ onRefreshPreview, onPublish, onShare }: TopBarP
           type="button"
           onClick={onRefreshPreview}
           className="text-[#cccccc] hover:text-white w-6 h-6 flex items-center justify-center rounded shadow-sm border border-transparent hover:bg-[#333333] transition-colors outline-none mx-1"
-          title="Refresh Preview"
+          title="刷新预览"
         >
           <svg className="w-[14px] h-[14px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />

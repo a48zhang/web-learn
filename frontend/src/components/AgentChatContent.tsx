@@ -263,7 +263,7 @@ export default function AgentChatContent({
             </svg>
           </div>
           <p className="text-sm text-zinc-400 font-medium">正在初始化工作环境...</p>
-          <p className="text-xs text-zinc-600 mt-1">WebContainer 启动中，请稍候</p>
+          <p className="text-xs text-zinc-600 mt-1">运行环境启动中，请稍候</p>
         </div>
       )}
       {/* Header - Glassmorphism */}
@@ -283,7 +283,11 @@ export default function AgentChatContent({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
-            <p className="text-sm text-zinc-400">我是您的 AI 助手<br />我可以帮您分析资料并修改代码</p>
+            <p className="text-sm text-zinc-400">
+              {agentType === 'learning'
+                ? '关于这个专题，你想了解什么？'
+                : '告诉我你想修改什么'}
+            </p>
           </div>
         )}
 

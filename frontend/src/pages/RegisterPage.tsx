@@ -60,9 +60,9 @@ function RegisterPage() {
 
   return (
     <StandaloneAuthPageShell
-      eyebrow="Join Web Learn"
-      heroTitle="创建账户，直接开始使用"
-      description="注册后即可进入控制台，保存学习内容并继续您的创作流程。"
+      eyebrow="WebLearn"
+      heroTitle="开始你的学习之旅"
+      description=""
       backgroundClassName="bg-[radial-gradient(circle_at_top,_rgba(45,212,191,0.2),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(14,165,233,0.18),_transparent_34%),linear-gradient(180deg,_#020617_0%,_#0f172a_55%,_#020617_100%)]"
       eyebrowClassName="text-emerald-200/80"
     >
@@ -169,9 +169,6 @@ function RegisterPage() {
 
               <div className="space-y-3">
                 <AuthSubmitButton idleLabel="注册" loadingLabel="注册中..." isLoading={isLoading} />
-                <p className="text-center text-xs leading-5 text-slate-400">
-                  注册即表示您将创建一个新的学习账户，并在完成后进入控制台。
-                </p>
               </div>
             </form>
           </AuthFormCard>

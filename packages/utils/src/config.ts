@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import fs from 'fs';
 
 // Support explicit env file path; otherwise load from current working directory (default .env behavior)
 if (process.env.DOTENV_CONFIG_PATH) {
@@ -13,6 +14,9 @@ export interface DatabaseConfig {
   name: string;
   user: string;
   password: string;
+  ssl: boolean;
+  sslRejectUnauthorized: boolean;
+  sslCa?: string;
 }
 
 export interface JwtConfig {
@@ -20,13 +24,29 @@ export interface JwtConfig {
   expiresIn: string;
 }
 
-export const createDatabaseConfig = (): DatabaseConfig => ({
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '3306', 10),
-  name: process.env.DB_NAME || 'web_learn',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-});
+const parseBoolean = (value: string | undefined, defaultValue = false) => {
+  if (!value) return defaultValue;
+  return ['1', 'true', 'yes', 'on'].includes(value.toLowerCase());
+};
+
+const readOptionalFile = (path: string | undefined) => {
+  if (!path) return undefined;
+  return fs.readFileSync(path, 'utf8');
+};
+
+export const createDatabaseConfig = (): DatabaseConfig => {
+  const sslCa = process.env.DB_SSL_CA || readOptionalFile(process.env.DB_SSL_CA_PATH);
+  return {
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || '3306', 10),
+    name: process.env.DB_NAME || 'web_learn',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    ssl: parseBoolean(process.env.DB_SSL),
+    sslRejectUnauthorized: parseBoolean(process.env.DB_SSL_REJECT_UNAUTHORIZED, true),
+    ...(sslCa ? { sslCa } : {}),
+  };
+};
 
 export const createJwtConfig = (): JwtConfig => {
   const secret = process.env.JWT_SECRET?.trim();

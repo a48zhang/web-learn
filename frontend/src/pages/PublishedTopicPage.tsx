@@ -14,7 +14,7 @@ export default function PublishedTopicPage() {
   useEffect(() => {
     if (!id) {
       setStatus('error');
-      setErrorMessage('无效专题 ID');
+      setErrorMessage('专题不存在或链接无效');
       return;
     }
 

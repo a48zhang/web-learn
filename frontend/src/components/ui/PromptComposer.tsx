@@ -17,12 +17,15 @@ export default function PromptComposer({
   onChange,
   onSubmit,
   disabled = false,
+  submitDisabled = false,
   submitLabel,
   textareaLabel = '描述你的需求',
   placeholder = '描述你想完成的内容...',
   className = '',
   cardClassName = '',
-}: PromptComposerProps) {
+}: PromptComposerProps & { submitDisabled?: boolean }) {
+  const isSubmitDisabled = disabled || submitDisabled;
+
   return (
     <div className={`mx-auto flex w-full justify-center px-4 sm:px-6 ${className}`.trim()}>
       <SurfaceCard className={`w-full max-w-3xl p-4 sm:p-5 ${cardClassName}`.trim()}>
@@ -34,7 +37,7 @@ export default function PromptComposer({
           className="min-h-28 w-full resize-none bg-transparent text-base text-slate-100 outline-none placeholder:text-slate-500 sm:text-lg"
           placeholder={placeholder}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey && !disabled) {
+            if (e.key === 'Enter' && !e.shiftKey && !isSubmitDisabled) {
               e.preventDefault();
               onSubmit();
             }
@@ -43,7 +46,7 @@ export default function PromptComposer({
         <div className="mt-3 flex justify-end">
           <button
             type="button"
-            disabled={disabled}
+            disabled={isSubmitDisabled}
             onClick={onSubmit}
             className="inline-flex items-center justify-center rounded-2xl bg-primary-strong px-4 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-primary disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-slate-300"
           >

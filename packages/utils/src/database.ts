@@ -6,6 +6,14 @@ export const createSequelize = (config: DatabaseConfig): Sequelize =>
     host: config.host,
     port: config.port,
     dialect: 'mysql',
+    dialectOptions: config.ssl
+      ? {
+          ssl: {
+            rejectUnauthorized: config.sslRejectUnauthorized,
+            ca: config.sslCa,
+          },
+        }
+      : undefined,
     logging: false,
     define: {
       underscored: true,

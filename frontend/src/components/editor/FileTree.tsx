@@ -110,9 +110,9 @@ export default function FileTree({ onOpenFile, onDeleteFile }: FileTreeProps) {
       <div className="flex items-center justify-between px-4 py-2 hover:bg-[#2a2d2e] cursor-pointer group">
         <div className="flex items-center gap-1.5 focus:outline-none">
           <svg className="w-3.5 h-3.5 text-[#cccccc]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[#cccccc]">EXPLORER</span>
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#cccccc]">资源管理器</span>
         </div>
-        <button onClick={handleNewFile} className="text-[#cccccc] opacity-0 group-hover:opacity-100 hover:bg-[#3d3d3d] p-[4px] rounded-md transition-all" title="New File">
+        <button onClick={handleNewFile} className="text-[#cccccc] opacity-0 group-hover:opacity-100 hover:bg-[#3d3d3d] p-[4px] rounded-md transition-all" title="新建文件">
           <FiPlus size={14} />
         </button>
       </div>
@@ -123,7 +123,7 @@ export default function FileTree({ onOpenFile, onDeleteFile }: FileTreeProps) {
           ))
         ) : (
           <div className="p-4 text-xs text-zinc-500 text-center">
-            暂无文件，请在对话中让Agent生成
+            暂无文件，在对话中告诉 AI 你需要什么
           </div>
         )}
       </div>

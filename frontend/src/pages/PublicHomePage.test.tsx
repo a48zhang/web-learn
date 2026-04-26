@@ -168,7 +168,7 @@ describe('PublicHomePage', () => {
     fireEvent.change(screen.getByLabelText('确认密码'), {
       target: { value: 'password123' },
     });
-    fireEvent.click(within(dialog).getByRole('button', { name: '注册' }));
+    fireEvent.click(within(dialog).getAllByRole('button', { name: '注册' })[1]);
 
     await waitFor(() => {
       expect(registerMock).toHaveBeenCalledWith('tester', 'tester@example.com', 'password123');
@@ -201,7 +201,7 @@ describe('PublicHomePage', () => {
     fireEvent.change(screen.getByLabelText('描述专题需求'), {
       target: { value: '做一个不会自动创建的专题' },
     });
-    fireEvent.click(screen.getByRole('button', { name: '登录' }));
+    fireEvent.click(screen.getAllByRole('button', { name: '登录' })[0]);
 
     const dialog = await screen.findByRole('dialog', { name: '登录对话框' });
 
@@ -211,14 +211,14 @@ describe('PublicHomePage', () => {
     fireEvent.change(screen.getByLabelText('密码'), {
       target: { value: 'password123' },
     });
-    fireEvent.click(within(dialog).getByRole('button', { name: '登录' }));
+    fireEvent.click(within(dialog).getAllByRole('button', { name: '登录' })[1]);
 
     await waitFor(() => {
       expect(loginMock).toHaveBeenCalledWith('tester@example.com', 'password123');
     });
 
     await waitFor(() => {
-      expect(navigateMock).toHaveBeenCalledWith('/dashboard', { replace: true });
+      expect(navigateMock).toHaveBeenCalledWith('/', { replace: true });
     });
 
     expect(createTopicMock).not.toHaveBeenCalled();

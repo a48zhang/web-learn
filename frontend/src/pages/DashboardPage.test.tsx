@@ -34,7 +34,7 @@ describe('DashboardPage', () => {
   it('renders the ai create entry surface and removes the old dashboard blocks', () => {
     render(<DashboardPage />);
 
-    expect(screen.getByRole('heading', { name: '想做什么学习专题？' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '今天想做什么' })).toBeInTheDocument();
     expect(screen.getByLabelText('描述专题需求')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '开始制作' })).toBeDisabled();
 

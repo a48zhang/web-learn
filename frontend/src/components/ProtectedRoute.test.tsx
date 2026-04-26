@@ -118,7 +118,7 @@ describe('ProtectedRoute', () => {
               </ProtectedRoute>
             }
           />
-          <Route path="/dashboard" element={<div>Dashboard Route</div>} />
+          <Route path="/" element={<div>Dashboard Route</div>} />
         </Routes>
       </MemoryRouter>
     );

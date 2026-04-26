@@ -74,7 +74,7 @@ describe('TopicListPage', () => {
 
     const createButtons = screen.getAllByRole('button', { name: '创建专题' });
     expect(createButtons).toHaveLength(2);
-    expect(screen.getByText('创建您的第一个专题，开始组织教学内容')).toBeInTheDocument();
+    expect(screen.getByText('创建第一个专题')).toBeInTheDocument();
   });
 
   it('shows an error state when the topic request fails', async () => {

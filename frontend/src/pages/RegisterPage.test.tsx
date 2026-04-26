@@ -77,7 +77,7 @@ describe('RegisterPage', () => {
     });
     expect(successMock).toHaveBeenCalledWith('注册成功！');
     expect(errorMock).not.toHaveBeenCalled();
-    expect(navigateMock).toHaveBeenCalledWith('/dashboard');
+    expect(navigateMock).toHaveBeenCalledWith('/', { replace: true });
   });
 
   it('shows a disabled loading state while auth is in progress', () => {

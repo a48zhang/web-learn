@@ -85,7 +85,7 @@ describe('LoginPage', () => {
     });
     expect(successMock).toHaveBeenCalledWith('登录成功！');
     expect(errorMock).not.toHaveBeenCalled();
-    expect(navigateMock).toHaveBeenCalledWith('/dashboard');
+    expect(navigateMock).toHaveBeenCalledWith('/', { replace: true });
   });
 
   it('shows backend error feedback when login fails', async () => {

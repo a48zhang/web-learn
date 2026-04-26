@@ -58,6 +58,8 @@ function isInChina(): boolean {
 
 async function setupNpmRegistry(wc: WebContainer): Promise<void> {
   if (isInChina()) {
+    // blocked for certain reasons
+    return;
     writeTerminalHeader('npm config set registry');
     const proc = await wc.spawn(
       'npm',

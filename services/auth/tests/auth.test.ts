@@ -63,7 +63,7 @@ describe('Auth Service', () => {
         createdAt: '2026-04-01T00:00:00.000Z', updatedAt: '2026-04-01T00:00:00.000Z',
       });
       expect(mockUserModel.create).toHaveBeenCalledWith({
-        username: 'alice', email: 'alice@example.com', password: 'password123', role: 'user',
+        id: expect.any(String), username: 'alice', email: 'alice@example.com', password: 'password123', role: 'user',
       });
     });
 

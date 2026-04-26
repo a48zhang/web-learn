@@ -1,4 +1,4 @@
-import { WebContainer } from '@webcontainer/api';
+import type { WebContainer } from '@webcontainer/api';
 
 let wcInstance: WebContainer | null = null;
 const fileChangeListeners = new Set<(path: string) => void>();

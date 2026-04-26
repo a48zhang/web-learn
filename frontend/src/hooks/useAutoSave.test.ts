@@ -29,10 +29,11 @@ describe('useAutoSave', () => {
   });
 
   it('forces OSS upload when manual save is triggered, even without unsaved changes', async () => {
-    const { result } = renderHook(() => useAutoSave('topic-1'));
+    const { result, unmount } = renderHook(() => useAutoSave('topic-1'));
 
     await result.current.save();
 
     expect(saveToOSSMock).toHaveBeenCalledWith('topic-1', '手动保存', { force: true });
+    unmount();
   });
 });

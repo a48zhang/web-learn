@@ -15,6 +15,7 @@ registerTool('write_file', {
     required: ['path', 'content'],
   },
 }, async (args) => {
+  console.log("write_file: ", args.path);
   const path = parseProjectToolPath(args.path);
   const content = args.content as string;
   if (typeof path !== 'string') {

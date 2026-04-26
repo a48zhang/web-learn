@@ -72,6 +72,7 @@ export class ServiceRegistry {
         }
       }
     }, intervalMs);
+    this.cleanupInterval.unref?.();
   }
 
   stop(): void {

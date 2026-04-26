@@ -18,7 +18,7 @@ function TopicCreatePage() {
     setMeta({
       pageTitle: '新建专题',
       breadcrumbSegments: [
-        { label: '首页', to: '/dashboard' },
+        { label: '首页', to: '/' },
         { label: '专题列表', to: '/topics' },
         { label: '新建专题' },
       ],

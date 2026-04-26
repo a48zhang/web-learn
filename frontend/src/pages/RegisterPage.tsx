@@ -50,7 +50,7 @@ function RegisterPage() {
     try {
       await registerUser(data.username, data.email, data.password);
       toast.success('注册成功！');
-      navigate('/dashboard');
+      navigate('/', { replace: true });
     } catch (err: unknown) {
       const errorMsg = getApiErrorMessage(err, '注册失败，请稍后重试');
       setError(errorMsg);

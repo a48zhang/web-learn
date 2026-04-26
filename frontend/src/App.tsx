@@ -6,7 +6,6 @@ import { ToastContainer } from './components/Toast';
 import { LoadingOverlay } from './components/Loading';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
-import DashboardPage from './pages/DashboardPage';
 import TopicListPage from './pages/TopicListPage';
 import TopicCreatePage from './pages/TopicCreatePage';
 import TopicDetailPage from './pages/TopicDetailPage';
@@ -40,28 +39,18 @@ function App() {
           <Route
             path="/login"
             element={
-              isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
+              isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />
             }
           />
           <Route
             path="/register"
             element={
-              isAuthenticated ? <Navigate to="/dashboard" replace /> : <RegisterPage />
+              isAuthenticated ? <Navigate to="/" replace /> : <RegisterPage />
             }
           />
           <Route path="/p/:id" element={<PublishedTopicPage />} />
 
           {/* Protected routes wrapped with AppShell */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <AppShell>
-                  <DashboardPage />
-                </AppShell>
-              </ProtectedRoute>
-            }
-          />
           <Route
             path="/topics"
             element={
@@ -110,7 +99,7 @@ function App() {
                   <div className="text-center">
                     <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
                     <p className="text-gray-600 mb-4">页面未找到</p>
-                    <a href="/dashboard" className="text-blue-600 hover:text-blue-500 font-medium">
+                    <a href="/" className="text-blue-600 hover:text-blue-500 font-medium">
                       返回首页
                     </a>
                   </div>

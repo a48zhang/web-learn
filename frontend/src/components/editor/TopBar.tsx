@@ -54,7 +54,7 @@ export default function TopBar({ onRefreshPreview, onPublish, onShare }: TopBarP
       {/* MAC / VSCODE TITLE BAR LEFT */}
       <div className="flex items-center justify-center gap-1.5 flex-row group">
         <button
-          onClick={() => navigate('/dashboard')}
+          onClick={() => navigate('/')}
           className="flex items-center justify-center w-6 h-6 rounded-md hover:bg-[#333333] transition-colors text-[#cccccc] cursor-pointer outline-none"
           title="Back to Dashboard"
         >

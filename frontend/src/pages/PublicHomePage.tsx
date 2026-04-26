@@ -73,9 +73,9 @@ function PublicHomePage() {
 
   useEffect(() => {
     if (isAuthenticated && authIntent !== 'create') {
-      navigate('/dashboard', { replace: true });
+      // 已登录用户留在落地页
     }
-  }, [authIntent, isAuthenticated, navigate]);
+  }, [authIntent, isAuthenticated]);
 
   const normalizedPrompt = normalizePrompt(prompt);
   const isComposerDisabled = isCreating || isAuthLoading;
@@ -154,7 +154,7 @@ function PublicHomePage() {
     }
 
     setAuthIntent(null);
-    navigate('/dashboard', { replace: true });
+    navigate('/', { replace: true });
   };
 
   return (

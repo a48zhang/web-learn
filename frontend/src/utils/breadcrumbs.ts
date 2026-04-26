@@ -6,7 +6,7 @@ import type { BreadcrumbSegment } from '../components/layout/LayoutMetaContext';
  */
 export function getBaseBreadcrumbs(): BreadcrumbSegment[] {
   return [
-    { label: '首页', to: '/dashboard' },
+    { label: '首页', to: '/' },
     { label: '专题列表', to: '/topics' },
   ];
 }

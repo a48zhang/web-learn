@@ -18,7 +18,7 @@ function TopicListPage() {
     setMeta({
       pageTitle: '专题列表',
       breadcrumbSegments: [
-        { label: '首页', to: '/dashboard' },
+        { label: '首页', to: '/' },
         { label: '专题列表' },
       ],
       sideNavSlot: null,

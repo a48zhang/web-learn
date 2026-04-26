@@ -18,7 +18,7 @@ export default function TopNav({ onMenuClick }: TopNavProps) {
 
   const navLinks: NavLinkItem[] = isAuthenticated
     ? [
-        { label: '控制台', to: '/dashboard' },
+        { label: '首页', to: '/' },
         { label: '专题列表', to: '/topics' },
         { label: '新建专题', to: '/topics/create' },
       ]
@@ -37,7 +37,7 @@ export default function TopNav({ onMenuClick }: TopNavProps) {
       className="glass-surface flex h-14 items-center justify-between border-x-0 border-t-0 border-b border-border/80 px-4 sm:px-6"
     >
       <div className="flex items-center gap-6">
-        <Link to="/dashboard" className="font-display text-lg font-bold tracking-tight text-slate-50">
+        <Link to="/" className="font-display text-lg font-bold tracking-tight text-slate-50">
           WebLearn
         </Link>
         <nav className="hidden items-center gap-2 md:flex">

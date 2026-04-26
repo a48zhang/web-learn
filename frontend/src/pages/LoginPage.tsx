@@ -116,7 +116,7 @@ function LoginPage() {
     try {
       await login(data.email, data.password);
       toast.success('登录成功！');
-      navigate('/dashboard');
+      navigate('/', { replace: true });
     } catch (err: unknown) {
       const errorMsg = getApiErrorMessage(err, '登录失败，请检查您的邮箱和密码');
       setError(errorMsg);

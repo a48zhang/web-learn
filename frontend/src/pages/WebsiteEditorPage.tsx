@@ -68,14 +68,22 @@ function WebsiteEditorPage() {
   const { openFile, getAllFiles, loadSnapshot, deleteFile, saveToOSS } = useEditorStore();
   const { save: autoSave } = useAutoSave(id ?? '');
   const locationState = location.state as EditorLocationState | null;
-  const initialBuildPrompt =
+  const locationInitialBuildPrompt =
     typeof locationState?.initialBuildPrompt === 'string' ? locationState.initialBuildPrompt : undefined;
+  const [initialBuildPrompt, setInitialBuildPrompt] = useState<string | undefined>(() => locationInitialBuildPrompt);
+
+  useEffect(() => {
+    if (locationInitialBuildPrompt) {
+      setInitialBuildPrompt(locationInitialBuildPrompt);
+    }
+  }, [locationInitialBuildPrompt]);
 
   const handleRefreshPreview = useCallback(() => {
     setPreviewReloadKey((prev) => prev + 1);
   }, []);
 
   const handleInitialPromptConsumed = useCallback(() => {
+    setInitialBuildPrompt(undefined);
     navigate(location.pathname, { replace: true, state: null });
   }, [location.pathname, navigate]);
 

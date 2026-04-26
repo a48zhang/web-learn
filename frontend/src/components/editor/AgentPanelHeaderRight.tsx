@@ -1,38 +1,12 @@
 import { useState } from 'react';
 import { useAgentStore } from '../../stores/useAgentStore';
-
-const MODELS: Array<{ label: string; id: string; desc: string; logoUrl: string }> = [
-  {
-    label: 'MiniMax M2.7',
-    id: 'MiniMax-M2.7',
-    desc: 'MiniMax的通用推理模型，上下文理解与速度的极佳平衡',
-    logoUrl: 'https://avatars.githubusercontent.com/u/194880281?v=4'
-  },
-  {
-    label: 'Qwen 3',
-    id: 'qwen3',
-    desc: '通义千问推理模型，长逻辑和编程能力卓越',
-    logoUrl: 'https://avatars.githubusercontent.com/u/141221163?v=4'
-  },
-  {
-    label: 'Doubao Seed Code',
-    id: 'doubao-seed-2.0-code',
-    desc: '火山引擎提供，针对代码生成深度优化',
-    logoUrl: 'https://avatars.githubusercontent.com/u/67365215?v=4'
-  },
-  {
-    label: 'GPT-5.4',
-    id: 'gpt-5.4',
-    desc: 'OpenAI的高阶系统规划、逻辑推理与编码模型',
-    logoUrl: 'https://avatars.githubusercontent.com/u/14957082?v=4'
-  },
-];
+import { AGENT_MODELS } from '../../agent/modelOptions';
 
 export default function AgentPanelHeaderRight() {
   const { model, setModel, visibleMessages, setVisibleMessages } = useAgentStore();
   const [showModelPicker, setShowModelPicker] = useState(false);
 
-  const currentModel = MODELS.find((m) => m.id === model) ?? MODELS[0];
+  const currentModel = AGENT_MODELS.find((m) => m.id === model) ?? AGENT_MODELS[0];
 
   const handleClearChat = () => {
     setVisibleMessages([]);
@@ -69,7 +43,7 @@ export default function AgentPanelHeaderRight() {
               <div className="px-3 pt-1 pb-1.5 text-[10px] uppercase tracking-wider text-[#858585] font-semibold border-b border-[#3c3c3c] mb-1">
                 选择代理使用的语言模型
               </div>
-              {MODELS.map((m) => {
+              {AGENT_MODELS.map((m) => {
                 const isActive = model === m.id;
                 return (
                   <button

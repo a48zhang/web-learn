@@ -9,16 +9,20 @@ const createTopicMock = vi.hoisted(() => vi.fn());
 const setMetaMock = vi.hoisted(() => vi.fn());
 const toastSuccessMock = vi.hoisted(() => vi.fn());
 const toastErrorMock = vi.hoisted(() => vi.fn());
+const setModelMock = vi.hoisted(() => vi.fn());
+const logoutMock = vi.hoisted(() => vi.fn());
 
 type AuthSnapshot = {
   isAuthenticated: boolean;
   isLoading: boolean;
+  user: { id: number; username: string; role: string } | null;
 };
 
 const authStore = vi.hoisted(() => {
   let snapshot: AuthSnapshot = {
     isAuthenticated: false,
     isLoading: false,
+    user: null,
   };
   const listeners = new Set<() => void>();
   const emit = () => {
@@ -35,6 +39,7 @@ const authStore = vi.hoisted(() => {
       snapshot = {
         isAuthenticated: false,
         isLoading: false,
+        user: null,
       };
       emit();
     },
@@ -50,13 +55,21 @@ const authStore = vi.hoisted(() => {
 
 const loginMock = vi.hoisted(() =>
   vi.fn(async () => {
-    authStore.setState({ isAuthenticated: true, isLoading: false });
+    authStore.setState({
+      isAuthenticated: true,
+      isLoading: false,
+      user: { id: 1, username: 'tester', role: 'user' },
+    });
   })
 );
 
 const registerMock = vi.hoisted(() =>
   vi.fn(async () => {
-    authStore.setState({ isAuthenticated: true, isLoading: false });
+    authStore.setState({
+      isAuthenticated: true,
+      isLoading: false,
+      user: { id: 1, username: 'tester', role: 'user' },
+    });
   })
 );
 
@@ -73,8 +86,17 @@ vi.mock('../stores/useAuthStore', () => ({
       ...snapshot,
       login: loginMock,
       register: registerMock,
+      logout: logoutMock,
     };
   },
+}));
+
+vi.mock('../stores/useAgentStore', () => ({
+  useAgentStore: (selector: (state: { model: string; setModel: (model: string) => void }) => unknown) =>
+    selector({
+      model: 'MiniMax-M2.7',
+      setModel: setModelMock,
+    }),
 }));
 
 vi.mock('../stores/useToastStore', () => ({
@@ -106,6 +128,8 @@ describe('PublicHomePage', () => {
     setMetaMock.mockReset();
     toastSuccessMock.mockReset();
     toastErrorMock.mockReset();
+    setModelMock.mockReset();
+    logoutMock.mockReset();
   });
 
   it('renders only the centered prompt entry instead of marketing sections', () => {
@@ -116,10 +140,42 @@ describe('PublicHomePage', () => {
     );
 
     expect(screen.getByLabelText('描述专题需求')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '选择模型' })).toHaveTextContent('MiniMax M2.7');
     expect(screen.getByRole('button', { name: '开始创建' })).toBeDisabled();
     expect(screen.queryByText('为什么选择 WebLearn？')).not.toBeInTheDocument();
     expect(screen.queryByText('热门专题')).not.toBeInTheDocument();
     expect(screen.queryByText('准备好开始了吗？')).not.toBeInTheDocument();
+  });
+
+  it('shows the authenticated user in the landing header instead of login/register actions', () => {
+    authStore.setState({
+      isAuthenticated: true,
+      user: { id: 1, username: 'Ada Lovelace', role: 'user' },
+    });
+
+    render(
+      <MemoryRouter>
+        <PublicHomePage />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '退出' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '登录' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '注册' })).not.toBeInTheDocument();
+  });
+
+  it('updates the selected model from the designed landing composer selector', () => {
+    render(
+      <MemoryRouter>
+        <PublicHomePage />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '选择模型' }));
+    fireEvent.click(screen.getByRole('option', { name: /GPT-5.4/ }));
+
+    expect(setModelMock).toHaveBeenCalledWith('gpt-5.4');
   });
 
   it('opens the auth dialog and preserves the prompt when an unauthenticated user submits', async () => {

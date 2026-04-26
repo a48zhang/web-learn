@@ -60,6 +60,15 @@ export default function AgentChatContent({
   }, [onInitialPromptConsumed]);
 
   useEffect(() => {
+    const prompt = initialPrompt?.trim();
+    if (!prompt) {
+      return;
+    }
+
+    setInput((current) => current || prompt);
+  }, [initialPrompt]);
+
+  useEffect(() => {
     let cancelled = false;
     const sessionKey = `${topicId}:${agentType}`;
 
@@ -94,6 +103,10 @@ export default function AgentChatContent({
 
     consumedPromptKeyRef.current = consumedPromptKey;
     onInitialPromptConsumedRef.current?.();
+    setInput('');
+    if (textareaRef.current) {
+      textareaRef.current.style.height = '52px';
+    }
     void runAgentLoopRef.current(prompt, modelRef.current);
   }, [initialPrompt, hydratedSessionKey, topicId, agentType]);
 

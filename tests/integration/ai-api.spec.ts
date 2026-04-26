@@ -11,7 +11,7 @@ beforeAll(async () => {
     email: 'admin@test.com',
     password: 'Admin123!',
   });
-  adminToken = loginRes.body.data.token;
+  adminToken = loginRes.data.data.token;
 });
 
 afterAll(async () => {
@@ -46,5 +46,4 @@ describe('AI API', () => {
       expect(res.status).not.toBe(401);
     });
   });
-
 });

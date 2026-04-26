@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { topicApi } from '../services/api';
+import { useAgentStore } from '../stores/useAgentStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import { toast } from '../stores/useToastStore';
 import { getApiErrorMessage } from '../utils/errors';
@@ -52,9 +53,13 @@ function PublicHomePage() {
   const {
     isAuthenticated,
     isLoading: isAuthLoading,
+    user,
     login,
     register,
+    logout,
   } = useAuthStore();
+  const model = useAgentStore((s) => s.model);
+  const setModel = useAgentStore((s) => s.setModel);
   const [prompt, setPrompt] = useState('');
   const [dialogMode, setDialogMode] = useState<AuthMode | null>(null);
   const [authIntent, setAuthIntent] = useState<AuthIntent>(null);
@@ -165,20 +170,46 @@ function PublicHomePage() {
             WebLearn
           </Link>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => openAuthDialog('login')}
-              className="rounded-full px-4 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-slate-50"
-            >
-              登录
-            </button>
-            <button
-              type="button"
-              onClick={() => openAuthDialog('register')}
-              className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-primary-soft"
-            >
-              注册
-            </button>
+            {isAuthenticated && user ? (
+              <>
+                <Link
+                  to="/topics"
+                  className="hidden rounded-full px-4 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-slate-50 sm:inline-flex"
+                >
+                  专题列表
+                </Link>
+                <div className="flex min-h-10 items-center gap-2 rounded-full border border-white/10 bg-white/5 py-1 pl-1 pr-3">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-bold text-slate-950">
+                    {Array.from(user.username || 'U')[0]?.toUpperCase()}
+                  </span>
+                  <span className="max-w-32 truncate text-sm font-medium text-slate-100">{user.username}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="rounded-full px-3 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-slate-50"
+                >
+                  退出
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => openAuthDialog('login')}
+                  className="rounded-full px-4 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-slate-50"
+                >
+                  登录
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openAuthDialog('register')}
+                  className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-primary-soft"
+                >
+                  注册
+                </button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -208,6 +239,8 @@ function PublicHomePage() {
               }}
               disabled={isComposerDisabled}
               submitDisabled={isSubmitDisabled}
+              selectedModel={model}
+              onModelChange={setModel}
               submitLabel={isCreating ? '创建中...' : '开始创建'}
               textareaLabel="描述专题需求"
               placeholder="例如：做一个中国古代史互动专题，包含时间线、地图和关键人物故事"

@@ -1,23 +1,24 @@
 import { registerTool } from '../toolRegistry';
 import { wcWriteFile } from '../webcontainer';
 import { useEditorStore } from '../../stores/useEditorStore';
+import { parseProjectToolPath } from './projectToolPath';
 
 registerTool('write_file', {
   name: 'write_file',
-  description: 'Overwrite the contents of an existing file. Creates parent directories if needed.',
+  description: 'Overwrite a project file. Creates parent directories if needed. The path must be project-root-relative, for example src/App.tsx.',
   parameters: {
     type: 'object',
     properties: {
-      path: { type: 'string', description: 'Path to the file to write' },
+      path: { type: 'string', description: 'Project-root-relative path to the file, for example src/App.tsx. Do not use absolute paths.' },
       content: { type: 'string', description: 'New content for the file' },
     },
     required: ['path', 'content'],
   },
 }, async (args) => {
-  const path = args.path as string;
+  const path = parseProjectToolPath(args.path);
   const content = args.content as string;
-  if (!path || typeof path !== 'string') {
-    return { content: 'path is required and must be a string', isError: true };
+  if (typeof path !== 'string') {
+    return path;
   }
   if (typeof content !== 'string') {
     return { content: 'content is required and must be a string', isError: true };

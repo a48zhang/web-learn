@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { useAgentRuntime } from './useAgentRuntime';
+import { parseToolArguments, useAgentRuntime } from './useAgentRuntime';
 import { useAgentStore } from '../stores/useAgentStore';
 
 const chatWithToolsMock = vi.hoisted(() => vi.fn());
@@ -109,6 +109,66 @@ describe('useAgentRuntime', () => {
       currentToolName: null,
       currentToolPath: null,
       error: null,
+    });
+  });
+
+  it('parses tool arguments when models return an escaped JSON string', () => {
+    const escapedJsonString = JSON.stringify(JSON.stringify({ path: 'src/app.ts', content: 'hello' }));
+
+    expect(parseToolArguments(escapedJsonString)).toEqual({
+      path: 'src/app.ts',
+      content: 'hello',
+    });
+  });
+
+  it('executes tool calls with decoded args when arguments are double-encoded JSON', async () => {
+    const doubleEncodedArguments = JSON.stringify(JSON.stringify({ path: 'src/app.ts', content: 'hello' }));
+
+    chatWithToolsMock
+      .mockResolvedValueOnce({
+        choices: [{
+          message: {
+            role: 'assistant',
+            content: '',
+            tool_calls: [{
+              id: 'tool-escaped',
+              type: 'function',
+              function: {
+                name: 'write_file',
+                arguments: doubleEncodedArguments,
+              },
+            }],
+          },
+        }],
+      })
+      .mockResolvedValueOnce({
+        choices: [{
+          message: {
+            role: 'assistant',
+            content: 'done',
+          },
+        }],
+      });
+
+    const { result } = renderHook(() => useAgentRuntime({ topicId: 'topic-1', agentType: 'building' }));
+
+    await act(async () => {
+      await result.current.runAgentLoop('update the file');
+    });
+
+    expect(executeToolMock).toHaveBeenCalledWith('write_file', {
+      path: 'src/app.ts',
+      content: 'hello',
+    });
+    expect(useAgentStore.getState().visibleMessages[1]).toMatchObject({
+      tools: [
+        expect.objectContaining({
+          args: {
+            path: 'src/app.ts',
+            content: 'hello',
+          },
+        }),
+      ],
     });
   });
 

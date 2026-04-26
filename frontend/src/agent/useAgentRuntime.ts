@@ -11,6 +11,35 @@ import type { AgentSessionContext } from './BaseAgent';
 const MAX_TOOL_LOOPS = 1000;
 const FILE_MUTATION_TOOLS = new Set(['write_file', 'create_file', 'delete_file', 'move_file']);
 
+export function parseToolArguments(rawArguments: unknown): Record<string, unknown> {
+  if (!rawArguments) {
+    return {};
+  }
+
+  if (typeof rawArguments === 'object' && !Array.isArray(rawArguments)) {
+    return rawArguments as Record<string, unknown>;
+  }
+
+  if (typeof rawArguments !== 'string') {
+    return {};
+  }
+
+  let parsed: unknown = rawArguments;
+  for (let depth = 0; depth < 2; depth += 1) {
+    if (typeof parsed !== 'string') {
+      break;
+    }
+
+    parsed = JSON.parse(parsed);
+  }
+
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+    return parsed as Record<string, unknown>;
+  }
+
+  return {};
+}
+
 export function useAgentRuntime(options: { topicId: string; agentType: 'building' | 'learning' }) {
   const visibleMessages = useAgentStore((s) => s.visibleMessages);
   const addVisibleMessage = useAgentStore((s) => s.addVisibleMessage);
@@ -105,7 +134,7 @@ export function useAgentRuntime(options: { topicId: string; agentType: 'building
           tools = message.tool_calls!.map(tc => {
             let args = {};
             if ('function' in tc) {
-              try { args = JSON.parse(tc.function.arguments || '{}'); } catch {
+              try { args = parseToolArguments(tc.function.arguments); } catch {
                 // Ignore malformed tool arguments in the transient UI payload.
               }
               return {
@@ -148,7 +177,7 @@ export function useAgentRuntime(options: { topicId: string; agentType: 'building
           let args: any = {};
           let toolPath: string | null = null;
           try {
-            args = JSON.parse(toolCall.function.arguments || '{}');
+            args = parseToolArguments(toolCall.function.arguments);
             toolPath = args.path ?? args.oldPath ?? args.newPath ?? null;
           } catch {
             // ignore

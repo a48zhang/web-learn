@@ -1,21 +1,22 @@
 import { registerTool } from '../toolRegistry';
 import { wcDeleteFile } from '../webcontainer';
 import { useEditorStore } from '../../stores/useEditorStore';
+import { parseProjectToolPath } from './projectToolPath';
 
 registerTool('delete_file', {
   name: 'delete_file',
-  description: 'Delete a file or directory at the given path.',
+  description: 'Delete a project file or directory. The path must be project-root-relative, for example src/App.tsx.',
   parameters: {
     type: 'object',
     properties: {
-      path: { type: 'string', description: 'Path to the file or directory to delete' },
+      path: { type: 'string', description: 'Project-root-relative path to the file or directory. Do not use absolute paths.' },
     },
     required: ['path'],
   },
 }, async (args) => {
-  const path = args.path as string;
-  if (!path || typeof path !== 'string') {
-    return { content: 'path is required and must be a string', isError: true };
+  const path = parseProjectToolPath(args.path);
+  if (typeof path !== 'string') {
+    return path;
   }
   await wcDeleteFile(path);
   useEditorStore.getState().deleteFile(path);

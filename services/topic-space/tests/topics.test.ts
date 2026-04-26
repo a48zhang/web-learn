@@ -57,6 +57,16 @@ const getPresignedUrlMock = jest.fn().mockResolvedValue({
   method: 'GET',
 });
 
+const mockStorageService = {
+  uploadBuffer: jest.fn().mockResolvedValue('https://cdn.example.com/test'),
+  deleteDir: jest.fn().mockResolvedValue(undefined),
+  delete: jest.fn().mockResolvedValue(undefined),
+  listFiles: jest.fn().mockResolvedValue([]),
+  getSize: jest.fn().mockResolvedValue(0),
+  getUrl: jest.fn((key: string) => `https://cdn.example.com/${key}`),
+  getPresignedUrl: getPresignedUrlMock,
+};
+
 jest.mock('../src/models', () => ({
   User: mockUserModel,
   Topic: mockTopicModel,
@@ -70,15 +80,7 @@ jest.mock('jsonwebtoken', () => ({
 }));
 
 jest.mock('../src/services/storageService', () => ({
-  getStorageService: jest.fn(() => ({
-    uploadBuffer: jest.fn().mockResolvedValue('https://cdn.example.com/test'),
-    deleteDir: jest.fn().mockResolvedValue(undefined),
-    delete: jest.fn().mockResolvedValue(undefined),
-    listFiles: jest.fn().mockResolvedValue([]),
-    getSize: jest.fn().mockResolvedValue(0),
-    getUrl: jest.fn((key: string) => `https://cdn.example.com/${key}`),
-    getPresignedUrl: getPresignedUrlMock,
-  })),
+  getStorageService: jest.fn(() => mockStorageService),
   initStorageService: jest.fn(),
 }));
 
@@ -327,7 +329,7 @@ describe('Topics API', () => {
   });
 
   describe('DELETE /api/topics/:id', () => {
-    it('deletes topic for owner', async () => {
+    it('deletes exact OSS keys and legacy prefix cleanup for owner', async () => {
       (jwt.verify as jest.Mock).mockReturnValue({ id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' });
       mockUserModel.findByPk.mockResolvedValue({
         id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
@@ -358,6 +360,54 @@ describe('Topics API', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
+      expect(mockStorageService.delete).toHaveBeenCalledTimes(2);
+      expect(mockStorageService.delete).toHaveBeenNthCalledWith(
+        1,
+        'topics/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb.tar.gz'
+      );
+      expect(mockStorageService.delete).toHaveBeenNthCalledWith(
+        2,
+        'topics/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb-published.tar.gz'
+      );
+      expect(mockStorageService.deleteDir).toHaveBeenCalledWith(
+        'topics/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb/'
+      );
+    });
+
+    it('continues deletion when legacy cleanup is missing', async () => {
+      (jwt.verify as jest.Mock).mockReturnValue({ id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' });
+      mockUserModel.findByPk.mockResolvedValue({
+        id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        username: 'teacher1',
+        email: 'teacher@example.com',
+        role: 'user',
+      });
+      mockStorageService.delete.mockResolvedValue(undefined);
+      mockStorageService.deleteDir.mockRejectedValueOnce(new Error('missing prefix'));
+      mockTopicModel.findByPk.mockResolvedValue({
+        id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+        title: 'Topic',
+        description: 'Testing fundamentals',
+        type: 'website',
+        created_by: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        editors: ['aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'],
+        status: 'draft',
+        save: jest.fn(),
+        createdAt: new Date('2026-04-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-04-01T00:00:00.000Z'),
+      });
+      mockTopicModel.destroy.mockResolvedValue(1);
+
+      const response = await request(app)
+        .delete('/api/topics/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb')
+        .set('x-user-id', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
+        .set('x-user-username', 'teacher1')
+        .set('x-user-email', 'teacher@example.com')
+        .set('x-user-role', 'user');
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(mockTopicModel.destroy).toHaveBeenCalledTimes(1);
     });
   });
 

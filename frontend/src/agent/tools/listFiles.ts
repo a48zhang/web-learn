@@ -1,5 +1,5 @@
 import { registerTool } from '../toolRegistry';
-import { wcListFiles } from '../webcontainer';
+import { useEditorStore } from '../../stores/useEditorStore';
 
 registerTool('list_files', {
   name: 'list_files',
@@ -10,6 +10,8 @@ registerTool('list_files', {
     required: [],
   },
 }, async (_args) => {
-  const files = await wcListFiles();
-  return { content: JSON.stringify(files) };
+  // Read from EditorStore directly to ensure consistency with FileTree
+  const files = useEditorStore.getState().files;
+  const filePaths = Object.keys(files);
+  return { content: JSON.stringify(filePaths) };
 });

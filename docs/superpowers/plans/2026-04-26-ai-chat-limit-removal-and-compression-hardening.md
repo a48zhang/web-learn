@@ -401,7 +401,7 @@ it('compresses normal long context into summary plus recent visible window', asy
   let currentVisibleMessages = [
     createPersistedMessage('msg-1', 'Project goal: build a React learning page. ' + 'a'.repeat(120_000)),
     createPersistedMessage('msg-2', 'Constraint: keep the UI in Chinese. ' + 'b'.repeat(80_000)),
-    createPersistedMessage('msg-3', 'Recent user request: continue polishing the hero section.'),
+    createPersistedMessage('msg-3', 'Recent user request: continue polishing the hero section. ' + 'c'.repeat(10_000)),
   ];
   let currentCompressedContext = createCompressedContext();
   const setVisibleMessages = vi.fn((messages: PersistedAgentMessage[]) => {
@@ -449,7 +449,7 @@ it('compresses normal long context into summary plus recent visible window', asy
 it('builds llm messages with compressed memory followed by recent messages', async () => {
   let currentVisibleMessages = [
     createPersistedMessage('msg-1', 'Old context ' + 'a'.repeat(120_000)),
-    createPersistedMessage('msg-2', 'Recent request: adjust layout.'),
+    createPersistedMessage('msg-2', 'Recent request: adjust layout. ' + 'b'.repeat(10_000)),
   ];
   let currentCompressedContext = createCompressedContext();
 
@@ -483,7 +483,7 @@ it('builds llm messages with compressed memory followed by recent messages', asy
       }),
       expect.objectContaining({
         role: 'user',
-        content: 'Recent request: adjust layout.',
+        content: expect.stringContaining('Recent request: adjust layout.'),
       }),
     ])
   );

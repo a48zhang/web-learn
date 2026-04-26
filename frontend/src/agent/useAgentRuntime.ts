@@ -157,14 +157,17 @@ export function useAgentRuntime(options: { topicId: string; agentType: 'building
           setRunState({ currentToolName: toolName, currentToolPath: toolPath });
 
           let resultContent: string;
+          let toolErrored = false;
           try {
             const result = await executeTool(toolName, args);
             resultContent = result.content;
+            toolErrored = Boolean(result.isError);
             if (!result.isError && FILE_MUTATION_TOOLS.has(toolName)) {
               didMutateFiles = true;
             }
           } catch (e: any) {
             resultContent = `Error: ${e.message}`;
+            toolErrored = true;
           }
 
           internalMessages.push({
@@ -173,13 +176,15 @@ export function useAgentRuntime(options: { topicId: string; agentType: 'building
             tool_call_id: toolCall.id,
           } as AIChatMessage);
 
-          // Update tool state to success in the UI
+          // Update tool state to match the tool result in the UI
           updateLastMessage((msg) => {
             if (!msg.tools) return msg;
             return {
               ...msg,
               tools: msg.tools.map(t =>
-                t.id === toolCall.id ? { ...t, state: 'success', result: resultContent } : t
+                t.id === toolCall.id
+                  ? { ...t, state: toolErrored ? 'error' : 'success', result: resultContent }
+                  : t
               )
             };
           });

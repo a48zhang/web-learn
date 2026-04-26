@@ -170,7 +170,23 @@ export const deleteTopic = async (req: AuthRequest, res: Response) => {
 
     // C3: clean up OSS content before deleting the DB record
     const storageService = getStorageService();
+    const ossKeys = [
+      `topics/${topic.id}.tar.gz`,
+      `topics/${topic.id}-published.tar.gz`,
+    ];
     const ossPrefix = `topics/${topic.id}/`;
+
+    for (const ossKey of ossKeys) {
+      try {
+        await storageService.delete(ossKey);
+      } catch (err) {
+        console.warn(
+          `[deleteTopic] Failed to delete OSS file ${ossKey} for topic ${topic.id}:`,
+          err
+        );
+      }
+    }
+
     try {
       await storageService.deleteDir(ossPrefix);
     } catch (err) {

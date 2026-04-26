@@ -4,15 +4,13 @@ import { AuthenticatedRequest as AuthRequest } from '@web-learn/shared';
 import { chatWithLLM } from '../services/aiService';
 
 const ALLOWED_MESSAGE_ROLES = new Set(['system', 'user', 'assistant', 'tool']);
-const MAX_MESSAGES = 100;
-const MAX_MESSAGE_CONTENT_LENGTH = 10000;
 
 const validateMessages = (messages: unknown): string | null => {
   if (!Array.isArray(messages)) {
     return 'messages must be an array';
   }
-  if (messages.length === 0 || messages.length > MAX_MESSAGES) {
-    return `messages length must be between 1 and ${MAX_MESSAGES}`;
+  if (messages.length === 0) {
+    return 'messages must be a non-empty array';
   }
   for (const message of messages) {
     if (!message || typeof message !== 'object') {
@@ -28,16 +26,10 @@ const validateMessages = (messages: unknown): string | null => {
       if (content !== null && content !== undefined && typeof content !== 'string') {
         return 'message content must be a string or null';
       }
-      if (typeof content === 'string' && content.length > MAX_MESSAGE_CONTENT_LENGTH) {
-        return `message content too long, max ${MAX_MESSAGE_CONTENT_LENGTH}`;
-      }
     } else {
       // user/system messages must have non-empty string content
       if (typeof content !== 'string' || !content.trim()) {
         return 'message content must be a non-empty string';
-      }
-      if (content.length > MAX_MESSAGE_CONTENT_LENGTH) {
-        return `message content too long, max ${MAX_MESSAGE_CONTENT_LENGTH}`;
       }
     }
   }

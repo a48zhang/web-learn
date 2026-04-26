@@ -28,6 +28,10 @@ export function selectRecentWindowGreedy(messages: RuntimeMessage[]): {
   recentMessages: RuntimeMessage[];
   recentTokenEstimate: number;
 } {
+  if (messages.length === 0) {
+    return { recentMessages: [], recentTokenEstimate: 0 };
+  }
+
   const selected: RuntimeMessage[] = [];
   let used = 0;
   const maxRecentWindowTokens = defaultAgentContextBudget().recentWindowTokens;
@@ -37,6 +41,15 @@ export function selectRecentWindowGreedy(messages: RuntimeMessage[]): {
     if (used + cost > maxRecentWindowTokens) break;
     selected.unshift(messages[i]);
     used += cost;
+  }
+
+  // Always keep at least the last message, even if it exceeds the budget.
+  // Without this, a single huge message causes recentMessages=[] which
+  // wipes the entire visible conversation during compression.
+  if (selected.length === 0) {
+    const last = messages[messages.length - 1];
+    selected.push(last);
+    used = estimateMessageTokens(last);
   }
 
   return { recentMessages: selected, recentTokenEstimate: used };
@@ -133,7 +146,11 @@ export async function compressWithLlmOrFallback(
   requestCompressionSummary: (prompt: string) => Promise<string>
 ): Promise<string> {
   try {
-    return await requestCompressionSummary(compressionPrompt);
+    const summary = await requestCompressionSummary(compressionPrompt);
+    if (!summary.trim()) {
+      throw new Error('Compression summary is blank');
+    }
+    return summary;
   } catch {
     return buildRuleBasedCompressionSummary(input);
   }

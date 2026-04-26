@@ -1,5 +1,5 @@
 import { registerTool } from '../toolRegistry';
-import { wcReadFile } from '../webcontainer';
+import { useEditorStore } from '../../stores/useEditorStore';
 
 registerTool('read_file', {
   name: 'read_file',
@@ -16,6 +16,11 @@ registerTool('read_file', {
   if (!path || typeof path !== 'string') {
     return { content: 'path is required and must be a string', isError: true };
   }
-  const content = await wcReadFile(path);
+  // Read from EditorStore directly to ensure consistency with FileTree
+  const files = useEditorStore.getState().files;
+  const content = files[path];
+  if (content === undefined) {
+    return { content: `File not found: ${path}`, isError: true };
+  }
   return { content };
 });

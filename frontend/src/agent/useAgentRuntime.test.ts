@@ -240,6 +240,67 @@ describe('useAgentRuntime', () => {
     });
   });
 
+  it('marks the visible tool state as error when executeTool returns an error result', async () => {
+    executeToolMock.mockResolvedValueOnce({
+      content: 'tool failed',
+      isError: true,
+    });
+
+    chatWithToolsMock
+      .mockResolvedValueOnce({
+        choices: [{
+          message: {
+            role: 'assistant',
+            content: '',
+            tool_calls: [{
+              id: 'tool-1',
+              type: 'function',
+              function: {
+                name: 'write_file',
+                arguments: JSON.stringify({ path: 'src/app.ts', content: 'hello' }),
+              },
+            }],
+          },
+        }],
+      })
+      .mockResolvedValueOnce({
+        choices: [{
+          message: {
+            role: 'assistant',
+            content: 'done',
+          },
+        }],
+      });
+
+    const { result } = renderHook(() => useAgentRuntime({ topicId: 'topic-1', agentType: 'building' }));
+
+    await act(async () => {
+      await result.current.runAgentLoop('update the file');
+    });
+
+    expect(executeToolMock).toHaveBeenCalledTimes(1);
+    expect(chatWithToolsMock.mock.calls[1]?.[0]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: 'tool',
+          content: 'tool failed',
+          tool_call_id: 'tool-1',
+        }),
+      ])
+    );
+    expect(useAgentStore.getState().visibleMessages[1]).toMatchObject({
+      role: 'assistant',
+      tools: [
+        expect.objectContaining({
+          id: 'tool-1',
+          name: 'write_file',
+          state: 'error',
+          result: 'tool failed',
+        }),
+      ],
+    });
+  });
+
   it('preserves partial streamed content when the streaming request fails', async () => {
     chatWithToolsMock.mockImplementationOnce(async (_messages, _tools, onStream) => {
       onStream?.('partial');

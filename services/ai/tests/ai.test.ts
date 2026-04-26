@@ -27,16 +27,6 @@ jest.mock('../src/utils/config', () => ({
 }));
 
 import request from 'supertest';
-import jwt from 'jsonwebtoken';
-
-const mockUserModel = {
-  findByPk: jest.fn(),
-};
-
-jest.mock('../src/models', () => ({
-  User: mockUserModel,
-  Topic: { findByPk: jest.fn() },
-}));
 
 const mockCreate = jest.fn();
 jest.mock('openai', () => {
@@ -52,24 +42,14 @@ jest.mock('openai', () => {
   };
 });
 
-jest.mock('jsonwebtoken', () => ({
-  sign: jest.fn(),
-  verify: jest.fn(),
-  TokenExpiredError: class TokenExpiredError extends Error {},
-  JsonWebTokenError: class JsonWebTokenError extends Error {},
-}));
-
 import app from '../src/app';
 
-const authenticateUser = () => {
-  (jwt.verify as jest.Mock).mockReturnValue({ id: 9 });
-  mockUserModel.findByPk.mockResolvedValue({
-    id: 9,
-    username: 'student',
-    email: 'student@example.com',
-    role: 'user',
-  });
-};
+const authenticateUser = () => ({
+  'x-user-id': '9',
+  'x-user-username': 'student',
+  'x-user-email': 'student@example.com',
+  'x-user-role': 'user',
+});
 
 async function* streamChunks(chunks: any[]) {
   for (const chunk of chunks) {
@@ -99,7 +79,6 @@ describe('AI API', () => {
   });
 
   it('allows authenticated chat requests', async () => {
-    authenticateUser();
     mockCreate.mockResolvedValue({
       id: 'chatcmpl-1',
       object: 'chat.completion',
@@ -109,7 +88,7 @@ describe('AI API', () => {
 
     const response = await request(app)
       .post('/api/ai/chat/completions')
-      .set('Authorization', 'Bearer token')
+      .set(authenticateUser())
       .send({
         messages: [{ role: 'user', content: 'hello' }],
       });
@@ -119,11 +98,9 @@ describe('AI API', () => {
   });
 
   it('rejects invalid messages payload', async () => {
-    authenticateUser();
-
     const response = await request(app)
       .post('/api/ai/chat/completions')
-      .set('Authorization', 'Bearer token')
+      .set(authenticateUser())
       .send({
         messages: 'not-array',
       });
@@ -131,25 +108,10 @@ describe('AI API', () => {
     expect(response.status).toBe(400);
   });
 
-  it('rejects message list exceeding 100 messages', async () => {
-    authenticateUser();
-
-    const response = await request(app)
-      .post('/api/ai/chat/completions')
-      .set('Authorization', 'Bearer token')
-      .send({
-        messages: Array.from({ length: 101 }).map((_, i) => ({ role: 'user', content: `m-${i}` })),
-      });
-
-    expect(response.status).toBe(400);
-  });
-
   it('rejects invalid message role', async () => {
-    authenticateUser();
-
     const response = await request(app)
       .post('/api/ai/chat/completions')
-      .set('Authorization', 'Bearer token')
+      .set(authenticateUser())
       .send({
         messages: [{ role: 'hacker', content: 'hello' }],
       });
@@ -157,25 +119,10 @@ describe('AI API', () => {
     expect(response.status).toBe(400);
   });
 
-  it('rejects too long message content', async () => {
-    authenticateUser();
-
-    const response = await request(app)
-      .post('/api/ai/chat/completions')
-      .set('Authorization', 'Bearer token')
-      .send({
-        messages: [{ role: 'user', content: 'x'.repeat(10001) }],
-      });
-
-    expect(response.status).toBe(400);
-  });
-
   it('rejects empty messages array', async () => {
-    authenticateUser();
-
     const response = await request(app)
       .post('/api/ai/chat/completions')
-      .set('Authorization', 'Bearer token')
+      .set(authenticateUser())
       .send({
         messages: [],
       });
@@ -184,7 +131,6 @@ describe('AI API', () => {
   });
 
   it('forwards tools and tool_choice to LLM', async () => {
-    authenticateUser();
     mockCreate.mockResolvedValue({
       id: 'chatcmpl-2',
       object: 'chat.completion',
@@ -201,7 +147,7 @@ describe('AI API', () => {
 
     const response = await request(app)
       .post('/api/ai/chat/completions')
-      .set('Authorization', 'Bearer token')
+      .set(authenticateUser())
       .send({
         messages: [{ role: 'user', content: 'list my files' }],
         tools,
@@ -216,7 +162,6 @@ describe('AI API', () => {
   });
 
   it('streams chat completion chunks as SSE when stream=true', async () => {
-    authenticateUser();
     mockCreate.mockResolvedValue(
       streamChunks([
         { id: 'chunk-1', object: 'chat.completion.chunk', choices: [{ index: 0, delta: { content: '你' } }] },
@@ -226,7 +171,7 @@ describe('AI API', () => {
 
     const response = await request(app)
       .post('/api/ai/chat/completions')
-      .set('Authorization', 'Bearer token')
+      .set(authenticateUser())
       .send({
         stream: true,
         messages: [{ role: 'user', content: 'hello' }],
@@ -240,11 +185,9 @@ describe('AI API', () => {
   });
 
   it('rejects non-boolean stream values', async () => {
-    authenticateUser();
-
     const response = await request(app)
       .post('/api/ai/chat/completions')
-      .set('Authorization', 'Bearer token')
+      .set(authenticateUser())
       .send({
         stream: 'yes',
         messages: [{ role: 'user', content: 'hello' }],
@@ -255,7 +198,6 @@ describe('AI API', () => {
   });
 
   it('keeps non-streaming chat completion responses as JSON', async () => {
-    authenticateUser();
     mockCreate.mockResolvedValue({
       id: 'chatcmpl-json',
       object: 'chat.completion',
@@ -265,7 +207,7 @@ describe('AI API', () => {
 
     const response = await request(app)
       .post('/api/ai/chat/completions')
-      .set('Authorization', 'Bearer token')
+      .set(authenticateUser())
       .send({
         stream: false,
         messages: [{ role: 'user', content: 'hello' }],

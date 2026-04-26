@@ -135,7 +135,7 @@ export const agentConversationApi = {
     const response = await api.get<ApiResponse<PersistedConversationState>>(`/ai/conversations/${topicId}/${agentType}`);
     return response.data.data as PersistedConversationState;
   },
-  
+
   replaceConversation: async (
     topicId: string,
     agentType: 'building' | 'learning',

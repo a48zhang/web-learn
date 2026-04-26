@@ -112,6 +112,14 @@ export abstract class BaseAgent {
     }
 
     const { recentMessages } = selectRecentWindowGreedy(visibleMessages as RuntimeMessage[]);
+
+    // Safety: if recentMessages is empty (should not happen after the
+    // selectRecentWindowGreedy fix, but guard anyway), abort compression
+    // to avoid wiping all messages.
+    if (recentMessages.length === 0) {
+      return;
+    }
+
     const newlyCompressibleMessages = visibleMessages
       .slice(0, visibleMessages.length - recentMessages.length)
       .filter((message) => this.isAfterCompressionCursor(message as RuntimeMessage, compressedContext.firstUncompressedMessageId))
@@ -137,6 +145,10 @@ export abstract class BaseAgent {
       },
       this.requestCompressionSummary.bind(this)
     );
+
+    if (!nextSummary.trim()) {
+      return;
+    }
 
     const nextCompressedContext: AgentCompressedContext = {
       summary: nextSummary,

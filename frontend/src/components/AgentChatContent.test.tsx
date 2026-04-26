@@ -1,4 +1,4 @@
-import { act, render, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { useState, type FC } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AgentChatContent from './AgentChatContent';
@@ -133,5 +133,50 @@ describe('AgentChatContent hydration', () => {
     });
 
     expect(setSessionContext).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('AgentChatContent tool output rendering', () => {
+  beforeEach(() => {
+    useAgentRuntimeMock.mockReset();
+    useAgentStoreMock.mockReset();
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+
+  it('renders ansi tool output without visible escape glyphs', () => {
+    useAgentRuntimeMock.mockReturnValue({
+      runAgentLoop: vi.fn(),
+      hydrateConversation: vi.fn(() => new Promise<void>(() => {})),
+      visibleMessages: [
+        {
+          role: 'assistant',
+          content: 'done',
+          tools: [
+            {
+              id: 'tool-ansi',
+              name: 'run_command',
+              args: { command: 'npm test' },
+              result: '␛[1G␛[0K␛[1mnpm␛[22m ␛[31merror␛[39m code ENOENT',
+              state: 'error',
+            },
+          ],
+        },
+      ],
+    });
+
+    useAgentStoreMock.mockImplementation((selector: (state: MockAgentStoreState) => unknown) =>
+      selector({
+        runState: { isRunning: false, currentToolName: null, currentToolPath: null, error: null },
+        model: 'MiniMax-M2.7',
+        compressedContext: { hasCompressedContext: false },
+        setSessionContext: vi.fn(),
+      })
+    );
+
+    render(<AgentChatContent topicId="topic-1" agentType="building" />);
+
+    expect(screen.getByText('npm')).toBeInTheDocument();
+    expect(screen.getByText('error')).toBeInTheDocument();
+    expect(screen.queryByText(/␛\[1G/)).not.toBeInTheDocument();
   });
 });

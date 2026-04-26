@@ -111,7 +111,7 @@ export const SAFE_COMMANDS = new Set([
 export async function wcSpawnCommand(
   command: string,
   args: string[] = [],
-  options?: { timeout?: number; onOutput?: (data: string) => void }
+  options?: { timeout?: number; cwd?: string; onOutput?: (data: string) => void }
 ): Promise<SpawnResult> {
   const wc = await getWebContainer();
 
@@ -122,7 +122,7 @@ export async function wcSpawnCommand(
     throw new Error(`Command \"${command}\" is not in the allowed command list`);
   }
 
-  const process = await wc.spawn(command, args);
+  const process = await wc.spawn(command, args, { cwd: options?.cwd ?? WC_PROJECT_DIR });
 
   process.output.pipeTo(
     new WritableStream({

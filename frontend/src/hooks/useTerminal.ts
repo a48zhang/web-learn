@@ -3,6 +3,7 @@ import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
 import { useWebContainer } from './useWebContainer';
+import { useTerminalStore } from '../stores/useTerminalStore';
 
 import 'xterm/css/xterm.css';
 
@@ -17,6 +18,7 @@ export function useTerminal({ visible, containerRef }: UseTerminalOptions) {
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const processRef = useRef<{ kill: () => void; exit: Promise<unknown> } | null>(null);
+  const unregisterSinkRef = useRef<(() => void) | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const isInitializing = useRef(false);
 
@@ -64,6 +66,13 @@ export function useTerminal({ visible, containerRef }: UseTerminalOptions) {
 
     terminalRef.current = terminal;
     fitAddonRef.current = fitAddon;
+    const { outputBuffer, registerSink } = useTerminalStore.getState();
+    if (outputBuffer) {
+      terminal.write(outputBuffer);
+    }
+    unregisterSinkRef.current = registerSink((data) => {
+      terminalRef.current?.write(data);
+    });
 
     const wc = getInstance();
     if (wc) {
@@ -92,6 +101,10 @@ export function useTerminal({ visible, containerRef }: UseTerminalOptions) {
   }, [isReady, containerRef, getInstance]);
 
   const close = useCallback(() => {
+    if (unregisterSinkRef.current) {
+      unregisterSinkRef.current();
+      unregisterSinkRef.current = null;
+    }
     if (processRef.current) {
       processRef.current.kill();
       processRef.current = null;
@@ -112,6 +125,10 @@ export function useTerminal({ visible, containerRef }: UseTerminalOptions) {
 
   useEffect(() => {
     return () => {
+      if (unregisterSinkRef.current) {
+        unregisterSinkRef.current();
+        unregisterSinkRef.current = null;
+      }
       if (terminalRef.current) {
         terminalRef.current.dispose();
       }

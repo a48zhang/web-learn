@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm';
 import { useAgentRuntime } from '../agent/useAgentRuntime';
 import { useAgentStore } from '../stores/useAgentStore';
 import type { AgentMessage } from '@web-learn/shared';
+import { TerminalOutput } from './ui/TerminalOutput';
 
 interface AgentChatContentProps {
   topicId: string;
@@ -232,12 +233,7 @@ export default function AgentChatContent({
                       </pre>
                     </div>
                     {tool.result && (
-                      <div className={`p-2.5 bg-zinc-950/40 border border-zinc-800/40 rounded-[6px] text-[11px] font-mono overflow-x-auto custom-scrollbar ${tool.state === 'error' ? 'text-red-400/90' : 'text-zinc-400'}`}>
-                        <div className="text-zinc-500 mb-1 font-sans text-[10px] tracking-wide uppercase">结果</div>
-                        <pre className="!m-0 !p-0 !bg-transparent whitespace-pre-wrap break-all leading-relaxed">
-                          {tool.result}
-                        </pre>
-                      </div>
+                      <TerminalOutput value={tool.result} state={tool.state} />
                     )}
                   </div>
                 </details>

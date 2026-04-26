@@ -1,5 +1,15 @@
 import { registerTool } from '../toolRegistry';
 import { wcSpawnCommand } from '../webcontainer';
+import { useTerminalStore } from '../../stores/useTerminalStore';
+
+function appendTerminalOutput(data: string): void {
+  useTerminalStore.getState().appendOutput(data);
+}
+
+function formatCommandPart(part: string): string {
+  if (/^[A-Za-z0-9_./:=@+-]+$/.test(part)) return part;
+  return JSON.stringify(part);
+}
 
 registerTool('run_command', {
   name: 'run_command',
@@ -22,11 +32,17 @@ registerTool('run_command', {
   const cmdArgs = parts.slice(1);
 
   try {
-    const result = await wcSpawnCommand(cmd, cmdArgs);
+    const printableCommand = [cmd, ...cmdArgs].map(formatCommandPart).join(' ');
+    appendTerminalOutput(`\r\n[agent] $ ${printableCommand}\r\n`);
+    const result = await wcSpawnCommand(cmd, cmdArgs, {
+      onOutput: appendTerminalOutput,
+    });
+    appendTerminalOutput(`\r\n[agent] exited with code ${result.exitCode}\r\n`);
     const text = result.output || '(no output)';
     return { content: text };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Command execution failed';
+    appendTerminalOutput(`\r\n[agent] command failed: ${message}\r\n`);
     return { content: message, isError: true };
   }
 });

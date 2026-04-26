@@ -3,6 +3,7 @@ import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
 import { useWebContainer } from './useWebContainer';
+import { useTerminalStore } from '../stores/useTerminalStore';
 
 import 'xterm/css/xterm.css';
 
@@ -17,12 +18,38 @@ export function useTerminal({ visible, containerRef }: UseTerminalOptions) {
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const processRef = useRef<{ kill: () => void; exit: Promise<unknown> } | null>(null);
+  const unregisterSinkRef = useRef<(() => void) | null>(null);
+  const openSessionRef = useRef(0);
   const [isOpen, setIsOpen] = useState(false);
   const isInitializing = useRef(false);
 
+  const cleanupTerminalSession = useCallback(() => {
+    openSessionRef.current += 1;
+    isInitializing.current = false;
+
+    if (unregisterSinkRef.current) {
+      unregisterSinkRef.current();
+      unregisterSinkRef.current = null;
+    }
+
+    if (processRef.current) {
+      processRef.current.kill();
+      processRef.current = null;
+    }
+
+    if (terminalRef.current) {
+      terminalRef.current.dispose();
+      terminalRef.current = null;
+    }
+
+    fitAddonRef.current = null;
+  }, []);
+
   const open = useCallback(() => {
     if (!isReady || !containerRef.current) return;
-    if (isInitializing.current) return;
+    if (terminalRef.current || isInitializing.current) return;
+
+    const sessionId = ++openSessionRef.current;
     isInitializing.current = true;
 
     const container = containerRef.current;
@@ -65,44 +92,67 @@ export function useTerminal({ visible, containerRef }: UseTerminalOptions) {
     terminalRef.current = terminal;
     fitAddonRef.current = fitAddon;
 
+    const { outputBuffer, registerSink } = useTerminalStore.getState();
+    if (outputBuffer) {
+      terminal.write(outputBuffer);
+    }
+    unregisterSinkRef.current = registerSink((data) => {
+      if (openSessionRef.current === sessionId && terminalRef.current === terminal) {
+        terminal.write(data);
+      }
+    });
+
     const wc = getInstance();
     if (wc) {
       wc.spawn('bash', [], { cwd: '/home/project' }).then(async (process) => {
+        if (openSessionRef.current !== sessionId || terminalRef.current !== terminal) {
+          process.kill();
+          return;
+        }
+
         processRef.current = process;
 
         process.output.pipeTo(
           new WritableStream({
-            write: (data) => terminal.write(data),
+            write: (data) => {
+              if (openSessionRef.current === sessionId && terminalRef.current === terminal) {
+                terminal.write(data);
+              }
+            },
           })
-        );
+        ).catch((err: unknown) => {
+          if (openSessionRef.current === sessionId && terminalRef.current === terminal) {
+            const message = err instanceof Error ? err.message : 'Unknown error';
+            terminal.writeln(`\x1b[31mShell output stopped: ${message}\x1b[0m\r\n`);
+          }
+        });
 
         const inputWriter = process.input.getWriter();
         terminal.onData((data) => {
           inputWriter.write(data);
         });
-      }).catch((err: Error) => {
-        terminal.writeln(`\x1b[31mFailed to start shell: ${err.message}\x1b[0m\r\n`);
+      }).catch((err: unknown) => {
+        if (openSessionRef.current === sessionId && terminalRef.current === terminal) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          terminal.writeln(`\x1b[31mFailed to start shell: ${message}\x1b[0m\r\n`);
+        }
+      }).finally(() => {
+        if (openSessionRef.current === sessionId) {
+          isInitializing.current = false;
+        }
       });
     } else {
       terminal.writeln('\x1b[33mWebContainer not available.\x1b[0m\r\n');
+      isInitializing.current = false;
     }
 
     setIsOpen(true);
-    isInitializing.current = false;
   }, [isReady, containerRef, getInstance]);
 
   const close = useCallback(() => {
-    if (processRef.current) {
-      processRef.current.kill();
-      processRef.current = null;
-    }
-    if (terminalRef.current) {
-      terminalRef.current.dispose();
-      terminalRef.current = null;
-      fitAddonRef.current = null;
-    }
+    cleanupTerminalSession();
     setIsOpen(false);
-  }, []);
+  }, [cleanupTerminalSession]);
 
   const resize = useCallback(() => {
     if (fitAddonRef.current && terminalRef.current) {
@@ -112,11 +162,9 @@ export function useTerminal({ visible, containerRef }: UseTerminalOptions) {
 
   useEffect(() => {
     return () => {
-      if (terminalRef.current) {
-        terminalRef.current.dispose();
-      }
+      cleanupTerminalSession();
     };
-  }, []);
+  }, [cleanupTerminalSession]);
 
   return { open, close, resize, isOpen, isReady, visible };
 }

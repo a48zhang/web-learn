@@ -1,6 +1,7 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { WebContainer } from '@webcontainer/api';
 import { useEditorStore } from '../stores/useEditorStore';
+import { useTerminalStore } from '../stores/useTerminalStore';
 import { setWebContainerInstance } from '../agent/webcontainer';
 
 let webcontainerInstance: WebContainer | null = null;
@@ -9,12 +10,36 @@ let devServerStarted = false;
 // Fix #4: use Set to deduplicate listeners
 const serverReadyListeners = new Set<(url: string) => void>();
 
+function appendTerminalOutput(data: string): void {
+  useTerminalStore.getState().appendOutput(data);
+}
+
+function writeTerminalHeader(label: string): void {
+  appendTerminalOutput(`\r\n[${label}]\r\n`);
+}
+
+function pipeProcessOutput(label: string, output: ReadableStream<string>): void {
+  output
+    .pipeTo(
+      new WritableStream({
+        write: appendTerminalOutput,
+      })
+    )
+    .catch((err) => {
+      const message = err instanceof Error ? err.message : 'unknown stream error';
+      appendTerminalOutput(`[${label}] output stream failed: ${message}\r\n`);
+    });
+}
+
 export function bootWebContainer(): Promise<WebContainer> {
   if (!bootPromise) {
     bootPromise = WebContainer.boot().then(async (wc) => {
       setWebContainerInstance(wc);
       // Fix #1: fire-and-forget registry setup — don't block the critical path
-      void setupNpmRegistry(wc).catch(() => {});
+      void setupNpmRegistry(wc).catch((err) => {
+        const message = err instanceof Error ? err.message : 'unknown error';
+        appendTerminalOutput(`[npm config] failed: ${message}\r\n`);
+      });
       return wc;
     });
   }
@@ -33,13 +58,15 @@ function isInChina(): boolean {
 
 async function setupNpmRegistry(wc: WebContainer): Promise<void> {
   if (isInChina()) {
+    writeTerminalHeader('npm config set registry');
     const proc = await wc.spawn(
       'npm',
       ['config', 'set', 'registry', 'https://registry.npmmirror.com'],
       { cwd: '/home/project' }
     );
+    pipeProcessOutput('npm config', proc.output);
     await proc.exit;
-    console.log('[WC] Set npm registry to npmmirror.com');
+    appendTerminalOutput('[npm config] registry set to https://registry.npmmirror.com\r\n');
   }
 }
 
@@ -68,20 +95,21 @@ async function startDevServerInternal(): Promise<void> {
   devServerStarted = true;
 
   try {
+    writeTerminalHeader('npm install');
     const installProcess = await webcontainerInstance.spawn('npm', ['install'], { cwd: '/home/project' });
-    installProcess.output.pipeTo(
-      new WritableStream({ write: (data) => console.log('[npm]', data) })
-    );
-    await installProcess.exit;
+    pipeProcessOutput('npm install', installProcess.output);
+    const installExitCode = await installProcess.exit;
+    appendTerminalOutput(`[npm install] exited with code ${installExitCode}\r\n`);
   } catch (err) {
+    const message = err instanceof Error ? err.message : 'unknown error';
+    appendTerminalOutput(`[npm install] failed: ${message}\r\n`);
     console.warn('npm install failed, continuing anyway:', err);
   }
 
   try {
+    writeTerminalHeader('npm run dev');
     const devProcess = await webcontainerInstance.spawn('npm', ['run', 'dev', '--', '--host', 'localhost', '--port', '5173'], { cwd: '/home/project' });
-    devProcess.output.pipeTo(
-      new WritableStream({ write: (data) => console.log('[dev]', data) })
-    );
+    pipeProcessOutput('npm run dev', devProcess.output);
 
     webcontainerInstance.on('server-ready', (_port: number, url: string) => {
       for (const listener of serverReadyListeners) {
@@ -89,6 +117,8 @@ async function startDevServerInternal(): Promise<void> {
       }
     });
   } catch (err) {
+    const message = err instanceof Error ? err.message : 'unknown error';
+    appendTerminalOutput(`[npm run dev] failed: ${message}\r\n`);
     console.error('Failed to start dev server:', err);
   }
 }

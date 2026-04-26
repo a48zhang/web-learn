@@ -111,7 +111,7 @@ export const SAFE_COMMANDS = new Set([
 export async function wcSpawnCommand(
   command: string,
   args: string[] = [],
-  options?: { timeout?: number; onOutput?: (data: string) => void }
+  options?: { timeout?: number; cwd?: string; onOutput?: (data: string) => void }
 ): Promise<SpawnResult> {
   const wc = await getWebContainer();
 
@@ -122,9 +122,11 @@ export async function wcSpawnCommand(
     throw new Error(`Command \"${command}\" is not in the allowed command list`);
   }
 
-  const process = await wc.spawn(command, args);
+  const process = await wc.spawn(command, args, { cwd: options?.cwd ?? WC_PROJECT_DIR });
 
-  process.output.pipeTo(
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  let pipeError: unknown;
+  const outputDone = process.output.pipeTo(
     new WritableStream({
       write: (data) => {
         output.push(data);
@@ -133,22 +135,38 @@ export async function wcSpawnCommand(
         }
       },
     })
-  );
+  ).catch((error: unknown) => {
+    pipeError = error;
+  });
 
   const exitPromise = process.exit;
   const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => {
+    timeoutId = setTimeout(() => {
       process.kill();
       reject(new Error(`Command timed out after ${timeout}ms`));
     }, timeout);
   });
 
-  const exitCode = await Promise.race([exitPromise, timeoutPromise]);
+  try {
+    const exitCode = await Promise.race([exitPromise, timeoutPromise]);
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId);
+      timeoutId = undefined;
+    }
+    await outputDone;
+    if (pipeError) {
+      throw pipeError instanceof Error ? pipeError : new Error('Command output stream failed');
+    }
 
-  return {
-    output: output.join(''),
-    exitCode,
-  };
+    return {
+      output: output.join(''),
+      exitCode,
+    };
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
 }
 
 export function wcOnFileChange(callback: (path: string) => void): () => void {

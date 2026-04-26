@@ -1,4 +1,4 @@
-import { act, render, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { useState, type FC } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AgentChatContent from './AgentChatContent';
@@ -133,5 +133,54 @@ describe('AgentChatContent hydration', () => {
     });
 
     expect(setSessionContext).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders ANSI tool results through TerminalOutput while keeping args JSON visible', async () => {
+    const setSessionContext = vi.fn();
+    const visibleMessages = [
+      {
+        id: 'msg-1',
+        role: 'assistant',
+        content: 'Tool output follows.',
+        tools: [
+          {
+            id: 'tool-ansi',
+            name: 'run_command',
+            args: { command: 'npm test' },
+            result: '␛[1G␛[0K␛[1mnpm␛[22m ␛[31merror␛[39m code ENOENT',
+            state: 'error',
+          },
+        ],
+      },
+    ];
+
+    useAgentRuntimeMock.mockReturnValue({
+      runAgentLoop: vi.fn(),
+      visibleMessages,
+      hydrateConversation: vi.fn(() => Promise.resolve()),
+    });
+
+    useAgentStoreMock.mockImplementation((selector: (state: MockAgentStoreState) => unknown) =>
+      selector({
+        runState: { isRunning: false, currentToolName: null, currentToolPath: null, error: null },
+        model: 'MiniMax-M2.7',
+        compressedContext: { hasCompressedContext: false },
+        setSessionContext,
+      })
+    );
+
+    let container: HTMLElement | undefined;
+
+    await act(async () => {
+      ({ container } = render(<AgentChatContent topicId="topic-1" agentType="building" />));
+      await Promise.resolve();
+    });
+    expect(container).toBeDefined();
+    const renderedContainer = container as HTMLElement;
+
+    expect(screen.getByText('npm')).toBeInTheDocument();
+    expect(screen.getByText('error')).toBeInTheDocument();
+    expect(screen.queryByText(/␛\[1G/)).not.toBeInTheDocument();
+    expect(renderedContainer.querySelectorAll('pre')[0]?.textContent).toContain('npm test');
   });
 });

@@ -60,15 +60,6 @@ export default function AgentChatContent({
   }, [onInitialPromptConsumed]);
 
   useEffect(() => {
-    const prompt = initialPrompt?.trim();
-    if (!prompt) {
-      return;
-    }
-
-    setInput((current) => current || prompt);
-  }, [initialPrompt]);
-
-  useEffect(() => {
     let cancelled = false;
     const sessionKey = `${topicId}:${agentType}`;
 
@@ -108,7 +99,7 @@ export default function AgentChatContent({
       textareaRef.current.style.height = '52px';
     }
     void runAgentLoopRef.current(prompt, modelRef.current);
-  }, [initialPrompt, hydratedSessionKey, topicId, agentType]);
+  }, [initialPrompt, isWebContainerReady, hydratedSessionKey, topicId, agentType]);
 
   // Auto-scroll effect
   useEffect(() => {

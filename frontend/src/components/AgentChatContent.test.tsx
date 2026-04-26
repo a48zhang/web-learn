@@ -99,6 +99,58 @@ describe('AgentChatContent hydration', () => {
     expect(events).toEqual(['hydrate', 'consume', 'run']);
   });
 
+  it('keeps the landing prompt out of the textarea and sends it when WebContainer becomes ready', async () => {
+    const hydrateConversation = vi.fn(() => Promise.resolve());
+    const runAgentLoop = vi.fn(async () => {});
+    const consumeSpy = vi.fn();
+    const setSessionContext = vi.fn();
+
+    useAgentRuntimeMock.mockReturnValue({
+      runAgentLoop,
+      visibleMessages: [],
+      hydrateConversation,
+    });
+
+    useAgentStoreMock.mockImplementation((selector: (state: MockAgentStoreState) => unknown) =>
+      selector({
+        runState: { isRunning: false, currentToolName: null, currentToolPath: null, error: null },
+        model: 'MiniMax-M2.7',
+        compressedContext: { hasCompressedContext: false },
+        setSessionContext,
+      })
+    );
+
+    const { rerender } = render(
+      <AgentChatContent
+        topicId="topic-1"
+        agentType="building"
+        initialPrompt="做一个物理专题"
+        onInitialPromptConsumed={consumeSpy}
+        isWebContainerReady={false}
+      />
+    );
+
+    expect(screen.getByPlaceholderText('描述你想要的更改...')).toHaveValue('');
+    expect(runAgentLoop).not.toHaveBeenCalled();
+
+    rerender(
+      <AgentChatContent
+        topicId="topic-1"
+        agentType="building"
+        initialPrompt="做一个物理专题"
+        onInitialPromptConsumed={consumeSpy}
+        isWebContainerReady
+      />
+    );
+
+    await waitFor(() => {
+      expect(runAgentLoop).toHaveBeenCalledWith('做一个物理专题', 'MiniMax-M2.7');
+    });
+
+    expect(consumeSpy).toHaveBeenCalledTimes(1);
+    expect(screen.getByPlaceholderText('描述你想要的更改...')).toHaveValue('');
+  });
+
   it('does not re-hydrate when the runtime recreates the hydrate callback on rerender', async () => {
     const hydrateCalls: string[] = [];
     const setSessionContext = vi.fn();

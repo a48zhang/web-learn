@@ -22,22 +22,26 @@ export default function AppShell({ children }: AppShellProps) {
       <TopNav onMenuClick={() => setDrawerOpen(true)} />
       {hasTopBarContent && (
         <div className="glass-surface relative z-10 shrink-0 border-x-0 border-b border-t-0 px-4 py-3 shadow-panel">
-          <BreadcrumbBar segments={meta.breadcrumbSegments} />
-          {(meta.topBarRightSlot || actions.length > 0) && (
-            <div className="mt-3 flex items-center justify-end gap-2">
-              {meta.topBarRightSlot}
-              {!meta.topBarRightSlot && actions.map((action) => (
-                <button
-                  key={action.label}
-                  type="button"
-                  onClick={action.onClick}
-                  className="rounded-full border border-border bg-surface-3 px-3 py-1.5 text-sm font-medium text-slate-100 transition-colors hover:border-primary/50 hover:bg-surface-2"
-                >
-                  {action.label}
-                </button>
-              ))}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <BreadcrumbBar segments={meta.breadcrumbSegments} />
             </div>
-          )}
+            {(meta.topBarRightSlot || actions.length > 0) && (
+              <div className="flex shrink-0 items-center justify-end gap-2">
+                {meta.topBarRightSlot}
+                {!meta.topBarRightSlot && actions.map((action) => (
+                  <button
+                    key={action.label}
+                    type="button"
+                    onClick={action.onClick}
+                    className="rounded-full border border-border bg-surface-3 px-3 py-1.5 text-sm font-medium text-slate-100 transition-colors hover:border-primary/50 hover:bg-surface-2"
+                  >
+                    {action.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
       <div className="relative z-0 flex min-h-0 flex-1 overflow-hidden">

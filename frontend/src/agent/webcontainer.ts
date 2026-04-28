@@ -1,13 +1,25 @@
 import type { WebContainer } from '@webcontainer/api';
+import { normalizeProjectPath, toWcAbsolutePath } from '../utils/projectPaths';
 
 let wcInstance: WebContainer | null = null;
 const fileChangeListeners = new Set<(path: string) => void>();
 
-const WC_PROJECT_DIR = '/home/project';
+export const PROJECT_ROOT = '/home/project';
+const PROJECT_IGNORED_DIRS = new Set(['node_modules', 'dist', '.vite', '.git']);
 
 function wcPath(path: string): string {
-  if (path.startsWith('/')) return path;
-  return `${WC_PROJECT_DIR}/${path}`;
+  return toWcAbsolutePath(normalizeProjectPath(path));
+}
+
+function relativeFromProjectRoot(path: string): string {
+  if (path === PROJECT_ROOT) {
+    return '';
+  }
+  return path.replace(`${PROJECT_ROOT}/`, '');
+}
+
+function dirname(path: string): string {
+  return path.substring(0, path.lastIndexOf('/'));
 }
 
 function emitFileChange(path: string): void {
@@ -40,63 +52,124 @@ export async function wcReadFile(path: string): Promise<string> {
 
 export async function wcWriteFile(path: string, content: string): Promise<void> {
   const wc = await getWebContainer();
-  const resolved = wcPath(path);
-  const dir = resolved.substring(0, resolved.lastIndexOf('/'));
+  const normalizedPath = normalizeProjectPath(path);
+  const resolved = toWcAbsolutePath(normalizedPath);
+  const dir = dirname(resolved);
   if (dir) {
     await wc.fs.mkdir(dir, { recursive: true });
   }
   await wc.fs.writeFile(resolved, content);
-  emitFileChange(path);
+  emitFileChange(normalizedPath);
 }
 
 export async function wcCreateFile(path: string, content = ''): Promise<void> {
   const wc = await getWebContainer();
-  const resolved = wcPath(path);
-  const dir = resolved.substring(0, resolved.lastIndexOf('/'));
+  const normalizedPath = normalizeProjectPath(path);
+  const resolved = toWcAbsolutePath(normalizedPath);
+  const dir = dirname(resolved);
   if (dir) {
     await wc.fs.mkdir(dir, { recursive: true });
   }
   await wc.fs.writeFile(resolved, content);
-  emitFileChange(path);
+  emitFileChange(normalizedPath);
 }
 
 export async function wcDeleteFile(path: string): Promise<void> {
   const wc = await getWebContainer();
-  await wc.fs.rm(wcPath(path), { recursive: true, force: true });
+  const normalizedPath = normalizeProjectPath(path);
+  await wc.fs.rm(toWcAbsolutePath(normalizedPath), { recursive: true, force: true });
+  emitFileChange(normalizedPath);
 }
 
 export async function wcMoveFile(oldPath: string, newPath: string): Promise<void> {
   const wc = await getWebContainer();
-  const newResolved = wcPath(newPath);
-  const dir = newResolved.substring(0, newResolved.lastIndexOf('/'));
+  const normalizedOldPath = normalizeProjectPath(oldPath);
+  const normalizedNewPath = normalizeProjectPath(newPath);
+  const newResolved = toWcAbsolutePath(normalizedNewPath);
+  const dir = dirname(newResolved);
   if (dir) {
     await wc.fs.mkdir(dir, { recursive: true });
   }
-  await wc.fs.rename(wcPath(oldPath), newResolved);
+  await wc.fs.rename(toWcAbsolutePath(normalizedOldPath), newResolved);
+  emitFileChange(normalizedOldPath);
+  emitFileChange(normalizedNewPath);
 }
 
 export async function wcListFiles(rootPath = '.'): Promise<string[]> {
   const wc = await getWebContainer();
   const files: string[] = [];
-  const base = rootPath === '.' ? WC_PROJECT_DIR : wcPath(rootPath);
+  const base = rootPath === '.' ? PROJECT_ROOT : wcPath(rootPath);
 
   async function walk(dir: string) {
     const entries = await wc.fs.readdir(dir, { withFileTypes: true });
     for (const entry of entries) {
-      const fullPath = dir === WC_PROJECT_DIR ? entry.name : `${dir}/${entry.name}`;
+      const fullPath = dir === PROJECT_ROOT ? `${PROJECT_ROOT}/${entry.name}` : `${dir}/${entry.name}`;
       if (entry.isDirectory()) {
-        if (entry.name !== 'node_modules') {
+        if (!PROJECT_IGNORED_DIRS.has(entry.name)) {
           await walk(fullPath);
         }
       } else {
         // Return relative paths
-        files.push(fullPath.replace(WC_PROJECT_DIR + '/', ''));
+        files.push(relativeFromProjectRoot(fullPath));
       }
     }
   }
 
   await walk(base);
   return files;
+}
+
+export async function wcResetProject(files: Record<string, string>, shouldContinue: () => boolean = () => true): Promise<void> {
+  const wc = await getWebContainer();
+  const writePlan = Object.entries(files).map(([path, content]) => {
+    const normalizedPath = normalizeProjectPath(path);
+    const resolved = toWcAbsolutePath(normalizedPath);
+    return { content, resolved };
+  });
+
+  if (!shouldContinue()) return;
+  await wc.fs.mkdir(PROJECT_ROOT, { recursive: true });
+
+  if (!shouldContinue()) return;
+  const entries = await wc.fs.readdir(PROJECT_ROOT, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!shouldContinue()) return;
+    await wc.fs.rm(`${PROJECT_ROOT}/${entry.name}`, { recursive: true, force: true });
+  }
+
+  for (const { resolved, content } of writePlan) {
+    if (!shouldContinue()) return;
+    const dir = dirname(resolved);
+    if (dir) {
+      await wc.fs.mkdir(dir, { recursive: true });
+    }
+    if (!shouldContinue()) return;
+    await wc.fs.writeFile(resolved, content);
+  }
+}
+
+export async function wcGetProjectSnapshot(): Promise<Record<string, string>> {
+  const wc = await getWebContainer();
+  const snapshot: Record<string, string> = {};
+
+  async function walk(dir: string) {
+    const entries = await wc.fs.readdir(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory() && PROJECT_IGNORED_DIRS.has(entry.name)) {
+        continue;
+      }
+
+      const fullPath = `${dir}/${entry.name}`;
+      if (entry.isDirectory()) {
+        await walk(fullPath);
+      } else {
+        snapshot[relativeFromProjectRoot(fullPath)] = await wc.fs.readFile(fullPath, 'utf-8');
+      }
+    }
+  }
+
+  await walk(PROJECT_ROOT);
+  return snapshot;
 }
 
 export interface SpawnResult {
@@ -122,7 +195,7 @@ export async function wcSpawnCommand(
     throw new Error(`Command \"${command}\" is not in the allowed command list`);
   }
 
-  const process = await wc.spawn(command, args, { cwd: options?.cwd ?? WC_PROJECT_DIR });
+  const process = await wc.spawn(command, args, { cwd: options?.cwd ?? PROJECT_ROOT });
 
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
   let pipeError: unknown;

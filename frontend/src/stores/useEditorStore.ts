@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import type { FileTreeNode } from '@web-learn/shared';
+import { wcGetProjectSnapshot } from '../agent/webcontainer';
 import { topicGitApi } from '../services/api';
 import { createTarball } from '../utils/tarUtils';
+import { normalizeProjectPath } from '../utils/projectPaths';
 import { toast } from './useToastStore';
 
 interface SaveToOSSOptions {
@@ -82,6 +84,8 @@ interface EditorState {
   fileTree: FileTreeNode[];
   openFiles: string[];
   activeFile: string | null;
+  fileRevision: number;
+  lastSavedRevision: number;
   previewUrl: string | null;
   isWebContainerReady: boolean;
   hasUnsavedChanges: boolean;
@@ -99,13 +103,14 @@ interface EditorState {
   deleteFile: (path: string) => void;
   renameFile: (oldPath: string, newPath: string) => void;
   createFile: (path: string, content?: string) => void;
+  replaceProjectFiles: (files: Record<string, string>, options?: { markUnsaved?: boolean }) => void;
   setPreviewUrl: (url: string | null) => void;
   setWebContainerReady: (ready: boolean) => void;
   loadSnapshot: (files: Record<string, string>) => void;
   getAllFiles: () => Record<string, string>;
   getFileTree: () => FileTreeNode[];
   getChangedFiles: () => string[];
-  markSaved: () => void;
+  markSaved: (savedRevision?: number) => void;
   markUnsaved: () => void;
   backupToLocal: (topicId: string) => void;
   restoreFromLocalBackup: (topicId: string) => boolean;
@@ -144,11 +149,47 @@ function buildFileTree(files: Record<string, string>): FileTreeNode[] {
   return root.children || [];
 }
 
+function filesEqual(left: Record<string, string>, right: Record<string, string>): boolean {
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  if (leftKeys.length !== rightKeys.length) return false;
+
+  return leftKeys.every((key) => Object.prototype.hasOwnProperty.call(right, key) && left[key] === right[key]);
+}
+
+function replacePathPrefix(path: string, oldPath: string, newPath: string): string {
+  if (path === oldPath) return newPath;
+  if (path.startsWith(oldPath + '/')) return newPath + path.slice(oldPath.length);
+  return path;
+}
+
+function dedupe(paths: string[]): string[] {
+  return Array.from(new Set(paths));
+}
+
+function normalizeFileRecord(files: Record<string, string>): Record<string, string> {
+  const normalizedFiles: Record<string, string> = {};
+  for (const [path, content] of Object.entries(files)) {
+    normalizedFiles[normalizeProjectPath(path)] = content;
+  }
+  return normalizedFiles;
+}
+
+function backupSnapshotToLocal(topicId: string, files: Record<string, string>): void {
+  const backupData = {
+    files,
+    timestamp: Date.now(),
+  };
+  localStorage.setItem(`local-backup-${topicId}`, JSON.stringify(backupData));
+}
+
 export const useEditorStore = create<EditorState>((set, get) => ({
   files: {},
   fileTree: [],
   openFiles: [],
   activeFile: null,
+  fileRevision: 0,
+  lastSavedRevision: 0,
   previewUrl: null,
   isWebContainerReady: false,
   hasUnsavedChanges: false,
@@ -161,10 +202,19 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setActivePreviewContent: (content) => set({ activePreviewContent: content }),
 
   setFileContent: (path, content) => {
-    set((state) => ({
-      files: { ...state.files, [path]: content },
-      hasUnsavedChanges: true,
-    }));
+    set((state) => {
+      if (state.files[path] === content) {
+        return {};
+      }
+
+      const files = { ...state.files, [path]: content };
+      return {
+        files,
+        fileTree: buildFileTree(files),
+        fileRevision: state.fileRevision + 1,
+        hasUnsavedChanges: true,
+      };
+    });
   },
 
   openFile: (path) => {
@@ -194,16 +244,31 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   deleteFile: (path) => {
     set((state) => {
       const newFiles = { ...state.files };
+      let changed = false;
       // Delete file and any children (if it's a directory prefix)
       for (const key of Object.keys(newFiles)) {
         if (key === path || key.startsWith(path + '/')) {
           delete newFiles[key];
+          changed = true;
         }
       }
+      if (!changed) {
+        return {};
+      }
+
+      const openFiles = state.openFiles.filter((f) => f !== path && !f.startsWith(path + '/'));
+      const activeFile = state.activeFile && (state.activeFile === path || state.activeFile.startsWith(path + '/'))
+        ? (openFiles.length > 0 ? openFiles[openFiles.length - 1] : null)
+        : state.activeFile;
+      const previewMode = activeFile ? state.previewMode : 'page';
+
       return {
         files: newFiles,
-        openFiles: state.openFiles.filter((f) => f !== path && !f.startsWith(path + '/')),
+        openFiles,
+        activeFile,
+        previewMode,
         fileTree: buildFileTree(newFiles),
+        fileRevision: state.fileRevision + 1,
         hasUnsavedChanges: true,
       };
     });
@@ -212,41 +277,97 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   renameFile: (oldPath, newPath) => {
     set((state) => {
       const newFiles: Record<string, string> = {};
+      let changed = false;
       for (const [key, value] of Object.entries(state.files)) {
         if (key === oldPath) {
           newFiles[newPath] = value;
+          changed = true;
         } else if (key.startsWith(oldPath + '/')) {
-          newFiles[key.replace(oldPath, newPath)] = value;
+          newFiles[replacePathPrefix(key, oldPath, newPath)] = value;
+          changed = true;
         } else {
           newFiles[key] = value;
         }
       }
-      return { files: newFiles, fileTree: buildFileTree(newFiles), hasUnsavedChanges: true };
+      if (!changed || filesEqual(state.files, newFiles)) {
+        return {};
+      }
+
+      const openFiles = dedupe(state.openFiles.map((file) => replacePathPrefix(file, oldPath, newPath)));
+      const activeFile = state.activeFile ? replacePathPrefix(state.activeFile, oldPath, newPath) : null;
+
+      return {
+        files: newFiles,
+        openFiles,
+        activeFile,
+        fileTree: buildFileTree(newFiles),
+        fileRevision: state.fileRevision + 1,
+        hasUnsavedChanges: true,
+      };
     });
   },
 
   createFile: (path, content = '') => {
-    set((state) => ({
-      files: { ...state.files, [path]: content },
-      fileTree: buildFileTree({ ...state.files, [path]: content }),
-      hasUnsavedChanges: true,
-    }));
+    set((state) => {
+      if (state.files[path] === content) {
+        return {};
+      }
+
+      const files = { ...state.files, [path]: content };
+      return {
+        files,
+        fileTree: buildFileTree(files),
+        fileRevision: state.fileRevision + 1,
+        hasUnsavedChanges: true,
+      };
+    });
+  },
+
+  replaceProjectFiles: (files, options) => {
+    set((state) => {
+      const nextFiles = normalizeFileRecord(files);
+      const changed = !filesEqual(state.files, nextFiles);
+      const fileRevision = changed ? state.fileRevision + 1 : state.fileRevision;
+      const openFiles = state.openFiles.filter((path) => Object.prototype.hasOwnProperty.call(nextFiles, path));
+      const activeFile = state.activeFile && Object.prototype.hasOwnProperty.call(nextFiles, state.activeFile)
+        ? state.activeFile
+        : (openFiles.length > 0 ? openFiles[openFiles.length - 1] : null);
+
+      return {
+        files: nextFiles,
+        fileTree: buildFileTree(nextFiles),
+        openFiles,
+        activeFile,
+        previewMode: activeFile ? state.previewMode : 'page',
+        fileRevision,
+        hasUnsavedChanges: options?.markUnsaved ? changed || state.hasUnsavedChanges : false,
+        lastSavedRevision: options?.markUnsaved ? state.lastSavedRevision : fileRevision,
+        lastSavedAt: options?.markUnsaved ? state.lastSavedAt : null,
+      };
+    });
   },
 
   setPreviewUrl: (url) => set({ previewUrl: url }),
   setWebContainerReady: (ready) => set({ isWebContainerReady: ready }),
 
-  loadSnapshot: (files) => set({
-    files,
-    fileTree: buildFileTree(files),
-    hasUnsavedChanges: false,
-    lastSavedAt: null,
-  }),
+  loadSnapshot: (files) => get().replaceProjectFiles(files),
 
   getAllFiles: () => get().files,
   getFileTree: () => get().fileTree,
 
-  markSaved: () => set({ hasUnsavedChanges: false, lastSavedAt: new Date() }),
+  markSaved: (savedRevision) => set((state) => {
+    const revisionToMark = savedRevision ?? state.fileRevision;
+    const lastSavedRevision = Math.max(
+      state.lastSavedRevision,
+      Math.min(revisionToMark, state.fileRevision),
+    );
+
+    return {
+      hasUnsavedChanges: state.fileRevision > lastSavedRevision,
+      lastSavedAt: new Date(),
+      lastSavedRevision,
+    };
+  }),
   markUnsaved: () => set({ hasUnsavedChanges: true }),
 
   getChangedFiles: () => {
@@ -257,12 +378,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   backupToLocal: (topicId: string) => {
     try {
-      const files = get().files;
-      const backupData = {
-        files,
-        timestamp: Date.now(),
-      };
-      localStorage.setItem(`local-backup-${topicId}`, JSON.stringify(backupData));
+      backupSnapshotToLocal(topicId, { ...get().files });
       set({ lastLocalBackupAt: new Date() });
     } catch (e) {
       console.error('Local backup failed:', e);
@@ -284,12 +400,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   saveToOSS: async (topicId: string, commitMessage?: string, options?: SaveToOSSOptions): Promise<boolean> => {
-    const { hasUnsavedChanges, getAllFiles, getChangedFiles, markSaved, backupToLocal } = get();
-    if (!hasUnsavedChanges && !options?.force) return true;
-
-    // 先自动备份到本地
-    backupToLocal(topicId);
-
     try {
       // 【已注释】版本冲突检测：获取云端版本号（接口不存在，暂不启用）
       // const { version: cloudVersion } = await topicGitApi.getVersion(topicId);
@@ -300,11 +410,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       //   return false;
       // }
 
-      const files = getAllFiles();
+      const files = await wcGetProjectSnapshot();
+      if (!filesEqual(get().files, files)) {
+        get().replaceProjectFiles(files, { markUnsaved: true });
+      }
+      const { fileRevision: snapshotRevision, hasUnsavedChanges, markSaved } = get();
       if (Object.keys(files).length === 0) return false;
+      if (!hasUnsavedChanges && !options?.force) return true;
+
+      // 先自动备份到本地，且与上传的 tarball 使用同一个快照
+      backupSnapshotToLocal(topicId, files);
+      set({ lastLocalBackupAt: new Date() });
 
       // 生成commit信息
-      const changedFiles = getChangedFiles();
+      const changedFiles = Object.keys(files);
       const defaultCommitMessage = `AI修改: 修改了${changedFiles.join('、')}`;
       const finalCommitMessage = commitMessage || defaultCommitMessage;
 
@@ -320,7 +439,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       });
       if (!response.ok) throw new Error(`Upload failed: ${response.status}`);
 
-      markSaved();
+      markSaved(snapshotRevision);
       return true;
     } catch (e) {
       console.error('Save to OSS failed:', e);

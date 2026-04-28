@@ -1,31 +1,17 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { usePreviewSync } from './usePreviewSync';
 import { useEditorStore } from '../stores/useEditorStore';
 
-const wcOnFileChangeMock = vi.hoisted(() => vi.fn());
-const wcReadFileMock = vi.hoisted(() => vi.fn());
-
-vi.mock('../agent/webcontainer', () => ({
-  wcOnFileChange: wcOnFileChangeMock,
-  wcReadFile: wcReadFileMock,
-}));
-
 describe('usePreviewSync', () => {
   beforeEach(() => {
-    wcOnFileChangeMock.mockReset();
-    wcReadFileMock.mockReset();
-    wcOnFileChangeMock.mockReturnValue(() => {});
-    wcReadFileMock.mockImplementation(async (path: string) => {
-      const files = useEditorStore.getState().files;
-      return files[path] ?? '';
-    });
-
     useEditorStore.setState({
       files: { 'src/app.ts': 'initial content' },
       fileTree: [],
       openFiles: ['src/app.ts'],
       activeFile: 'src/app.ts',
+      fileRevision: 0,
+      lastSavedRevision: 0,
       previewUrl: null,
       isWebContainerReady: false,
       hasUnsavedChanges: false,
@@ -49,6 +35,40 @@ describe('usePreviewSync', () => {
 
     await waitFor(() => {
       expect(useEditorStore.getState().activePreviewContent).toBe('updated content');
+    });
+  });
+
+  it('clears preview content when there is no active file', async () => {
+    useEditorStore.setState({
+      activeFile: null,
+      activePreviewContent: 'previous content',
+    });
+
+    renderHook(() => usePreviewSync());
+
+    await waitFor(() => {
+      expect(useEditorStore.getState().activePreviewContent).toBeNull();
+    });
+  });
+
+  it('clears preview content when the active file is deleted', async () => {
+    renderHook(() => usePreviewSync());
+
+    await waitFor(() => {
+      expect(useEditorStore.getState().activePreviewContent).toBe('initial content');
+    });
+
+    act(() => {
+      useEditorStore.setState({
+        files: {},
+        fileTree: [],
+        openFiles: ['src/app.ts'],
+        activeFile: 'src/app.ts',
+      });
+    });
+
+    await waitFor(() => {
+      expect(useEditorStore.getState().activePreviewContent).toBeNull();
     });
   });
 });

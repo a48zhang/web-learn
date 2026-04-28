@@ -6,7 +6,6 @@ import type { Topic } from '@web-learn/shared';
 import { topicApi, topicGitApi } from '../services/api';
 import { extractTarball } from '../utils/tarUtils';
 import { useAuthStore } from '../stores/useAuthStore';
-import { toast } from '../stores/useToastStore';
 import { getApiErrorMessage } from '../utils/errors';
 import { LoadingOverlay } from '../components/Loading';
 import { useLayoutMeta } from '../components/layout/LayoutMetaContext';
@@ -42,6 +41,7 @@ function WebsiteEditorPage() {
   const [previewReloadKey, setPreviewReloadKey] = useState(0);
   const [filesLoaded, setFilesLoaded] = useState(false);
   const seededRef = useRef<string | null>(null);
+  const pendingSeedSaveTopicIdRef = useRef<string | null>(null);
 
   const fileTreePanelRef = useRef<any>(null);
   const [isFileTreeCollapsed, setIsFileTreeCollapsed] = useState(true);
@@ -61,11 +61,10 @@ function WebsiteEditorPage() {
     isReady,
     previewUrl,
     error: wcError,
-    init: initWC,
-    deleteFile: deleteFileWC,
+    initProject: initWCProject,
   } = useWebContainer();
 
-  const { openFile, getAllFiles, loadSnapshot, deleteFile, saveToOSS } = useEditorStore();
+  const { openFile, getAllFiles, loadSnapshot, saveToOSS } = useEditorStore();
   const { save: autoSave } = useAutoSave(id ?? '');
   const locationState = location.state as EditorLocationState | null;
   const locationInitialBuildPrompt =
@@ -89,8 +88,18 @@ function WebsiteEditorPage() {
 
   // Eager boot — starts WebContainer immediately, independent of topic data
   useEffect(() => {
-    bootWebContainer();
+    void Promise.resolve(bootWebContainer()).catch((err) => {
+      console.error('Failed to boot WebContainer:', err);
+    });
   }, []);
+
+  useEffect(() => {
+    setFilesLoaded(false);
+    setTopic(null);
+    setError(null);
+    setLoading(true);
+    pendingSeedSaveTopicIdRef.current = null;
+  }, [id]);
 
   // Editors-based permission: admin, creator, or editor
   const canEdit =
@@ -99,10 +108,13 @@ function WebsiteEditorPage() {
 
   // Load topic — try OSS first, then localStorage cache fallback
   useEffect(() => {
+    let cancelled = false;
+
     const fetchData = async () => {
       if (!id) return;
       try {
         const topicData = await topicApi.getById(id);
+        if (cancelled) return;
         setTopic(topicData);
 
         // Try loading from OSS first
@@ -110,9 +122,11 @@ function WebsiteEditorPage() {
         try {
           const { url } = await topicGitApi.getPresign(id, 'download');
           const response = await fetch(url);
+          if (cancelled) return;
           if (response.ok) {
             const buffer = await response.arrayBuffer();
             const files = await extractTarball(buffer);
+            if (cancelled) return;
             loadSnapshot(files);
             loaded = true;
           } else {
@@ -123,24 +137,24 @@ function WebsiteEditorPage() {
         }
 
         // Fallback to localStorage cache
+        if (cancelled) return;
         if (!loaded) {
           const snapshot = getLocalRecoverySnapshot(id);
           if (snapshot) {
+            if (cancelled) return;
             loadSnapshot(snapshot.files);
             console.log(`[localStorage] Loaded ${snapshot.source} recovery snapshot from cache`);
           } else if (seededRef.current !== id) {
             // Both OSS and local recovery are empty — seed the built-in React scaffold
             console.log('[seed] No OSS or local files found — loading React seed scaffold');
+            if (cancelled) return;
             seededRef.current = id;
             loadSnapshot(reactSeed);
-            // Persist the seed to OSS once (fire-and-forget; useAutoSave backs up to
-            // localStorage if this fails, and the next manual/build-agent save will retry)
-            saveToOSS(id, 'Initial project scaffold', { force: true }).catch((e) => {
-              console.warn('[seed] Failed to persist seed to OSS (will retry on next save):', e);
-            });
+            pendingSeedSaveTopicIdRef.current = id;
           }
         }
 
+        if (cancelled) return;
         setFilesLoaded(true);
 
         setMeta({
@@ -154,39 +168,46 @@ function WebsiteEditorPage() {
           topBarRightSlot: <EditorActions topicId={id} onRefreshPreview={handleRefreshPreview} onSave={autoSave} />,
         });
       } catch (err: unknown) {
-        setError(getApiErrorMessage(err, '加载编辑器失败'));
+        if (!cancelled) {
+          setError(getApiErrorMessage(err, '加载编辑器失败'));
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
     fetchData();
 
     // Cleanup topBarRightSlot when component unmounts
     return () => {
+      cancelled = true;
       setMeta({ topBarRightSlot: undefined });
     };
-  }, [id, setMeta, loadSnapshot, saveToOSS, handleRefreshPreview]);
+  }, [id, setMeta, loadSnapshot, handleRefreshPreview]);
 
   // Initialize WebContainer after files are loaded into EditorStore
   useEffect(() => {
-    if (!filesLoaded || !topic || !id) return;
+    if (!filesLoaded || !topic || !id || topic.id !== id) return;
+    let cancelled = false;
     const currentFiles = getAllFiles();
-    initWC(Object.keys(currentFiles).length > 0 ? currentFiles : undefined);
-  }, [filesLoaded, topic, id, initWC, getAllFiles]);
+    void Promise.resolve(initWCProject(id, currentFiles)).then(() => {
+      if (cancelled || pendingSeedSaveTopicIdRef.current !== id) return;
+      pendingSeedSaveTopicIdRef.current = null;
+      // Persist the seed after WebContainer has been reset to this topic's files.
+      // saveToOSS snapshots WebContainer, so saving before init can persist stale files.
+      saveToOSS(id, 'Initial project scaffold', { force: true }).catch((e) => {
+        console.warn('[seed] Failed to persist seed to OSS (will retry on next save):', e);
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [filesLoaded, topic, id, initWCProject, getAllFiles, saveToOSS]);
 
   const handleOpenFile = useCallback((path: string) => {
     openFile(path);
   }, [openFile]);
-
-  const handleDeleteFile = useCallback(async (path: string) => {
-    try {
-      await deleteFileWC(path);
-      deleteFile(path);
-    } catch (error) {
-      console.error('File deletion failed:', error);
-      toast.error('删除文件失败，请稍后重试');
-    }
-  }, [deleteFile, deleteFileWC]);
 
   if (loading) {
     return <LoadingOverlay message="加载编辑器中..." />;
@@ -238,7 +259,7 @@ function WebsiteEditorPage() {
                     <span>文件资源管理器</span>
                   </div>
                 ),
-                content: <FileTree onOpenFile={handleOpenFile} onDeleteFile={handleDeleteFile} />,
+                content: <FileTree onOpenFile={handleOpenFile} />,
               },
               {
                 id: 'agent-chat',

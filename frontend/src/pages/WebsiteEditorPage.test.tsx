@@ -1,6 +1,6 @@
 import { act, render, waitFor } from '@testing-library/react';
-import type { ReactNode } from 'react';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { useEffect, useState, type ReactNode } from 'react';
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import WebsiteEditorPage from './WebsiteEditorPage';
 
@@ -16,11 +16,14 @@ const openFileMock = vi.hoisted(() => vi.fn());
 const deleteFileMock = vi.hoisted(() => vi.fn());
 const bootWebContainerMock = vi.hoisted(() => vi.fn());
 const initWebContainerMock = vi.hoisted(() => vi.fn());
+const initProjectWebContainerMock = vi.hoisted(() => vi.fn());
+const wcResetProjectMock = vi.hoisted(() => vi.fn());
 const useAutoSaveMock = vi.hoisted(() => vi.fn());
 const useAuthStoreMock = vi.hoisted(() => vi.fn());
 const useWebContainerMock = vi.hoisted(() => vi.fn());
 const agentChatContentMock = vi.hoisted(() => vi.fn());
 const locationProbeMock = vi.hoisted(() => vi.fn());
+const previewPanelMock = vi.hoisted(() => vi.fn());
 
 const mockReactSeed = vi.hoisted(() =>
   Object.freeze({
@@ -134,12 +137,28 @@ vi.mock('../components/TerminalToggle', () => ({
 }));
 
 vi.mock('../components/preview/PreviewPanel', () => ({
-  PreviewPanel: () => null,
+  PreviewPanel: (props: unknown) => {
+    previewPanelMock(props);
+    return null;
+  },
 }));
 
 function LocationStateProbe() {
   const location = useLocation();
   locationProbeMock(location.state);
+  return null;
+}
+
+let navigateFromTest: ((path: string) => void) | null = null;
+
+function NavigationProbe() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    navigateFromTest = (path: string) => navigate(path);
+    return () => {
+      navigateFromTest = null;
+    };
+  }, [navigate]);
   return null;
 }
 
@@ -157,11 +176,15 @@ describe('WebsiteEditorPage', () => {
     deleteFileMock.mockReset();
     bootWebContainerMock.mockReset();
     initWebContainerMock.mockReset();
+    initProjectWebContainerMock.mockReset();
+    wcResetProjectMock.mockReset();
     useAutoSaveMock.mockReset();
     useAuthStoreMock.mockReset();
     useWebContainerMock.mockReset();
     agentChatContentMock.mockReset();
     locationProbeMock.mockReset();
+    previewPanelMock.mockReset();
+    navigateFromTest = null;
 
     getAllFilesMock.mockReturnValue({});
     useAutoSaveMock.mockReturnValue({ save: vi.fn() });
@@ -171,6 +194,7 @@ describe('WebsiteEditorPage', () => {
       previewUrl: null,
       error: null,
       init: initWebContainerMock,
+      initProject: initProjectWebContainerMock,
       deleteFile: deleteFileMock,
     });
     vi.stubGlobal('fetch', vi.fn());
@@ -263,6 +287,7 @@ describe('WebsiteEditorPage', () => {
   });
 
   it('seeds with reactSeed when OSS download fails and no local recovery snapshot exists', async () => {
+    let editorFiles: Record<string, string> = {};
     getByIdMock.mockResolvedValueOnce({
       id: 'topic-seed',
       title: 'New Topic',
@@ -272,6 +297,10 @@ describe('WebsiteEditorPage', () => {
     getPresignMock.mockRejectedValueOnce(new Error('presign failed'));
     getLocalRecoverySnapshotMock.mockReturnValueOnce(undefined);
     saveToOSSMock.mockResolvedValueOnce(undefined);
+    loadSnapshotMock.mockImplementation((files: Record<string, string>) => {
+      editorFiles = files;
+    });
+    getAllFilesMock.mockImplementation(() => editorFiles);
 
     render(
       <MemoryRouter
@@ -288,9 +317,15 @@ describe('WebsiteEditorPage', () => {
       expect(loadSnapshotMock).toHaveBeenCalledWith(mockReactSeed);
     });
 
-    expect(saveToOSSMock).toHaveBeenCalledWith('topic-seed', 'Initial project scaffold', {
-      force: true,
+    await waitFor(() => {
+      expect(saveToOSSMock).toHaveBeenCalledWith('topic-seed', 'Initial project scaffold', {
+        force: true,
+      });
     });
+    expect(initProjectWebContainerMock).toHaveBeenCalledWith('topic-seed', mockReactSeed);
+    expect(initProjectWebContainerMock.mock.invocationCallOrder[0]).toBeLessThan(
+      saveToOSSMock.mock.invocationCallOrder[0]
+    );
   });
 
   it('skips seed when OSS files exist', async () => {
@@ -401,6 +436,87 @@ describe('WebsiteEditorPage', () => {
           agentType: 'building',
           initialPrompt: 'build a portfolio site',
         })
+      );
+    });
+  });
+
+  it('resets the WebContainer project and preview when switching topics', async () => {
+    const topicAFiles = { 'src/A.ts': 'export const a = 1;' };
+    const topicBFiles = { 'src/B.ts': 'export const b = 2;' };
+    let editorFiles: Record<string, string> = {};
+
+    getByIdMock.mockImplementation(async (topicId: string) => ({
+      id: topicId,
+      title: topicId,
+      createdBy: '1',
+      editors: [],
+    }));
+    getPresignMock.mockRejectedValue(new Error('presign failed'));
+    getLocalRecoverySnapshotMock.mockImplementation((topicId: string) => ({
+      files: topicId === 'topic-a' ? topicAFiles : topicBFiles,
+      timestamp: 123,
+      source: 'auto',
+    }));
+    loadSnapshotMock.mockImplementation((files: Record<string, string>) => {
+      editorFiles = files;
+    });
+    getAllFilesMock.mockImplementation(() => editorFiles);
+    useWebContainerMock.mockImplementation(() => {
+      const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+      return {
+        isReady: true,
+        previewUrl,
+        error: null,
+        init: initWebContainerMock,
+        initProject: (topicId: string, files: Record<string, string>) => {
+          initProjectWebContainerMock(topicId, files);
+          wcResetProjectMock(files);
+          setPreviewUrl(topicId === 'topic-a' ? 'http://topic-a.test' : null);
+        },
+        deleteFile: deleteFileMock,
+      };
+    });
+
+    render(
+      <MemoryRouter
+        initialEntries={['/topics/topic-a/edit']}
+        future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+      >
+        <NavigationProbe />
+        <Routes>
+          <Route path="/topics/:id/edit" element={<WebsiteEditorPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(wcResetProjectMock).toHaveBeenCalledWith(topicAFiles);
+    });
+    await waitFor(() => {
+      expect(previewPanelMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ previewUrl: 'http://topic-a.test' })
+      );
+    });
+
+    await act(async () => {
+      navigateFromTest?.('/topics/topic-b/edit');
+    });
+
+    await waitFor(() => {
+      expect(wcResetProjectMock).toHaveBeenCalledWith(topicBFiles);
+    });
+
+    const lastResetFiles = wcResetProjectMock.mock.calls.at(-1)?.[0];
+    expect(lastResetFiles).toEqual(topicBFiles);
+    expect(lastResetFiles).not.toHaveProperty('src/A.ts');
+    expect(initProjectWebContainerMock.mock.calls).not.toContainEqual([
+      'topic-b',
+      expect.objectContaining({ 'src/A.ts': topicAFiles['src/A.ts'] }),
+    ]);
+    await waitFor(() => {
+      expect(previewPanelMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ previewUrl: null })
       );
     });
   });

@@ -3,8 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useEditorStore } from '../../stores/useEditorStore';
 import { useAgentStore } from '../../stores/useAgentStore';
 import { toast } from '../../stores/useToastStore';
-import { topicGitApi } from '../../services/api';
-import { createTarball } from '../../utils/tarUtils';
 import SaveIndicator from './SaveIndicator';
 
 interface TopBarProps {
@@ -16,7 +14,7 @@ interface TopBarProps {
 export default function TopBar({ onRefreshPreview, onPublish, onShare }: TopBarProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getAllFiles, markSaved } = useEditorStore();
+  const { getAllFiles, saveToOSS } = useEditorStore();
   const visibleMessages = useAgentStore((s) => s.visibleMessages);
   const [saving, setSaving] = useState(false);
 
@@ -24,22 +22,16 @@ export default function TopBar({ onRefreshPreview, onPublish, onShare }: TopBarP
     if (!id) return;
     setSaving(true);
     try {
-      const files = getAllFiles();
-      const tarball = createTarball(files);
-      const { url } = await topicGitApi.getPresign(id, 'upload');
-
-      const response = await fetch(url, {
-        method: 'PUT',
-        body: new Blob([tarball], { type: 'application/gzip' }),
-      });
-
-      if (!response.ok) throw new Error(`Upload failed: ${response.status}`);
+      const saved = await saveToOSS(id, '手动保存', { force: true });
+      if (!saved) throw new Error('Save to OSS failed');
 
       // Cache locally for fast restore without re-downloading
-      localStorage.setItem(`snapshot-${id}`, JSON.stringify(files));
+      localStorage.setItem(`snapshot-${id}`, JSON.stringify({
+        files: getAllFiles(),
+        timestamp: Date.now(),
+      }));
       localStorage.setItem(`chat-history-${id}`, JSON.stringify(visibleMessages));
 
-      markSaved();
       toast.success('保存成功');
     } catch {
       toast.error('保存失败，文件未同步到云端');

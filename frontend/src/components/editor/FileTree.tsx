@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useEditorStore } from '../../stores/useEditorStore';
 import type { FileTreeNode } from '@web-learn/shared';
 import { FiPlus, FiFile, FiFileText, FiCode, FiSettings, FiImage, FiEdit2, FiFolder, FiDroplet, FiArchive } from 'react-icons/fi';
+import { createProjectFile, deleteProjectPath, moveProjectPath } from '../../services/projectFileService';
+import { toast } from '../../stores/useToastStore';
 
 function getFileIcon(filename: string): React.ReactNode {
   if (filename.endsWith('.html') || filename.endsWith('.htm')) return <FiFileText size={14} />;
@@ -16,28 +18,36 @@ function getFileIcon(filename: string): React.ReactNode {
 
 interface FileTreeProps {
   onOpenFile: (path: string) => void;
-  onDeleteFile: (path: string) => void | Promise<void>;
 }
 
 function TreeNode({
   node,
   depth,
   onOpenFile,
-  onDeleteFile,
 }: {
   node: FileTreeNode;
   depth: number;
   onOpenFile: (path: string) => void;
-  onDeleteFile: (path: string) => void | Promise<void>;
 }) {
   const [expanded, setExpanded] = useState(true);
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (confirm(`确定删除 ${node.path} 吗？`)) {
-      void Promise.resolve(onDeleteFile(node.path)).catch((error) => {
-        console.error('Delete file callback failed:', error);
-        // User-facing error toast is handled by parent component
+      void deleteProjectPath(node.path).catch((error) => {
+        console.error('File deletion failed:', error);
+        toast.error('删除文件失败，请稍后重试');
+      });
+    }
+  };
+
+  const handleRename = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const nextPath = prompt('输入新路径:', node.path);
+    if (nextPath && nextPath !== node.path) {
+      void moveProjectPath(node.path, nextPath).catch((error) => {
+        console.error('File rename failed:', error);
+        toast.error('重命名失败，请稍后重试');
       });
     }
   };
@@ -54,16 +64,26 @@ function TreeNode({
           <span className="shrink-0 text-[#858585]">{getFileIcon(node.name)}</span>
           <span className="truncate">{node.name}</span>
         </div>
-        <button
-          className="hidden group-hover:flex items-center justify-center text-[#858585] hover:bg-[#3d3d3d] hover:text-white p-[3px] rounded-md ml-2 shrink-0 transition-colors"
-          onClick={handleDelete}
-          title="删除"
-          aria-label={`删除 ${node.name}`}
-        >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        <div className="hidden group-hover:flex items-center gap-1 ml-2 shrink-0">
+          <button
+            className="flex items-center justify-center text-[#858585] hover:bg-[#3d3d3d] hover:text-white p-[3px] rounded-md transition-colors"
+            onClick={handleRename}
+            title="重命名"
+            aria-label={`重命名 ${node.name}`}
+          >
+            <FiEdit2 size={13} />
+          </button>
+          <button
+            className="flex items-center justify-center text-[#858585] hover:bg-[#3d3d3d] hover:text-white p-[3px] rounded-md transition-colors"
+            onClick={handleDelete}
+            title="删除"
+            aria-label={`删除 ${node.name}`}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
       </div>
     );
   }
@@ -71,12 +91,22 @@ function TreeNode({
   return (
     <div>
       <div
-        className="flex items-center gap-1.5 px-2 py-[3px] text-[13px] hover:bg-[#2a2d2e] cursor-pointer text-[#cccccc] font-medium tracking-wide select-none"
+        className="group flex items-center justify-between px-2 py-[3px] text-[13px] hover:bg-[#2a2d2e] cursor-pointer text-[#cccccc] font-medium tracking-wide select-none"
         style={{ paddingLeft: `${depth * 14 + 14}px` }}
         onClick={() => setExpanded((v) => !v)}
       >
-        <span className="shrink-0 text-zinc-400">{expanded ? <FiArchive size={14} /> : <FiFolder size={14} />}</span>
-        <span className="truncate">{node.name}</span>
+        <div className="flex flex-1 items-center gap-1.5 min-w-0">
+          <span className="shrink-0 text-zinc-400">{expanded ? <FiArchive size={14} /> : <FiFolder size={14} />}</span>
+          <span className="truncate">{node.name}</span>
+        </div>
+        <button
+          className="hidden group-hover:flex items-center justify-center text-[#858585] hover:bg-[#3d3d3d] hover:text-white p-[3px] rounded-md ml-2 shrink-0 transition-colors"
+          onClick={handleRename}
+          title="重命名"
+          aria-label={`重命名 ${node.name}`}
+        >
+          <FiEdit2 size={13} />
+        </button>
       </div>
       {expanded && node.children && (
         <div>
@@ -86,7 +116,6 @@ function TreeNode({
               node={child}
               depth={depth + 1}
               onOpenFile={onOpenFile}
-              onDeleteFile={onDeleteFile}
             />
           ))}
         </div>
@@ -95,13 +124,16 @@ function TreeNode({
   );
 }
 
-export default function FileTree({ onOpenFile, onDeleteFile }: FileTreeProps) {
-  const { fileTree, createFile } = useEditorStore();
+export default function FileTree({ onOpenFile }: FileTreeProps) {
+  const { fileTree } = useEditorStore();
 
   const handleNewFile = () => {
     const name = prompt('输入文件名:');
     if (name) {
-      createFile(name, '');
+      void createProjectFile(name, '').catch((error) => {
+        console.error('File creation failed:', error);
+        toast.error('新建文件失败，请稍后重试');
+      });
     }
   };
 
@@ -119,7 +151,7 @@ export default function FileTree({ onOpenFile, onDeleteFile }: FileTreeProps) {
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         {fileTree.length > 0 ? (
           fileTree.map((node) => (
-            <TreeNode key={node.path} node={node} depth={0} onOpenFile={onOpenFile} onDeleteFile={onDeleteFile} />
+            <TreeNode key={node.path} node={node} depth={0} onOpenFile={onOpenFile} />
           ))
         ) : (
           <div className="p-4 text-xs text-zinc-500 text-center">

@@ -1,22 +1,47 @@
 import { useCallback, useEffect, useRef } from 'react';
 import Editor from '@monaco-editor/react';
 import { useEditorStore } from '../../stores/useEditorStore';
-import { useWebContainer } from '../../hooks/useWebContainer';
 import { useThemeStore } from '../../stores/useThemeStore';
+import { writeProjectFile } from '../../services/projectFileService';
+import { toast } from '../../stores/useToastStore';
 
 export default function CodeEditor() {
-  const { activeFile, files, setFileContent } = useEditorStore();
-  const { syncFile } = useWebContainer();
+  const { activeFile, files } = useEditorStore();
   const { theme } = useThemeStore();
   const isExternalChange = useRef(false);
+  const writeSequenceByFile = useRef<Record<string, number>>({});
+  const writeQueueByFile = useRef<Record<string, Promise<void>>>({});
 
   const handleChange = useCallback(async (value: string | undefined) => {
-    if (activeFile && value !== undefined && !isExternalChange.current) {
-      setFileContent(activeFile, value);
-      await syncFile(activeFile, value);
+    if (activeFile && value !== undefined) {
+      if (isExternalChange.current && value === (files[activeFile] ?? '')) {
+        isExternalChange.current = false;
+        return;
+      }
+
+      const filePath = activeFile;
+      const sequence = (writeSequenceByFile.current[filePath] ?? 0) + 1;
+      writeSequenceByFile.current[filePath] = sequence;
+
+      const previousWrite = writeQueueByFile.current[filePath] ?? Promise.resolve();
+      const queuedWrite = previousWrite
+        .catch(() => undefined)
+        .then(() => writeProjectFile(filePath, value, {
+          shouldCommit: () => writeSequenceByFile.current[filePath] === sequence,
+        }));
+      writeQueueByFile.current[filePath] = queuedWrite;
+
+      try {
+        await queuedWrite;
+      } catch (error) {
+        console.error('File save failed:', error);
+        if (writeSequenceByFile.current[filePath] === sequence) {
+          toast.error('保存文件失败，请稍后重试');
+        }
+      }
     }
     isExternalChange.current = false;
-  }, [activeFile, setFileContent, syncFile]);
+  }, [activeFile, files]);
 
   // Mark as external change when active file switches
   useEffect(() => {

@@ -1,6 +1,7 @@
 import { registerTool } from '../toolRegistry';
 import { useTerminalStore } from '../../stores/useTerminalStore';
 import { wcSpawnCommand } from '../webcontainer';
+import { rescanProjectFiles } from '../../services/projectFileService';
 
 function appendTerminalOutput(data: string): void {
   useTerminalStore.getState().appendOutput(data);
@@ -111,6 +112,9 @@ registerTool('run_command', {
     return { content: 'command is required and must be a string', isError: true };
   }
 
+  let commandAttempted = false;
+  let commandResponse: { content: string; isError?: true } | undefined;
+
   try {
     const parts = parseCommand(commandStr);
     if (parts.length === 0) {
@@ -121,15 +125,44 @@ registerTool('run_command', {
     const cmdArgs = parts.slice(1);
     const printableCommand = [cmd, ...cmdArgs].map(quoteCommandPart).join(' ');
     appendTerminalOutput(`\r\n[agent] $ ${printableCommand}\r\n`);
+    commandAttempted = true;
     const result = await wcSpawnCommand(cmd, cmdArgs, {
       onOutput: appendTerminalOutput,
     });
     appendTerminalOutput(`\r\n[agent] exited with code ${result.exitCode}\r\n`);
     const text = result.output || '(no output)';
-    return { content: text };
+    if (result.exitCode !== 0) {
+      const outputText = result.output ? `\n${result.output}` : '';
+      commandResponse = {
+        content: `Command exited with code ${result.exitCode}${outputText}`,
+        isError: true,
+      };
+    } else {
+      commandResponse = { content: text };
+    }
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Command execution failed';
     appendTerminalOutput(`\r\n[agent] command failed: ${message}\r\n`);
-    return { content: message, isError: true };
+    commandResponse = { content: message, isError: true };
   }
+
+  if (commandAttempted) {
+    try {
+      await rescanProjectFiles();
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to rescan project files';
+      if (commandResponse?.isError) {
+        return {
+          content: `${commandResponse.content}\nFailed to rescan project files after command: ${message}`,
+          isError: true,
+        };
+      }
+      return {
+        content: `Command completed, but failed to rescan project files: ${message}`,
+        isError: true,
+      };
+    }
+  }
+
+  return commandResponse ?? { content: 'Command execution failed', isError: true };
 });

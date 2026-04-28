@@ -6,3 +6,4 @@ import './writeFile';
 import './createFile';
 import './deleteFile';
 import './moveFile';
+import './runCommand';

@@ -9,7 +9,6 @@ import type { AIChatMessage, PersistedAgentMessage, AgentMessage } from '@web-le
 import type { AgentSessionContext } from './BaseAgent';
 
 const MAX_TOOL_LOOPS = 1000;
-const FILE_MUTATION_TOOLS = new Set(['write_file', 'create_file', 'delete_file', 'move_file']);
 
 export function parseToolArguments(rawArguments: unknown): Record<string, unknown> {
   if (!rawArguments) {
@@ -77,8 +76,24 @@ export function useAgentRuntime(options: { topicId: string; agentType: 'building
 
   async function runAgentLoop(userMessage: string, model?: string): Promise<void> {
     let encounteredError = false;
+    let didMutateFiles = false;
+    let saveAttempted = false;
+
+    const saveBuildChangesIfNeeded = async (): Promise<void> => {
+      if (!(agent instanceof BuildAgent) || !didMutateFiles) {
+        return;
+      }
+
+      saveAttempted = true;
+      const { saveToOSS } = useEditorStore.getState();
+      const saved = await saveToOSS(options.topicId, undefined, { force: true });
+      if (!saved) {
+        throw new Error('Failed to save build changes to OSS');
+      }
+    };
+
     try {
-      let didMutateFiles = false;
+      const startingFileRevision = useEditorStore.getState().fileRevision;
 
       // Compress context if needed before starting new request
       await agent.maybeCompressContextBeforeLlmRequest(userMessage);
@@ -174,29 +189,37 @@ export function useAgentRuntime(options: { topicId: string; agentType: 'building
 
           const toolName = toolCall.function.name;
 
-          let args: any = {};
+          let args: Record<string, unknown> = {};
           let toolPath: string | null = null;
+          let argumentParseError: string | null = null;
           try {
             args = parseToolArguments(toolCall.function.arguments);
-            toolPath = args.path ?? args.oldPath ?? args.newPath ?? null;
-          } catch {
-            // ignore
+            const candidatePath = args.path ?? args.oldPath ?? args.newPath;
+            toolPath = typeof candidatePath === 'string' ? candidatePath : null;
+          } catch (error) {
+            argumentParseError = error instanceof Error ? error.message : 'Invalid tool arguments JSON';
           }
 
           setRunState({ currentToolName: toolName, currentToolPath: toolPath });
 
           let resultContent: string;
           let toolErrored = false;
-          try {
-            const result = await executeTool(toolName, args);
-            resultContent = result.content;
-            toolErrored = Boolean(result.isError);
-            if (!result.isError && FILE_MUTATION_TOOLS.has(toolName)) {
-              didMutateFiles = true;
-            }
-          } catch (e: any) {
-            resultContent = `Error: ${e.message}`;
+          if (argumentParseError) {
+            resultContent = `Invalid tool arguments JSON for ${toolName}: ${argumentParseError}`;
             toolErrored = true;
+          } else {
+            try {
+              const result = await executeTool(toolName, args);
+              resultContent = result.content;
+              toolErrored = Boolean(result.isError);
+            } catch (e: any) {
+              resultContent = `Error: ${e.message}`;
+              toolErrored = true;
+            }
+          }
+
+          if (useEditorStore.getState().fileRevision > startingFileRevision) {
+            didMutateFiles = true;
           }
 
           internalMessages.push({
@@ -220,20 +243,22 @@ export function useAgentRuntime(options: { topicId: string; agentType: 'building
         }
       }
 
-      // Persist conversation after successful completion
+      // Save build changes before making the successful conversation durable.
+      await saveBuildChangesIfNeeded();
       await agent.persistConversationState();
 
-      // BuildAgent 成功修改文件后强制上传一次，避免本地快照提前清掉脏标记。
-      if (agent instanceof BuildAgent && didMutateFiles) {
-        const { saveToOSS } = useEditorStore.getState();
-        const saved = await saveToOSS(options.topicId, undefined, { force: true });
-        if (!saved) {
-          throw new Error('Failed to save build changes to OSS');
+    } catch (error: unknown) {
+      let errorMsg = error instanceof Error ? error.message : 'LLM request failed';
+
+      if (!saveAttempted && agent instanceof BuildAgent && didMutateFiles) {
+        try {
+          await saveBuildChangesIfNeeded();
+        } catch (saveError: unknown) {
+          const saveErrorMsg = saveError instanceof Error ? saveError.message : 'unknown save error';
+          errorMsg = `${errorMsg}; additionally failed to save build changes to OSS: ${saveErrorMsg}`;
         }
       }
 
-    } catch (error: unknown) {
-      const errorMsg = error instanceof Error ? error.message : 'LLM request failed';
       encounteredError = true;
       setRunState({
         isRunning: false,

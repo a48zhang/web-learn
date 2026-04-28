@@ -181,7 +181,7 @@ export abstract class BaseAgent {
     for (const message of visibleMessages) {
       messages.push({
         role: message.role,
-        content: message.content,
+        content: message.content || '',
       });
     }
 

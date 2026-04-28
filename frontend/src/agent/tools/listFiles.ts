@@ -1,17 +1,20 @@
 import { registerTool } from '../toolRegistry';
-import { useEditorStore } from '../../stores/useEditorStore';
+import { listProjectFiles } from '../../services/projectFileService';
 
 registerTool('list_files', {
   name: 'list_files',
-  description: 'List all files in the project. Returns an array of file paths.',
+  description: 'List all files in the project. Returns an array of project-root-relative file paths. Absolute paths are invalid for file tools.',
   parameters: {
     type: 'object',
     properties: {},
     required: [],
   },
-}, async (_args) => {
-  // Read from EditorStore directly to ensure consistency with FileTree
-  const files = useEditorStore.getState().files;
-  const filePaths = Object.keys(files);
-  return { content: JSON.stringify(filePaths) };
+}, async () => {
+  try {
+    const filePaths = await listProjectFiles();
+    return { content: JSON.stringify(filePaths) };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to list project files';
+    return { content: `Failed to list project files: ${message}`, isError: true };
+  }
 });

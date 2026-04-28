@@ -1,14 +1,14 @@
 import { registerTool } from '../toolRegistry';
-import { useEditorStore } from '../../stores/useEditorStore';
+import { readProjectFile } from '../../services/projectFileService';
 import { parseProjectToolPath } from './projectToolPath';
 
 registerTool('read_file', {
   name: 'read_file',
-  description: 'Read a project file. The path must be project-root-relative, for example src/App.tsx.',
+  description: 'Read a project file. The path must be project-root-relative, for example src/App.tsx. Absolute paths are invalid.',
   parameters: {
     type: 'object',
     properties: {
-      path: { type: 'string', description: 'Project-root-relative path to the file, for example src/App.tsx. Do not use absolute paths.' },
+      path: { type: 'string', description: 'Project-root-relative path to the file, for example src/App.tsx. Absolute paths are invalid.' },
     },
     required: ['path'],
   },
@@ -17,11 +17,11 @@ registerTool('read_file', {
   if (typeof path !== 'string') {
     return path;
   }
-  // Read from EditorStore directly to ensure consistency with FileTree
-  const files = useEditorStore.getState().files;
-  const content = files[path];
-  if (content === undefined) {
-    return { content: `File not found: ${path}`, isError: true };
+  try {
+    const content = await readProjectFile(path);
+    return { content };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : `File not found: ${path}`;
+    return { content: `Failed to read ${path}: ${message}`, isError: true };
   }
-  return { content };
 });

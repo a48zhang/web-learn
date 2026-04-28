@@ -11,6 +11,7 @@ describe('projectPaths', () => {
 
   it('rejects empty, absolute, and malformed project paths', () => {
     expect(() => normalizeProjectPath('')).toThrow(/empty/i);
+    expect(() => normalizeProjectPath('/home/project/src/App.tsx')).toThrow(/absolute/i);
     expect(() => normalizeProjectPath('/src/App.tsx')).toThrow(/absolute/i);
     expect(() => normalizeProjectPath('.')).toThrow(/dot segments/i);
     expect(() => normalizeProjectPath('..')).toThrow(/dot segments/i);

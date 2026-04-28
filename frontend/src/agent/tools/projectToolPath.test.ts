@@ -12,5 +12,9 @@ describe('parseProjectToolPath', () => {
       content: expect.stringContaining('project-root-relative path'),
       isError: true,
     });
+    expect(parseProjectToolPath('/home/project/src/App.tsx')).toEqual({
+      content: expect.stringContaining('Absolute paths are invalid'),
+      isError: true,
+    });
   });
 });

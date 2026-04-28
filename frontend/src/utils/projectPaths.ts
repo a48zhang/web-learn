@@ -20,7 +20,7 @@ function assertValidProjectPath(input: string): void {
   }
 
   if (input.startsWith('/')) {
-    throw new Error('Project path must be root-relative, not absolute');
+    throw new Error('Project path must be project-root-relative, not absolute');
   }
 
   if (input === '.' || input === '..') {

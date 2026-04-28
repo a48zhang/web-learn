@@ -8,9 +8,11 @@ describe('systemPrompts', () => {
       selectedSkills: [],
     }).content;
 
+    expect(prompt).toContain('项目根目录');
     expect(prompt).toContain('项目根相对路径');
     expect(prompt).toContain('src/App.tsx');
     expect(prompt).toContain('run_command 会在项目根目录执行');
+    expect(prompt).not.toContain('/home/project');
     expect(prompt).not.toContain('工作区（/home/project）');
   });
 });

@@ -10,7 +10,7 @@ export function parseProjectToolPath(value: unknown, fieldName = 'path'): string
   } catch (error) {
     const reason = error instanceof Error ? error.message : 'invalid project path';
     return {
-      content: `${fieldName} must be a project-root-relative path such as src/App.tsx. ${reason}`,
+      content: `${fieldName} must be a project-root-relative path such as src/App.tsx. Absolute paths are invalid. ${reason}`,
       isError: true,
     };
   }

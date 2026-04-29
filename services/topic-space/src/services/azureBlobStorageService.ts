@@ -8,6 +8,8 @@ import {
 } from '@azure/storage-blob';
 import { StorageService } from './storageService';
 
+const SAS_CLOCK_SKEW_BUFFER_MS = 5 * 60 * 1000;
+
 export class AzureBlobStorageService implements StorageService {
   private containerClient: ContainerClient;
   private sharedKeyCredential: StorageSharedKeyCredential;
@@ -49,9 +51,9 @@ export class AzureBlobStorageService implements StorageService {
     expiresInHours: number = 1,
   ): Promise<{ url: string; method: string }> {
     const blobClient = this.containerClient.getBlobClient(blobName);
-    const startsOn = new Date();
-    const expiresOn = new Date(startsOn);
-    expiresOn.setHours(expiresOn.getHours() + expiresInHours);
+    const now = Date.now();
+    const startsOn = new Date(now - SAS_CLOCK_SKEW_BUFFER_MS);
+    const expiresOn = new Date(now + expiresInHours * 60 * 60 * 1000);
 
     const sasToken = generateBlobSASQueryParameters(
       {

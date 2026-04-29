@@ -65,7 +65,6 @@ export function PagePreview({ previewUrl, isReady, error, onRefresh, reloadKey }
       src={previewUrl}
       className="h-full w-full border-0"
       title="Page Preview"
-      sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-downloads"
     />
   );
 }

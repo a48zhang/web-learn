@@ -27,6 +27,7 @@ let devProcessKilled = false;
 let installProcess: WebContainerProcessHandle | null = null;
 let installProcessSessionId: number | null = null;
 let serverReadyUnsubscribe: (() => void) | null = null;
+const WEBCONTAINER_BOOT_OPTIONS = { coep: 'credentialless' as const };
 
 function getDevServerPort(sessionId: number): number {
   return 5173 + sessionId;
@@ -61,7 +62,7 @@ function pipeProcessOutput(label: string, output: ReadableStream<string>): void 
 
 export function bootWebContainer(): Promise<WebContainer> {
   if (!bootPromise) {
-    const nextBootPromise = WebContainer.boot().then(async (wc) => {
+    const nextBootPromise = WebContainer.boot(WEBCONTAINER_BOOT_OPTIONS).then(async (wc) => {
       setWebContainerInstance(wc);
       // Fix #1: fire-and-forget registry setup — don't block the critical path
       void setupNpmRegistry(wc).catch((err) => {
@@ -259,7 +260,7 @@ async function ensureWebContainerInstance(): Promise<WebContainer> {
       webcontainerInstance = await bootPromise;
     } else {
       // Fallback: should not happen if bootWebContainer was called eagerly
-      webcontainerInstance = await WebContainer.boot();
+      webcontainerInstance = await WebContainer.boot(WEBCONTAINER_BOOT_OPTIONS);
     }
     setWebContainerInstance(webcontainerInstance);
   }

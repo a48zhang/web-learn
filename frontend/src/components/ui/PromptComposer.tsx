@@ -70,8 +70,8 @@ export default function PromptComposer({
                 onClick={() => setIsModelPickerOpen((open) => !open)}
                 className="flex min-h-12 w-full cursor-pointer items-center gap-3 rounded-2xl border border-sky-400/20 bg-slate-950/70 px-3 py-2 text-left shadow-[0_14px_40px_rgba(14,165,233,0.12)] transition-colors hover:border-sky-300/40 hover:bg-slate-900/90 focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-[260px]"
               >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-white">
-                  <img src={currentModel.logoUrl} alt="" className="h-full w-full object-contain" loading="lazy" />
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-white text-gray-800">
+                  <currentModel.Logo />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-[11px] font-medium uppercase tracking-[0.16em] text-sky-300">
@@ -117,7 +117,7 @@ export default function PromptComposer({
                             }`}
                           >
                             <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-white p-0.5">
-                              <img src={model.logoUrl} alt="" className="h-full w-full rounded-lg object-contain" loading="lazy" />
+                              <model.Logo />
                             </span>
                             <span className="min-w-0 flex-1">
                               <span className="flex items-center gap-2 text-sm font-semibold">

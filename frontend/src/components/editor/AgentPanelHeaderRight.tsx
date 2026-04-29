@@ -22,11 +22,7 @@ export default function AgentPanelHeaderRight() {
           className="text-[11px] text-[#cccccc] hover:text-white flex items-center gap-1.5 px-1.5 py-1 rounded bg-[#333333] border border-[#2b2b2b] hover:bg-[#3e3e42] transition-colors h-[22px]"
           title="切换 AI 模型"
         >
-          <img 
-            src={currentModel.logoUrl} 
-            alt={currentModel.label} 
-            className="w-[14px] h-[14px] rounded-sm object-contain" 
-          />
+          <currentModel.Logo />
           <span>{currentModel.label}</span>
           <svg className={`w-3 h-3 text-[#858585] transition-transform ${showModelPicker ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -54,13 +50,8 @@ export default function AgentPanelHeaderRight() {
                     }`}
                   >
                     {/* Logo Area */}
-                    <div className="w-8 h-8 rounded-md shrink-0 mt-0.5 shadow-sm bg-white overflow-hidden flex items-center justify-center p-0.5">
-                      <img 
-                        src={m.logoUrl} 
-                        alt={m.label} 
-                        className="w-full h-full object-contain rounded-sm" 
-                        loading="lazy" 
-                      />
+                    <div className="w-8 h-8 rounded-md shrink-0 mt-0.5 shadow-sm bg-white dark:bg-gray-800 overflow-hidden flex items-center justify-center p-0.5 text-gray-800 dark:text-gray-200">
+                      <m.Logo />
                     </div>
                     {/* Text Area */}
                     <div className="flex flex-col flex-1 min-w-0">

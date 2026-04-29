@@ -13,6 +13,11 @@ const normalizeString = (value: string): string =>
 const normalizeType = (value: string): string =>
   value.toLowerCase().replace(/[`"\s]/g, '');
 
+const canonicalType = (value: string): string => {
+  const normalized = normalizeType(value);
+  return normalized === 'jsontype' ? 'json' : normalized;
+};
+
 const getEnumValues = (type: unknown): string[] => {
   if (!type || typeof type !== 'object') {
     return [];
@@ -49,8 +54,8 @@ const parseEnumValues = (typeValue: string): string[] => {
 };
 
 const typesMatch = (expected: string, actual: string): boolean => {
-  const expectedNormalized = normalizeType(expected);
-  const actualNormalized = normalizeType(actual);
+  const expectedNormalized = canonicalType(expected);
+  const actualNormalized = canonicalType(actual);
 
   if (expectedNormalized === actualNormalized) {
     return true;
@@ -84,6 +89,13 @@ const normalizeDefault = (value: unknown): string | null => {
 
   return JSON.stringify(value);
 };
+
+const shouldCompareDatabaseDefault = (value: unknown): boolean =>
+  value === undefined ||
+  value === null ||
+  typeof value === 'string' ||
+  typeof value === 'number' ||
+  typeof value === 'boolean';
 
 const hasUniqueIndexForColumn = (indexes: IndexesOptions[], column: string): boolean => {
   return indexes.some((index) => {
@@ -178,26 +190,28 @@ export const syncSchemaWithDiffCheck = async (
         );
       }
 
-      const expectedAllowNull = expectedDefinition.allowNull ?? true;
+      const expectedPrimaryKey = expectedDefinition.primaryKey ?? false;
+      const expectedAllowNull = expectedDefinition.allowNull ?? !expectedPrimaryKey;
       if (expectedAllowNull !== actualDefinition.allowNull) {
         driftReasons.push(
           `${rawTableName}.${columnName}: allowNull ${actualDefinition.allowNull} -> ${expectedAllowNull}`
         );
       }
 
-      const expectedPrimaryKey = expectedDefinition.primaryKey ?? false;
       if (expectedPrimaryKey !== actualDefinition.primaryKey) {
         driftReasons.push(
           `${rawTableName}.${columnName}: primaryKey ${actualDefinition.primaryKey} -> ${expectedPrimaryKey}`
         );
       }
 
-      const expectedDefault = normalizeDefault(expectedDefinition.defaultValue);
-      const actualDefault = normalizeDefault(actualDefinition.defaultValue);
-      if (expectedDefault !== actualDefault) {
-        driftReasons.push(
-          `${rawTableName}.${columnName}: default ${actualDefault ?? 'null'} -> ${expectedDefault ?? 'null'}`
-        );
+      if (shouldCompareDatabaseDefault(expectedDefinition.defaultValue)) {
+        const expectedDefault = normalizeDefault(expectedDefinition.defaultValue);
+        const actualDefault = normalizeDefault(actualDefinition.defaultValue);
+        if (expectedDefault !== actualDefault) {
+          driftReasons.push(
+            `${rawTableName}.${columnName}: default ${actualDefault ?? 'null'} -> ${expectedDefault ?? 'null'}`
+          );
+        }
       }
     }
 

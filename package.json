@@ -10,6 +10,8 @@
     "build": "pnpm --filter @web-learn/shared build && pnpm -r build",
     "build:services": "pnpm --filter @web-learn/shared build && pnpm --filter @web-learn/registry build && pnpm --filter @web-learn/gateway build && pnpm --filter @web-learn/auth-service build && pnpm --filter @web-learn/topic-space-service build && pnpm --filter @web-learn/ai-service build",
     "build:frontend": "pnpm --filter @web-learn/shared build && pnpm --filter @web-learn/frontend build",
+    "serve": "bash scripts/serve.sh",
+    "serve:services": "bash scripts/serve-services.sh",
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",

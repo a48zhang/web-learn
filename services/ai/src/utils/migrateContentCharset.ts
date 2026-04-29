@@ -1,3 +1,4 @@
+import { QueryTypes } from 'sequelize';
 import { sequelize } from './database';
 
 async function migrate() {
@@ -12,7 +13,7 @@ async function migrate() {
      WHERE TABLE_SCHEMA = DATABASE()
        AND TABLE_NAME = '${table}'
        AND COLUMN_NAME = '${column}'`,
-    { raw: true }
+    { type: QueryTypes.SELECT }
   );
 
   if (!results || results.length === 0) {
@@ -32,12 +33,14 @@ async function migrate() {
 
   // Step 1: convert to BLOB to reset the encoding
   await sequelize.query(
-    `ALTER TABLE ${table} MODIFY COLUMN ${column} MEDIUMBLOB NOT NULL`
+    `ALTER TABLE ${table} MODIFY COLUMN ${column} MEDIUMBLOB NOT NULL`,
+    { type: QueryTypes.RAW }
   );
 
   // Step 2: convert to LONGTEXT with utf8mb4 (charset/collate must come right after type)
   await sequelize.query(
-    `ALTER TABLE ${table} MODIFY COLUMN ${column} LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL`
+    `ALTER TABLE ${table} MODIFY COLUMN ${column} LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL`,
+    { type: QueryTypes.RAW }
   );
 
   console.log('Migration complete.');
@@ -48,7 +51,7 @@ async function migrate() {
      WHERE TABLE_SCHEMA = DATABASE()
        AND TABLE_NAME = '${table}'
        AND COLUMN_NAME = '${column}'`,
-    { raw: true }
+    { type: QueryTypes.SELECT }
   );
 
   console.log(`Verified charset: ${(verify as any)[0].CHARACTER_SET_NAME}`);

@@ -1,0 +1,10 @@
+name = "web-learn"
+main = "worker/index.ts"
+compatibility_date = "2024-09-25"
+
+[assets]
+directory = "dist"
+binding = "ASSETS"
+
+[vars]
+BACKEND_URL = ""

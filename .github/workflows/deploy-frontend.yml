@@ -1,4 +1,4 @@
-name: Deploy Frontend to Cloudflare Pages
+name: Deploy Frontend to Cloudflare Workers
 
 on:
   push:
@@ -6,7 +6,6 @@ on:
     paths:
       - "frontend/**"
       - "shared/**"
-      - "functions/**"
       - ".github/workflows/deploy-frontend.yml"
   workflow_dispatch:
 
@@ -34,4 +33,5 @@ jobs:
 
       - run: pnpm --filter @web-learn/frontend build
 
-      - run: npx wrangler pages deploy frontend/dist --project-name=web-learn
+      - run: npx wrangler deploy
+        working-directory: frontend

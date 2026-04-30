@@ -7,4 +7,4 @@ directory = "dist"
 binding = "ASSETS"
 
 [vars]
-BACKEND_URL = ""
+BACKEND_URL = "https://agent-api.harchimi.dpdns.org"

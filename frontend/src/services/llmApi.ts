@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import type { AIChatMessage } from '@web-learn/shared';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || `${window.location.origin}/api`;
 
 const getAuthToken = () => localStorage.getItem('auth_token');
 

@@ -7,6 +7,16 @@
     <title>专题学习平台</title>
   </head>
   <body>
+    <script>
+      (function () {
+        try {
+          var stored = JSON.parse(localStorage.getItem('theme-storage'));
+          if (stored && stored.theme === 'dark') {
+            document.documentElement.classList.add('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

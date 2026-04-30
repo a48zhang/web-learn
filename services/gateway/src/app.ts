@@ -43,6 +43,8 @@ const globalLimiter = rateLimit({
 
 const createApp = () => {
   const app: Application = express();
+
+  app.set('trust proxy', 1);
   app.use(buildCorsMiddleware());
   app.use(globalLimiter);
 

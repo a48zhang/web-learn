@@ -20,6 +20,9 @@ const globalLimiter = rateLimit({
 });
 
 const app: Application = express();
+
+app.set('trust proxy', 1);
+
 app.use(express.json({ limit: '10mb' }));
 app.use(cors({
   origin: (origin, cb) => {

@@ -13,6 +13,9 @@ const isLocalOrigin = (origin: string) => {
 };
 
 const app: Express = express();
+
+app.set('trust proxy', 1);
+
 app.use(express.json({ limit: '50mb' }));
 app.use(cors({
   origin: (origin, cb) => {

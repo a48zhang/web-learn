@@ -15,6 +15,9 @@ const isLocalOrigin = (origin: string) => {
 };
 
 const app: Application = express();
+
+app.set('trust proxy', 1);
+
 app.use(express.json());
 app.use(cors({
   origin: (origin, cb) => {

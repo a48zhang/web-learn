@@ -19,6 +19,9 @@ const registry = new ServiceRegistry();
 registry.startCleanup();
 
 const app: Application = express();
+
+app.set('trust proxy', 1);
+
 app.use(cors({ origin: true }));
 app.use(globalLimiter);
 app.use(express.json());
